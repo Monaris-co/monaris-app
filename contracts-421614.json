@@ -1,0 +1,21 @@
+{
+  "network": "arbitrumSepolia",
+  "chainId": "421614",
+  "chainName": "Arbitrum Sepolia",
+  "deployer": "0x9C7dCfd1E28B467C6AfBcc60b4E9a16ba6f3E0D6",
+  "contracts": {
+    "DemoUSDC": "0x28F87D31F8305B13aFc71f69b0D1d188003d1BB3",
+    "InvoiceNFT": "0x300e76fCcb57Fd19899AeAe4030c096620a52e74",
+    "InvoiceRegistry": "0xaf060BB0E44FcA5E05E7965efa75A7fa51a8e65a",
+    "USMTPlus": "0xc7493198B7955B0a6Cbebd19447C9b1937173C10",
+    "Vault": "0x6a994d3866b3eaC62aEEC4Ed57432b329A91bc7D",
+    "Staking": "0x6f692329Ec9a91B49989691ebcd68118B0DE45c9",
+    "AdvanceEngine": "0x525EC2b28AC5aA97497E53D97d7C1679C9c2083b",
+    "Reputation": "0x2AD2CB5D5196cf55c2361c9D2cB11CAF0C4743b0",
+    "SettlementRouter": "0xfe6AFA4e436462E7Ec361BFc41ebe29dB234bCdA",
+    "Treasury": "0x9C7dCfd1E28B467C6AfBcc60b4E9a16ba6f3E0D6",
+    "ProtocolFeeBps": "50"
+  },
+  "deployedAt": "2026-01-10T04:04:47.011Z",
+  "lastUpdated": "2026-01-10T04:40:28.866Z"
+}

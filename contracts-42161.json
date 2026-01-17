@@ -1,0 +1,21 @@
+{
+  "network": "arbitrumMainnet",
+  "chainId": "42161",
+  "chainName": "Arbitrum One",
+  "deployer": "0xEbF48F51c719b89fB5BE22B3F386ebC525C91193",
+  "contracts": {
+    "DemoUSDC": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+    "InvoiceNFT": "0x300718D45Ac08894839261d81Adef42797B87854",
+    "InvoiceRegistry": "0x1a9751dE68C4B33463682BD3f9a54e6eDBc04F35",
+    "USMTPlus": "0x990cF8A72974739E3F918dA33793A8b639889520",
+    "Vault": "0xAc9B0123000328Bb3780e3138815C6f4A12160Be",
+    "Staking": "0x2099329241882Ad465e4B8455FC536f86df9Fff5",
+    "AdvanceEngine": "0x7Ad0CcE4cCa1A1bdF86bfFfaA0befb2c7B4118eC",
+    "Reputation": "0x43Ea89114A06f9A39dCbABa25F362b6FBf07260c",
+    "SettlementRouter": "0xc49F8d05751F5C12EC29b5fD91fb009fA52cd475",
+    "Treasury": "0xEbF48F51c719b89fB5BE22B3F386ebC525C91193",
+    "ProtocolFeeBps": "50"
+  },
+  "deployedAt": "2026-01-10T06:17:31.872Z",
+  "lastUpdated": "2026-01-10T06:17:31.872Z"
+}
