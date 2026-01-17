@@ -172,7 +172,7 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 px-4 md:px-6 backdrop-blur-xl">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 px-3 sm:px-4 md:px-6 backdrop-blur-xl">
       {/* Left side - Mobile menu & Page context */}
       <div className="flex items-center gap-4">
         {/* Mobile menu button */}
