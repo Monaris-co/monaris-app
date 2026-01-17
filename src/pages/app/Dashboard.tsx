@@ -309,7 +309,7 @@ export default function Dashboard() {
           <div>
             <h1 className="text-[32px] font-semibold text-[#404040] dark:text-white tracking-tight">Dashboard</h1>
             <p className="text-[#aeaeae] text-base mt-1">
-              Get summary of your weekly online transactions here.
+              Get summary
             </p>
           </div>
           
