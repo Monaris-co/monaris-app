@@ -29,6 +29,7 @@ import { toast } from "sonner"
 import { useCreateInvoice } from "@/hooks/useInvoice"
 import { usePrivyAccount } from "@/hooks/usePrivyAccount"
 import { useChainId } from "wagmi"
+import { usePrivy, useWallets } from "@privy-io/react-auth"
 import { getExplorerUrl } from "@/lib/chain-utils"
 import { isAddress, decodeEventLog } from "viem"
 import { InvoiceRegistryABI } from "@/lib/abis"
@@ -57,7 +58,16 @@ export default function CreateInvoice() {
   
   const { address } = usePrivyAccount()
   const chainId = useChainId()
+  const { authenticated, ready, login } = usePrivy()
+  const { wallets } = useWallets()
   const { createInvoice, isPending, isConfirming, isSuccess, error, hash, receipt } = useCreateInvoice()
+  
+  // Find embedded wallet
+  const embeddedWallet = wallets.find(w => {
+    const ct = w.connectorType?.toLowerCase() || '';
+    const wct = w.walletClientType?.toLowerCase() || '';
+    return ct === 'embedded' || wct === 'privy' || ct.includes('privy') || ct.includes('embedded');
+  })
   const successToastShown = useRef<string | null>(null)
   const submittedToastShown = useRef<string | null>(null)
   const [successModalOpen, setSuccessModalOpen] = useState(false)
@@ -284,6 +294,29 @@ export default function CreateInvoice() {
     if (!formData.buyerAddress || !isAddress(formData.buyerAddress)) {
       toast.error("Invalid buyer address", {
         description: "Please enter a valid Ethereum address (0x...)",
+      })
+      return
+    }
+
+    // Check authentication and wallet availability FIRST
+    if (!ready) {
+      toast.error("Loading...", {
+        description: "Please wait while we connect to your wallet",
+      })
+      return
+    }
+    
+    if (!authenticated) {
+      toast.error("Not logged in", {
+        description: "Please log in to create an invoice",
+      })
+      login()
+      return
+    }
+    
+    if (!embeddedWallet) {
+      toast.error("Wallet not ready", {
+        description: "Your wallet is still being created. Please wait a moment and try again, or try logging out and back in.",
       })
       return
     }
