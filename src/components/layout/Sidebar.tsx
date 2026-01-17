@@ -41,15 +41,11 @@ function SidebarContent({ collapsed = false, onNavigate }: SidebarContentProps) 
         <Link to="/" className="flex items-center gap-3" onClick={() => onNavigate?.()}>
           {!collapsed ? (
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-xl bg-[#c8ff00] flex items-center justify-center">
-                <span className="text-black font-bold text-lg">M</span>
-              </div>
+              <img src="/monar.png" alt="Monaris" className="w-10 h-10 rounded-xl" />
               <span className="text-xl font-semibold text-gray-900 dark:text-white">Monaris</span>
             </div>
           ) : (
-            <div className="w-10 h-10 rounded-xl bg-[#c8ff00] flex items-center justify-center">
-              <span className="text-black font-bold text-lg">M</span>
-            </div>
+            <img src="/monar.png" alt="Monaris" className="w-10 h-10 rounded-xl" />
           )}
         </Link>
       </div>
