@@ -1,0 +1,10 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "ERC721Utils",
+  "sourceName": "@openzeppelin/contracts/token/ERC721/utils/ERC721Utils.sol",
+  "abi": [],
+  "bytecode": "0x60808060405234601757603a9081601d823930815050f35b600080fdfe600080fdfea2646970667358221220cb1daa04a9b692c898fc5c60c521cd83d05fdb26c7806859389dea5b82af3faf64736f6c63430008180033",
+  "deployedBytecode": "0x600080fdfea2646970667358221220cb1daa04a9b692c898fc5c60c521cd83d05fdb26c7806859389dea5b82af3faf64736f6c63430008180033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

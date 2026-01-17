@@ -28,7 +28,7 @@ dist-ssr
 
 # Hardhat
 cache/
-artifacts/
+# artifacts/ - KEEP artifacts for Vercel build (contains ABIs)
 typechain-types/
 coverage/
 coverage.json
