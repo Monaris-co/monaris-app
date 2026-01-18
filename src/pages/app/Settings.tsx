@@ -50,7 +50,7 @@ export default function Settings() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mx-auto max-w-3xl space-y-6"
+      className="mx-auto max-w-3xl space-y-6 px-3 sm:px-4 md:px-0"
     >
       {/* Header */}
       <div>
@@ -61,7 +61,7 @@ export default function Settings() {
       </div>
 
       {/* Profile */}
-      <div className="rounded-[20px] border border-[#f1f1f1] dark:border-gray-700 bg-white dark:bg-gray-900 p-6 shadow-[0px_4px_16px_0px_rgba(0,0,0,0.06)]">
+      <div className="rounded-[20px] border border-[#f1f1f1] dark:border-gray-700 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-[0px_4px_16px_0px_rgba(0,0,0,0.06)]">
         <div className="mb-6 flex items-center gap-3">
           <div className="rounded-xl bg-[#c8ff00]/10 p-2.5">
             <User className="h-5 w-5 text-[#7cb518]" />
@@ -84,7 +84,7 @@ export default function Settings() {
       </div>
 
       {/* Wallet */}
-      <div className="rounded-[20px] border border-[#f1f1f1] dark:border-gray-700 bg-white dark:bg-gray-900 p-6 shadow-[0px_4px_16px_0px_rgba(0,0,0,0.06)]">
+      <div className="rounded-[20px] border border-[#f1f1f1] dark:border-gray-700 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-[0px_4px_16px_0px_rgba(0,0,0,0.06)]">
         <div className="mb-6 flex items-center gap-3">
           <div className="rounded-xl bg-[#c8ff00]/10 p-2.5">
             <Wallet className="h-5 w-5 text-[#7cb518]" />
@@ -142,7 +142,7 @@ export default function Settings() {
       </div>
 
       {/* Notifications */}
-      <div className="rounded-[20px] border border-[#f1f1f1] dark:border-gray-700 bg-white dark:bg-gray-900 p-6 shadow-[0px_4px_16px_0px_rgba(0,0,0,0.06)]">
+      <div className="rounded-[20px] border border-[#f1f1f1] dark:border-gray-700 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-[0px_4px_16px_0px_rgba(0,0,0,0.06)]">
         <div className="mb-6 flex items-center gap-3">
           <div className="rounded-xl bg-[#c8ff00]/10 p-2.5">
             <Bell className="h-5 w-5 text-[#7cb518]" />
@@ -175,7 +175,7 @@ export default function Settings() {
       </div>
 
       {/* Privacy */}
-      <div className="rounded-[20px] border border-[#f1f1f1] dark:border-gray-700 bg-white dark:bg-gray-900 p-6 shadow-[0px_4px_16px_0px_rgba(0,0,0,0.06)]">
+      <div className="rounded-[20px] border border-[#f1f1f1] dark:border-gray-700 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-[0px_4px_16px_0px_rgba(0,0,0,0.06)]">
         <div className="mb-6 flex items-center gap-3">
           <div className="rounded-xl bg-[#c8ff00]/10 p-2.5">
             <Shield className="h-5 w-5 text-[#7cb518]" />
@@ -214,7 +214,7 @@ export default function Settings() {
       )}
 
       {/* Danger zone */}
-      <div className="rounded-[20px] border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/20 p-6">
+      <div className="rounded-[20px] border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/20 p-4 sm:p-6">
         <h2 className="mb-2 text-lg font-semibold text-red-600 dark:text-red-400">Danger Zone</h2>
         <p className="mb-4 text-sm text-[#696969] dark:text-gray-400">
           These actions are irreversible. Please proceed with caution.

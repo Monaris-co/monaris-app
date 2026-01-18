@@ -437,7 +437,7 @@ export default function CreateInvoice() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mx-auto max-w-3xl space-y-6"
+      className="mx-auto max-w-3xl space-y-6 px-3 sm:px-4 md:px-0"
     >
       {/* Header */}
       <div className="flex items-center gap-4">
