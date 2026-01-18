@@ -854,24 +854,21 @@ export default function Dashboard() {
                         transform: 'rotateY(180deg)'
                       }}
                     >
-                      {/* Back Card Layout - Gradient with noise texture */}
+                      {/* Back Card Layout - Monaris Color Scheme */}
                       <div className="min-h-[260px] relative overflow-hidden">
-                        {/* Gradient Background - Golden/Lime to Gray */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-[#d4a574] via-[#c8d96a] to-[#6b6b6b]" />
+                        {/* Gradient Background - Monaris Lime Green */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-[#c8ff00] via-[#a8df00] to-[#8bc34a]" />
                         
-                        {/* Noise texture overlay */}
-                        <div className="absolute inset-0 opacity-40" style={{
-                          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+                        {/* Subtle pattern overlay */}
+                        <div className="absolute inset-0 opacity-20" style={{
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
                         }} />
                         
                         {/* Content */}
                         <div className="relative z-10 p-6 flex flex-col h-full min-h-[165px]">
-                          {/* Top - Mastercard-style circles */}
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center -space-x-3">
-                              <div className="w-10 h-10 rounded-full bg-[#f5e6c8]/60" />
-                              <div className="w-10 h-10 rounded-full bg-[#e8d9b8]/40" />
-                            </div>
+                          {/* Top Right - Monaris Logo */}
+                          <div className="flex items-start justify-end">
+                            <img src="/monar.png" alt="Monaris" className="w-12 h-12 rounded-xl shadow-lg" />
                           </div>
                         </div>
                         
