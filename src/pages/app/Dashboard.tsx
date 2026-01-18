@@ -856,8 +856,8 @@ export default function Dashboard() {
                     >
                       {/* Back Card Layout - Monaris Color Scheme */}
                       <div className="min-h-[260px] relative overflow-hidden">
-                        {/* Gradient Background - Monaris Lime Green */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-[#c8ff00] via-[#a8df00] to-[#8bc34a]" />
+                        {/* Solid Background - Monaris Lime Green (matches logo) */}
+                        <div className="absolute inset-0 bg-[#c8ff00]" />
                         
                         {/* Subtle pattern overlay */}
                         <div className="absolute inset-0 opacity-20" style={{
@@ -878,7 +878,7 @@ export default function Dashboard() {
                             {/* Left - Card Info */}
                             <div>
                               <p className="text-white/60 text-xs mb-0.5">02/30</p>
-                              <p className="text-white font-semibold text-base tracking-wide">ADI MONARIS LLC</p>
+                              <p className="text-white font-semibold text-base tracking-wide">MONARIS LLC</p>
                               <p className="text-white/40 text-[10px] mt-2">Card connected by <span className="text-[#c8ff00]">avici</span> ending •••• 8009</p>
                               <p className="text-[#c8ff00]/70 text-[9px] mt-1">Cashflow credited</p>
                             </div>
