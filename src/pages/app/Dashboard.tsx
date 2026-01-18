@@ -125,6 +125,7 @@ export default function Dashboard() {
   const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false)
   const [receiveFundsDialogOpen, setReceiveFundsDialogOpen] = useState(false)
   const [hoveredSegment, setHoveredSegment] = useState<'balance' | 'cleared' | 'outstanding' | null>(null)
+  const [isCardFlipped, setIsCardFlipped] = useState(false)
   const [autoEarnEnabled, setAutoEarnEnabled] = useState(() => {
     const saved = localStorage.getItem('autoEarnEnabled')
     return saved !== null ? JSON.parse(saved) : true
@@ -729,100 +730,171 @@ export default function Dashboard() {
                 </button>
               </div>
               
-              {/* Credit Card - Monaris Split Design */}
+              {/* Credit Card - Monaris Split Design with Flip Animation */}
               <div className="flex flex-col items-center w-full">
-                <div className="w-full max-w-[460px] relative group">
+                <div 
+                  className="w-full max-w-[460px] relative group cursor-pointer"
+                  style={{ perspective: '1000px' }}
+                  onMouseEnter={() => setIsCardFlipped(true)}
+                  onMouseLeave={() => setIsCardFlipped(false)}
+                >
                   {/* Glow effect for pop-up - White/neutral */}
                   <div className="absolute -inset-3 bg-gradient-to-r from-white/30 via-white/15 to-white/30 rounded-[32px] blur-2xl opacity-60 group-hover:opacity-90 transition-opacity duration-300" />
                   <div className="absolute -inset-1 bg-gradient-to-br from-white/20 to-transparent rounded-[24px] blur-md" />
                   
-                  {/* Card Container */}
-                  <div className="relative rounded-[20px] overflow-hidden shadow-[0_40px_80px_-20px_rgba(255,255,255,0.15),0_20px_40px_-10px_rgba(255,255,255,0.1)] group-hover:shadow-[0_50px_100px_-25px_rgba(255,255,255,0.2),0_25px_50px_-12px_rgba(255,255,255,0.15)] transition-all duration-300 group-hover:-translate-y-1">
-                    
-                    {/* Split Card Layout */}
-                    <div className="flex min-h-[260px]">
-                      {/* Left Side - Lime/Monaris color with wave patterns */}
-                      <div className="w-[65%] bg-gradient-to-br from-[#d4f542] via-[#c8ff00] to-[#a8df00] relative overflow-hidden">
-                        {/* Wave patterns */}
-                        <div className="absolute inset-0">
-                          {/* Wave 1 - Lightest */}
-                          <div className="absolute left-0 top-0 bottom-0 w-[35%] bg-gradient-to-r from-[#e8ffb3]/70 to-transparent" 
-                            style={{ clipPath: 'ellipse(100% 80% at 0% 50%)' }} />
-                          {/* Wave 2 - Medium */}
-                          <div className="absolute left-[15%] top-0 bottom-0 w-[40%] bg-gradient-to-r from-[#dcff85]/50 to-transparent" 
-                            style={{ clipPath: 'ellipse(80% 90% at 20% 50%)' }} />
-                          {/* Wave 3 - Subtle */}
-                          <div className="absolute left-[30%] top-0 bottom-0 w-[35%] bg-gradient-to-r from-[#c8ff00]/40 to-transparent" 
-                            style={{ clipPath: 'ellipse(70% 100% at 30% 50%)' }} />
-                        </div>
-                        
-                        {/* Card Content - Left Side */}
-                        <div className="relative z-10 p-6 flex flex-col justify-between h-full">
-                          {/* Top - Account Info */}
-                          <div>
-                            <p className="text-[#1a1a1a]/50 text-[10px] font-semibold uppercase tracking-wider mb-1">Cashflow Account</p>
-                            <p className="text-[#1a1a1a]/80 text-sm font-mono">
-                              {address ? `${address.slice(0, 6)}…${address.slice(-4)}` : '0x0000…0000'}
-                            </p>
+                  {/* Card Flip Container */}
+                  <div 
+                    className="relative w-full transition-transform duration-700 ease-in-out"
+                    style={{ 
+                      transformStyle: 'preserve-3d',
+                      transform: isCardFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
+                    }}
+                  >
+                    {/* FRONT SIDE */}
+                    <div 
+                      className="relative rounded-[20px] overflow-hidden shadow-[0_40px_80px_-20px_rgba(255,255,255,0.15),0_20px_40px_-10px_rgba(255,255,255,0.1)]"
+                      style={{ backfaceVisibility: 'hidden' }}
+                    >
+                      {/* Split Card Layout */}
+                      <div className="flex min-h-[260px]">
+                        {/* Left Side - Lime/Monaris color with wave patterns */}
+                        <div className="w-[65%] bg-gradient-to-br from-[#d4f542] via-[#c8ff00] to-[#a8df00] relative overflow-hidden">
+                          {/* Wave patterns */}
+                          <div className="absolute inset-0">
+                            {/* Wave 1 - Lightest */}
+                            <div className="absolute left-0 top-0 bottom-0 w-[35%] bg-gradient-to-r from-[#e8ffb3]/70 to-transparent" 
+                              style={{ clipPath: 'ellipse(100% 80% at 0% 50%)' }} />
+                            {/* Wave 2 - Medium */}
+                            <div className="absolute left-[15%] top-0 bottom-0 w-[40%] bg-gradient-to-r from-[#dcff85]/50 to-transparent" 
+                              style={{ clipPath: 'ellipse(80% 90% at 20% 50%)' }} />
+                            {/* Wave 3 - Subtle */}
+                            <div className="absolute left-[30%] top-0 bottom-0 w-[35%] bg-gradient-to-r from-[#c8ff00]/40 to-transparent" 
+                              style={{ clipPath: 'ellipse(70% 100% at 30% 50%)' }} />
                           </div>
                           
-                          {/* Middle - Credit Limit */}
-                          <div className="my-4">
-                            <p className="text-[#1a1a1a]/50 text-[10px] font-semibold uppercase tracking-wider mb-1">Credit Limit</p>
-                            <p className="text-[#1a1a1a] font-bold text-2xl">
-                              ${isLoading ? "..." : statsData.outstanding.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                            </p>
-                          </div>
-                          
-                          {/* Bottom Info */}
-                          <div className="flex items-end gap-6">
+                          {/* Card Content - Left Side */}
+                          <div className="relative z-10 p-6 flex flex-col justify-between h-full">
+                            {/* Top - Account Info */}
                             <div>
-                              <p className="text-[#1a1a1a]/50 text-[10px] font-semibold uppercase tracking-wider">Net Inflow (30d)</p>
-                              <p className="text-[#1a1a1a] font-bold text-base">
-                                +${isLoading ? "..." : statsData.clearedVolume.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                              <p className="text-[#1a1a1a]/50 text-[10px] font-semibold uppercase tracking-wider mb-1">Cashflow Account</p>
+                              <p className="text-[#1a1a1a]/80 text-sm font-mono">
+                                {address ? `${address.slice(0, 6)}…${address.slice(-4)}` : '0x0000…0000'}
                               </p>
                             </div>
-                            <div>
-                              <p className="text-[#1a1a1a]/50 text-[10px] font-semibold uppercase tracking-wider">Credit Tier</p>
-                              <p className="text-[#1a1a1a] font-bold text-base">{effectiveTierLabel}</p>
+                            
+                            {/* Middle - Credit Limit */}
+                            <div className="my-4">
+                              <p className="text-[#1a1a1a]/50 text-[10px] font-semibold uppercase tracking-wider mb-1">Credit Limit</p>
+                              <p className="text-[#1a1a1a] font-bold text-2xl">
+                                ${isLoading ? "..." : statsData.outstanding.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                              </p>
+                            </div>
+                            
+                            {/* Bottom Info */}
+                            <div className="flex items-end gap-6">
+                              <div>
+                                <p className="text-[#1a1a1a]/50 text-[10px] font-semibold uppercase tracking-wider">Net Inflow (30d)</p>
+                                <p className="text-[#1a1a1a] font-bold text-base">
+                                  +${isLoading ? "..." : statsData.clearedVolume.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-[#1a1a1a]/50 text-[10px] font-semibold uppercase tracking-wider">Credit Tier</p>
+                                <p className="text-[#1a1a1a] font-bold text-base">{effectiveTierLabel}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Right Side - Dark with noise texture */}
+                        <div className="w-[35%] bg-[#0f0f14] relative overflow-hidden">
+                          {/* Subtle noise texture */}
+                          <div className="absolute inset-0 opacity-30" style={{
+                            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+                          }} />
+                          
+                          {/* Content - Right Side */}
+                          <div className="relative z-10 p-5 flex flex-col h-full">
+                            {/* Top - Monaris Logo */}
+                            <div className="mb-auto">
+                              <p className="text-white font-bold text-2xl italic tracking-tight">Monaris</p>
+                            </div>
+                            
+                            {/* Available Now */}
+                            <div className="mb-2">
+                              <p className="text-white/40 text-[10px] font-semibold uppercase tracking-wider mb-1">Available Now</p>
+                              <p className="text-[#c8ff00] font-bold text-xl">
+                                ${isLoading ? "..." : statsData.advanceEligible.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                              </p>
+                            </div>
+                            
+                            {/* Reserved */}
+                            <div className="mb-4">
+                              <p className="text-white/30 text-[9px] font-medium uppercase tracking-wider">Reserved</p>
+                              <p className="text-white/50 text-sm font-semibold">
+                                ${isLoading ? "..." : Math.max(0, statsData.outstanding - statsData.advanceEligible).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                              </p>
+                            </div>
+                            
+                            {/* Bottom - Badge */}
+                            <div className="flex items-end justify-end">
+                              <span className="text-[#c8ff00]/70 text-[9px] font-medium">Verified</span>
                             </div>
                           </div>
                         </div>
                       </div>
-                      
-                      {/* Right Side - Dark with noise texture */}
-                      <div className="w-[35%] bg-[#0f0f14] relative overflow-hidden">
-                        {/* Subtle noise texture */}
-                        <div className="absolute inset-0 opacity-30" style={{
-                          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+                    </div>
+                    
+                    {/* BACK SIDE */}
+                    <div 
+                      className="absolute inset-0 rounded-[20px] overflow-hidden shadow-[0_40px_80px_-20px_rgba(255,255,255,0.15),0_20px_40px_-10px_rgba(255,255,255,0.1)]"
+                      style={{ 
+                        backfaceVisibility: 'hidden',
+                        transform: 'rotateY(180deg)'
+                      }}
+                    >
+                      {/* Back Card Layout - Full dark with details */}
+                      <div className="min-h-[260px] bg-gradient-to-br from-[#1a1a2e] via-[#0f0f14] to-[#1a1a2e] relative overflow-hidden">
+                        {/* Subtle pattern */}
+                        <div className="absolute inset-0 opacity-10" style={{
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c8ff00' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
                         }} />
                         
-                        {/* Content - Right Side */}
-                        <div className="relative z-10 p-5 flex flex-col h-full">
-                          {/* Top - Monaris Logo */}
-                          <div className="mb-auto">
-                            <p className="text-white font-bold text-2xl italic tracking-tight">Monaris</p>
+                        {/* Accent line */}
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#c8ff00] via-[#a8df00] to-[#c8ff00]" />
+                        
+                        {/* Content */}
+                        <div className="relative z-10 p-6 flex flex-col h-full min-h-[260px]">
+                          {/* Top - Title */}
+                          <div className="flex items-center justify-between mb-6">
+                            <p className="text-white font-bold text-xl">Card Details</p>
+                            <img src="/monar.png" alt="Monaris" className="w-8 h-8 rounded-lg" />
                           </div>
                           
-                          {/* Available Now */}
-                          <div className="mb-2">
-                            <p className="text-white/40 text-[10px] font-semibold uppercase tracking-wider mb-1">Available Now</p>
-                            <p className="text-[#c8ff00] font-bold text-xl">
-                              ${isLoading ? "..." : statsData.advanceEligible.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                            </p>
+                          {/* Stats Grid */}
+                          <div className="grid grid-cols-2 gap-4 flex-1">
+                            <div className="bg-white/5 rounded-xl p-3">
+                              <p className="text-white/40 text-[9px] font-semibold uppercase tracking-wider mb-1">Total Invoices</p>
+                              <p className="text-white font-bold text-lg">{isLoading ? "..." : invoices?.length || 0}</p>
+                            </div>
+                            <div className="bg-white/5 rounded-xl p-3">
+                              <p className="text-white/40 text-[9px] font-semibold uppercase tracking-wider mb-1">Reputation</p>
+                              <p className="text-[#c8ff00] font-bold text-lg">{displayScore}</p>
+                            </div>
+                            <div className="bg-white/5 rounded-xl p-3">
+                              <p className="text-white/40 text-[9px] font-semibold uppercase tracking-wider mb-1">Max LTV</p>
+                              <p className="text-white font-bold text-lg">{maxLTV}%</p>
+                            </div>
+                            <div className="bg-white/5 rounded-xl p-3">
+                              <p className="text-white/40 text-[9px] font-semibold uppercase tracking-wider mb-1">APR Rate</p>
+                              <p className="text-white font-bold text-lg">{effectiveTierLabel === 'A' ? '6%' : effectiveTierLabel === 'B' ? '8%' : '18%'}</p>
+                            </div>
                           </div>
                           
-                          {/* Reserved */}
-                          <div className="mb-4">
-                            <p className="text-white/30 text-[9px] font-medium uppercase tracking-wider">Reserved</p>
-                            <p className="text-white/50 text-sm font-semibold">
-                              ${isLoading ? "..." : Math.max(0, statsData.outstanding - statsData.advanceEligible).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                            </p>
-                          </div>
-                          
-                          {/* Bottom - Badge */}
-                          <div className="flex items-end justify-end">
-                            <span className="text-[#c8ff00]/70 text-[9px] font-medium">Verified</span>
+                          {/* Bottom */}
+                          <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
+                            <p className="text-white/30 text-[10px]">Hover to flip back</p>
+                            <p className="text-[#c8ff00]/70 text-[10px] font-medium">Powered by Monaris</p>
                           </div>
                         </div>
                       </div>
@@ -832,8 +904,8 @@ export default function Dashboard() {
                 
                 {/* Carousel dots */}
                 <div className="flex items-center justify-center gap-2 mt-5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#c8ff00]" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-gray-300" />
+                  <div className={`w-2.5 h-2.5 rounded-full transition-colors ${!isCardFlipped ? 'bg-[#c8ff00]' : 'bg-gray-300'}`} />
+                  <div className={`w-2.5 h-2.5 rounded-full transition-colors ${isCardFlipped ? 'bg-[#c8ff00]' : 'bg-gray-300'}`} />
                   <div className="w-2.5 h-2.5 rounded-full bg-gray-300" />
                 </div>
               </div>
