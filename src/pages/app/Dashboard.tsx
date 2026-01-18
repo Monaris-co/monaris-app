@@ -735,6 +735,8 @@ export default function Dashboard() {
                 <div 
                   className="w-full max-w-[460px] relative group cursor-pointer select-none"
                   style={{ perspective: '1000px' }}
+                  onMouseEnter={() => setIsCardFlipped(true)}
+                  onMouseLeave={() => setIsCardFlipped(false)}
                   onClick={() => setIsCardFlipped(!isCardFlipped)}
                 >
                   {/* Glow effect for pop-up - White/neutral */}
@@ -892,7 +894,7 @@ export default function Dashboard() {
                           
                           {/* Bottom */}
                           <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
-                            <p className="text-white/30 text-[10px]">Tap to flip back</p>
+                            <p className="text-white/30 text-[10px]">Hover or tap to flip</p>
                             <p className="text-[#c8ff00]/70 text-[10px] font-medium">Powered by Monaris</p>
                           </div>
                         </div>
