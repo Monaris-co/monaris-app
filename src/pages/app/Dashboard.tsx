@@ -868,7 +868,7 @@ export default function Dashboard() {
                         <div className="relative z-10 p-6 flex flex-col h-full min-h-[165px]">
                           {/* Top - Cashflow-Backed left, Monaris Logo right */}
                           <div className="flex items-start justify-between">
-                            <p className="text-[#1a1a1a]/70 text-[11px] font-semibold uppercase tracking-wider">Cashflow-Backed</p>
+                            <p className="text-[#1a1a1a] text-sm font-bold uppercase tracking-wider">Cashflow-Backed</p>
                             <img src="/monar.png" alt="Monaris" className="w-12 h-12 rounded-xl shadow-lg" />
                           </div>
                         </div>
