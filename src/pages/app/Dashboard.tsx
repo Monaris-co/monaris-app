@@ -846,7 +846,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     
-                    {/* BACK SIDE */}
+                    {/* BACK SIDE - Credit Card Style */}
                     <div 
                       className="absolute inset-0 rounded-[20px] overflow-hidden shadow-[0_40px_80px_-20px_rgba(255,255,255,0.15),0_20px_40px_-10px_rgba(255,255,255,0.1)]"
                       style={{ 
@@ -854,48 +854,54 @@ export default function Dashboard() {
                         transform: 'rotateY(180deg)'
                       }}
                     >
-                      {/* Back Card Layout - Full dark with details */}
-                      <div className="min-h-[260px] bg-gradient-to-br from-[#1a1a2e] via-[#0f0f14] to-[#1a1a2e] relative overflow-hidden">
-                        {/* Subtle pattern */}
-                        <div className="absolute inset-0 opacity-10" style={{
-                          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c8ff00' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-                        }} />
+                      {/* Back Card Layout - Gradient with noise texture */}
+                      <div className="min-h-[260px] relative overflow-hidden">
+                        {/* Gradient Background - Golden/Lime to Gray */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-[#d4a574] via-[#c8d96a] to-[#6b6b6b]" />
                         
-                        {/* Accent line */}
-                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#c8ff00] via-[#a8df00] to-[#c8ff00]" />
+                        {/* Noise texture overlay */}
+                        <div className="absolute inset-0 opacity-40" style={{
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+                        }} />
                         
                         {/* Content */}
                         <div className="relative z-10 p-6 flex flex-col h-full min-h-[260px]">
-                          {/* Top - Title */}
-                          <div className="flex items-center justify-between mb-6">
-                            <p className="text-white font-bold text-xl">Card Details</p>
-                            <img src="/monar.png" alt="Monaris" className="w-8 h-8 rounded-lg" />
-                          </div>
-                          
-                          {/* Stats Grid */}
-                          <div className="grid grid-cols-2 gap-4 flex-1">
-                            <div className="bg-white/5 rounded-xl p-3">
-                              <p className="text-white/40 text-[9px] font-semibold uppercase tracking-wider mb-1">Total Invoices</p>
-                              <p className="text-white font-bold text-lg">{isLoading ? "..." : invoices?.length || 0}</p>
-                            </div>
-                            <div className="bg-white/5 rounded-xl p-3">
-                              <p className="text-white/40 text-[9px] font-semibold uppercase tracking-wider mb-1">Reputation</p>
-                              <p className="text-[#c8ff00] font-bold text-lg">{displayScore}</p>
-                            </div>
-                            <div className="bg-white/5 rounded-xl p-3">
-                              <p className="text-white/40 text-[9px] font-semibold uppercase tracking-wider mb-1">Max LTV</p>
-                              <p className="text-white font-bold text-lg">{maxLTV}%</p>
-                            </div>
-                            <div className="bg-white/5 rounded-xl p-3">
-                              <p className="text-white/40 text-[9px] font-semibold uppercase tracking-wider mb-1">APR Rate</p>
-                              <p className="text-white font-bold text-lg">{effectiveTierLabel === 'A' ? '6%' : effectiveTierLabel === 'B' ? '8%' : '18%'}</p>
+                          {/* Top - Mastercard-style circles */}
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center -space-x-3">
+                              <div className="w-10 h-10 rounded-full bg-[#f5e6c8]/60" />
+                              <div className="w-10 h-10 rounded-full bg-[#e8d9b8]/40" />
                             </div>
                           </div>
                           
-                          {/* Bottom */}
-                          <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
-                            <p className="text-white/30 text-[10px]">Hover or tap to flip</p>
-                            <p className="text-[#c8ff00]/70 text-[10px] font-medium">Powered by Monaris</p>
+                          {/* Card Number Display */}
+                          <div className="flex-1 flex items-end pb-4">
+                            <p className="text-white font-light text-3xl tracking-[0.2em] drop-shadow-lg" style={{ fontFamily: 'system-ui' }}>
+                              {address ? `${address.slice(2, 6)} ${address.slice(6, 10)} ${address.slice(10, 14)} ${address.slice(-4)}`.toUpperCase() : '0000 0000 0000 0000'}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Bottom Dark Section */}
+                        <div className="absolute bottom-0 left-0 right-0 bg-[#1a1a1a] p-5">
+                          <div className="flex items-end justify-between">
+                            {/* Left - Card Info */}
+                            <div>
+                              <p className="text-white/60 text-xs mb-0.5">02/30</p>
+                              <p className="text-white font-semibold text-base tracking-wide">ADI MONARIS LLC</p>
+                              <p className="text-white/40 text-[10px] mt-2">Card connected by <span className="text-[#c8ff00]">avici</span> ending •••• 8009</p>
+                              <p className="text-[#c8ff00]/70 text-[9px] mt-1">Cashflow credited</p>
+                            </div>
+                            
+                            {/* Right - Chip Icon */}
+                            <div className="w-12 h-10 rounded border-2 border-white/30 grid grid-cols-3 grid-rows-2 gap-0.5 p-1">
+                              <div className="bg-white/20 rounded-sm" />
+                              <div className="bg-white/20 rounded-sm" />
+                              <div className="bg-white/20 rounded-sm" />
+                              <div className="bg-white/20 rounded-sm" />
+                              <div className="bg-white/20 rounded-sm" />
+                              <div className="bg-white/20 rounded-sm" />
+                            </div>
                           </div>
                         </div>
                       </div>
