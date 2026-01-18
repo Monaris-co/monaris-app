@@ -86,18 +86,36 @@ export default function Reputation() {
   
   // Calculate stats from cleared invoices
   const calculatedStats = useMemo(() => {
-    const clearedCount = clearedInvoices.length
-    const totalVolume = clearedInvoices.reduce((sum, inv) => {
+    // Calculate from local invoices data
+    const localClearedCount = clearedInvoices.length
+    const localTotalVolume = clearedInvoices.reduce((sum, inv) => {
       return sum + parseFloat(formatUnits(inv.amount, 6))
     }, 0)
     
+    // Get on-chain stats if available
+    const onChainClearedCount = stats?.invoicesCleared ? Number(stats.invoicesCleared) : 0
+    const onChainTotalVolume = stats?.totalVolume ? Number(stats.totalVolume) / 1e6 : 0
+    
+    // Use the higher value between on-chain and local calculation
+    // This ensures we show correct data even if on-chain reputation isn't synced
+    const invoicesClearedCount = Math.max(localClearedCount, onChainClearedCount)
+    const totalVolumeAmount = Math.max(localTotalVolume, onChainTotalVolume)
+    
+    console.log('📊 Reputation stats calculation:', {
+      localClearedCount,
+      localTotalVolume,
+      onChainClearedCount,
+      onChainTotalVolume,
+      finalClearedCount: invoicesClearedCount,
+      finalTotalVolume: totalVolumeAmount,
+    })
+    
     return {
-      invoicesCleared: clearedCount,
-      totalVolume,
-      // Use on-chain stats if available, otherwise use calculated
+      invoicesCleared: localClearedCount,
+      totalVolume: localTotalVolume,
       score: stats?.score ? Number(stats.score) : currentScore,
-      invoicesClearedCount: stats?.invoicesCleared ? Number(stats.invoicesCleared) : clearedCount,
-      totalVolumeAmount: stats?.totalVolume ? Number(stats.totalVolume) / 1e6 : totalVolume, // stats stores in 6 decimals
+      invoicesClearedCount,
+      totalVolumeAmount,
     }
   }, [clearedInvoices, stats, currentScore])
   
