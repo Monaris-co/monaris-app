@@ -794,7 +794,7 @@ export default function Dashboard() {
                             {/* Bottom Info */}
                             <div className="flex items-end gap-6">
                               <div>
-                                <p className="text-[#1a1a1a]/50 text-[10px] font-semibold uppercase tracking-wider">Net Inflow (30d)</p>
+                                <p className="text-[#1a1a1a]/50 text-[10px] font-semibold uppercase tracking-wider">Net Inflow</p>
                                 <p className="text-[#1a1a1a] font-bold text-base">
                                   +${isLoading ? "..." : statsData.clearedVolume.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                 </p>
@@ -866,8 +866,9 @@ export default function Dashboard() {
                         
                         {/* Content */}
                         <div className="relative z-10 p-6 flex flex-col h-full min-h-[165px]">
-                          {/* Top Right - Monaris Logo */}
-                          <div className="flex items-start justify-end">
+                          {/* Top - Cashflow-Backed left, Monaris Logo right */}
+                          <div className="flex items-start justify-between">
+                            <p className="text-[#1a1a1a]/70 text-[11px] font-semibold uppercase tracking-wider">Cashflow-Backed</p>
                             <img src="/monar.png" alt="Monaris" className="w-12 h-12 rounded-xl shadow-lg" />
                           </div>
                         </div>
@@ -880,7 +881,6 @@ export default function Dashboard() {
                               <p className="text-white/60 text-xs mb-0.5">02/30</p>
                               <p className="text-white font-semibold text-base tracking-wide">MONARIS LLC</p>
                               <p className="text-white/40 text-[10px] mt-2">Card connected by <span className="text-[#c8ff00]">avici</span> ending •••• 8009</p>
-                              <p className="text-[#c8ff00]/70 text-[9px] mt-1">Cashflow credited</p>
                             </div>
                             
                             {/* Right - Chip Icon */}
