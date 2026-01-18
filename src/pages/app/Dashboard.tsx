@@ -733,10 +733,9 @@ export default function Dashboard() {
               {/* Credit Card - Monaris Split Design with Flip Animation */}
               <div className="flex flex-col items-center w-full">
                 <div 
-                  className="w-full max-w-[460px] relative group cursor-pointer"
+                  className="w-full max-w-[460px] relative group cursor-pointer select-none"
                   style={{ perspective: '1000px' }}
-                  onMouseEnter={() => setIsCardFlipped(true)}
-                  onMouseLeave={() => setIsCardFlipped(false)}
+                  onClick={() => setIsCardFlipped(!isCardFlipped)}
                 >
                   {/* Glow effect for pop-up - White/neutral */}
                   <div className="absolute -inset-3 bg-gradient-to-r from-white/30 via-white/15 to-white/30 rounded-[32px] blur-2xl opacity-60 group-hover:opacity-90 transition-opacity duration-300" />
@@ -893,7 +892,7 @@ export default function Dashboard() {
                           
                           {/* Bottom */}
                           <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
-                            <p className="text-white/30 text-[10px]">Hover to flip back</p>
+                            <p className="text-white/30 text-[10px]">Tap to flip back</p>
                             <p className="text-[#c8ff00]/70 text-[10px] font-medium">Powered by Monaris</p>
                           </div>
                         </div>
