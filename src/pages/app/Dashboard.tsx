@@ -302,7 +302,7 @@ export default function Dashboard() {
       {/* Main Dashboard Container - Figma Style */}
       <motion.div 
         variants={item}
-        className="bg-white dark:bg-[#1a1a2e] rounded-[32px] shadow-[0px_24px_32px_0px_rgba(0,0,0,0.04),0px_16px_24px_0px_rgba(0,0,0,0.04),0px_4px_8px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-8"
+        className="bg-white dark:bg-[#1a1a2e] rounded-[20px] sm:rounded-[32px] shadow-[0px_24px_32px_0px_rgba(0,0,0,0.04),0px_16px_24px_0px_rgba(0,0,0,0.04),0px_4px_8px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-3 sm:p-8 mx-1 sm:mx-0"
       >
         {/* Page Header */}
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
@@ -358,10 +358,10 @@ export default function Dashboard() {
         </div>
 
         {/* Cards Section - Balance & Stats */}
-        <div className="grid lg:grid-cols-12 gap-3 sm:gap-6 mb-6">
+        <div className="grid lg:grid-cols-12 gap-2 sm:gap-6 mb-4 sm:mb-6">
           {/* Left: Balance Card */}
           <div className="lg:col-span-5">
-            <div className="bg-white dark:bg-gray-800 rounded-[20px] sm:rounded-[28px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-3 sm:p-6 h-full">
+            <div className="bg-white dark:bg-gray-800 rounded-[16px] sm:rounded-[28px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-2.5 sm:p-6 h-full">
               <div className="flex items-center justify-between mb-6">
 <h2 className="text-xl font-bold text-[#1a1a1a] dark:text-white">Balance Overview</h2>
                 <div className="flex gap-2">
@@ -683,7 +683,7 @@ export default function Dashboard() {
             
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
               {/* Outstanding Card */}
-              <div className="bg-white dark:bg-gray-800 rounded-[20px] sm:rounded-[28px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-3 sm:p-5">
+              <div className="bg-white dark:bg-gray-800 rounded-[16px] sm:rounded-[28px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-2.5 sm:p-5">
                 <p className="text-2xl font-semibold text-[#1a1a1a] dark:text-white">
                   ${isLoading ? "..." : statsData.outstanding.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </p>
@@ -695,7 +695,7 @@ export default function Dashboard() {
               </div>
 
               {/* Advance Eligible Card */}
-              <div className="bg-white dark:bg-gray-800 rounded-[20px] sm:rounded-[28px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-3 sm:p-5">
+              <div className="bg-white dark:bg-gray-800 rounded-[16px] sm:rounded-[28px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-2.5 sm:p-5">
                 <p className="text-2xl font-semibold text-[#1a1a1a] dark:text-white">
                   ${isLoading ? "..." : statsData.advanceEligible.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </p>
@@ -707,7 +707,7 @@ export default function Dashboard() {
               </div>
 
               {/* Reputation Score Card */}
-              <div className="bg-white dark:bg-gray-800 rounded-[20px] sm:rounded-[28px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-3 sm:p-5">
+              <div className="bg-white dark:bg-gray-800 rounded-[16px] sm:rounded-[28px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-2.5 sm:p-5">
                 <p className="text-2xl font-semibold text-[#1a1a1a] dark:text-white">
                   {isLoading ? "..." : displayScore}
                 </p>
@@ -842,11 +842,11 @@ export default function Dashboard() {
         </div>
 
         {/* Bottom Section: Transactions & Statistics */}
-        <div className="grid lg:grid-cols-12 gap-3 sm:gap-6">
+        <div className="grid lg:grid-cols-12 gap-2 sm:gap-6">
           {/* Left Column: Transactions */}
-          <div className="lg:col-span-6 space-y-3 sm:space-y-6">
+          <div className="lg:col-span-6 space-y-2 sm:space-y-6">
             {/* Transaction History */}
-            <div className="bg-white dark:bg-gray-800 rounded-[20px] sm:rounded-[19px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-3 sm:p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-[16px] sm:rounded-[19px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-2.5 sm:p-6">
               <div className="flex items-center justify-between mb-5">
                 <h2 className="text-xl font-bold text-[#1a1a1a] dark:text-white">Transaction history</h2>
                 <Link 
@@ -913,9 +913,9 @@ export default function Dashboard() {
           </div>
 
           {/* Right Column: Statistics & CTA */}
-          <div className="lg:col-span-6 space-y-3 sm:space-y-4">
+          <div className="lg:col-span-6 space-y-2 sm:space-y-4">
             {/* Outcome Statistics */}
-            <div className="bg-white dark:bg-gray-800 rounded-[20px] sm:rounded-[19px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-3 sm:p-5">
+            <div className="bg-white dark:bg-gray-800 rounded-[16px] sm:rounded-[19px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-2.5 sm:p-5">
               <h2 className="text-xl font-bold text-[#1a1a1a] dark:text-white mb-4">Reputation Breakdown</h2>
               
               {/* Progress Item: Invoices Cleared */}
@@ -983,7 +983,7 @@ export default function Dashboard() {
             </div>
 
             {/* Get Advance CTA Card */}
-            <div className="bg-gradient-to-b from-[#d4f542] to-[#c8ff00] rounded-[20px] sm:rounded-[19px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06)] p-3 sm:p-6 text-[#1a1a1a] relative overflow-hidden">
+            <div className="bg-gradient-to-b from-[#d4f542] to-[#c8ff00] rounded-[16px] sm:rounded-[19px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06)] p-2.5 sm:p-6 text-[#1a1a1a] relative overflow-hidden">
               {/* Decorative elements */}
               <div className="absolute top-0 left-0 w-16 h-16 bg-black/5 rounded-full -translate-x-1/2 -translate-y-1/2" />
               <div className="absolute bottom-0 right-0 w-20 h-20 bg-black/5 rounded-full translate-x-1/3 translate-y-1/3" />
