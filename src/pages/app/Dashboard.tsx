@@ -865,20 +865,13 @@ export default function Dashboard() {
                         }} />
                         
                         {/* Content */}
-                        <div className="relative z-10 p-6 flex flex-col h-full min-h-[260px]">
+                        <div className="relative z-10 p-6 flex flex-col h-full min-h-[165px]">
                           {/* Top - Mastercard-style circles */}
                           <div className="flex items-start justify-between">
                             <div className="flex items-center -space-x-3">
                               <div className="w-10 h-10 rounded-full bg-[#f5e6c8]/60" />
                               <div className="w-10 h-10 rounded-full bg-[#e8d9b8]/40" />
                             </div>
-                          </div>
-                          
-                          {/* Card Number Display */}
-                          <div className="flex-1 flex items-end pb-4">
-                            <p className="text-white font-light text-3xl tracking-[0.2em] drop-shadow-lg" style={{ fontFamily: 'system-ui' }}>
-                              {address ? `${address.slice(2, 6)} ${address.slice(6, 10)} ${address.slice(10, 14)} ${address.slice(-4)}`.toUpperCase() : '0000 0000 0000 0000'}
-                            </p>
                           </div>
                         </div>
                         
