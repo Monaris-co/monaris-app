@@ -1,13 +1,15 @@
-// Contract ABIs - Extracted from Hardhat artifacts
+// Contract ABIs - Inlined from Hardhat artifacts for production builds
 
-import InvoiceRegistryArtifact from '../../artifacts/contracts/InvoiceRegistry.sol/InvoiceRegistry.json';
-import DemoUSDCArtifact from '../../artifacts/contracts/DemoUSDC.sol/DemoUSDC.json';
-import USMTPlusArtifact from '../../artifacts/contracts/USMTPlus.sol/USMTPlus.json';
-import VaultArtifact from '../../artifacts/contracts/Vault.sol/Vault.json';
-import StakingArtifact from '../../artifacts/contracts/Staking.sol/Staking.json';
-import AdvanceEngineArtifact from '../../artifacts/contracts/AdvanceEngine.sol/AdvanceEngine.json';
-import SettlementRouterArtifact from '../../artifacts/contracts/SettlementRouter.sol/SettlementRouter.json';
-import ReputationArtifact from '../../artifacts/contracts/Reputation.sol/Reputation.json';
+import {
+  InvoiceRegistryABI as _InvoiceRegistryABI,
+  DemoUSDCABI as _DemoUSDCABI,
+  USMTPlusABI as _USMTPlusABI,
+  VaultABI as _VaultABI,
+  StakingABI as _StakingABI,
+  AdvanceEngineABI as _AdvanceEngineABI,
+  SettlementRouterABI as _SettlementRouterABI,
+  ReputationABI as _ReputationABI,
+} from './contract-abis';
 
 // Standard ERC20 ABI for real USDC token (used on mainnets)
 // Using modern ABI format compatible with wagmi/viem
@@ -90,16 +92,15 @@ export const ERC20ABI = [
   },
 ] as const;
 
-export const InvoiceRegistryABI = InvoiceRegistryArtifact.abi;
-export const DemoUSDCABI = DemoUSDCArtifact.abi;
-// Use ERC20ABI for mainnet USDC, DemoUSDCABI for testnet DemoUSDC
+export const InvoiceRegistryABI = _InvoiceRegistryABI;
+export const DemoUSDCABI = _DemoUSDCABI;
 export const USDCABI = ERC20ABI;
-export const USMTPlusABI = USMTPlusArtifact.abi;
-export const VaultABI = VaultArtifact.abi;
-export const StakingABI = StakingArtifact.abi;
-export const AdvanceEngineABI = AdvanceEngineArtifact.abi;
-export const SettlementRouterABI = SettlementRouterArtifact.abi;
-export const ReputationABI = ReputationArtifact.abi;
+export const USMTPlusABI = _USMTPlusABI;
+export const VaultABI = _VaultABI;
+export const StakingABI = _StakingABI;
+export const AdvanceEngineABI = _AdvanceEngineABI;
+export const SettlementRouterABI = _SettlementRouterABI;
+export const ReputationABI = _ReputationABI;
 
 /**
  * Get the appropriate USDC ABI based on chain ID
