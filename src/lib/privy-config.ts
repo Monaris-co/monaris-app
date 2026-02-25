@@ -172,7 +172,7 @@ export const privyConfig = {
       accentColor: '#22c55e', // Green theme to match Monaris branding
       logo: '/monar.png', // Monaris logo
     },
-    loginMethods: ['email'], // Email-only login
+    loginMethods: ['email', 'google'],
     embeddedWallets: {
       // Create embedded wallet on email/social login
       ethereum: {
