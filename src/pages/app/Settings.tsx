@@ -10,7 +10,13 @@ import {
   Copy,
   Coins,
   AlertTriangle,
-  Loader2
+  Loader2,
+  BookUser,
+  Plus,
+  Pencil,
+  Trash2,
+  X,
+  Check
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,6 +28,7 @@ import { useChainId, useReadContract, useWaitForTransactionReceipt } from "wagmi
 import { useSendTransaction, useWallets } from "@privy-io/react-auth"
 import { usePrivyAccount } from "@/hooks/usePrivyAccount"
 import { useChainAddresses } from "@/hooks/useChainAddresses"
+import { useContacts, Contact } from "@/hooks/useContacts"
 import { DemoUSDCABI } from "@/lib/abis"
 import { parseUnits, formatUnits, encodeFunctionData } from "viem"
 import { isAddress } from "viem"
@@ -140,6 +147,9 @@ export default function Settings() {
           </div>
         </div>
       </div>
+
+      {/* Contacts / Address Book */}
+      <ContactsSection />
 
       {/* Notifications */}
       <div className="rounded-[20px] border border-[#f1f1f1] dark:border-gray-700 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-[0px_4px_16px_0px_rgba(0,0,0,0.06)]">
@@ -465,6 +475,189 @@ function DemoSetupPanel({
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function ContactsSection() {
+  const { contacts, isLoading, addContact, updateContact, deleteContact } = useContacts()
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [form, setForm] = useState({ name: '', address: '', email: '' })
+
+  const resetForm = () => {
+    setForm({ name: '', address: '', email: '' })
+    setShowAddForm(false)
+    setEditingId(null)
+  }
+
+  const handleAdd = async () => {
+    if (!form.name.trim()) {
+      toast.error('Name is required')
+      return
+    }
+    if (!form.address.trim() || !isAddress(form.address.trim())) {
+      toast.error('Valid wallet address is required')
+      return
+    }
+    const result = await addContact(form.address.trim(), form.name.trim(), form.email.trim() || undefined)
+    if (result) {
+      toast.success('Contact saved')
+      resetForm()
+    } else {
+      toast.error('Failed to save contact')
+    }
+  }
+
+  const handleUpdate = async (id: string) => {
+    if (!form.name.trim()) {
+      toast.error('Name is required')
+      return
+    }
+    const ok = await updateContact(id, {
+      contact_name: form.name.trim(),
+      contact_email: form.email.trim() || undefined,
+    })
+    if (ok) {
+      toast.success('Contact updated')
+      resetForm()
+    } else {
+      toast.error('Failed to update contact')
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    const ok = await deleteContact(id)
+    if (ok) toast.success('Contact deleted')
+    else toast.error('Failed to delete contact')
+  }
+
+  const startEdit = (c: Contact) => {
+    setEditingId(c.id)
+    setForm({ name: c.contact_name, address: c.contact_address, email: c.contact_email || '' })
+    setShowAddForm(false)
+  }
+
+  return (
+    <div className="rounded-[20px] border border-[#f1f1f1] dark:border-gray-700 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-[0px_4px_16px_0px_rgba(0,0,0,0.06)]">
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl bg-[#c8ff00]/10 p-2.5">
+            <BookUser className="h-5 w-5 text-[#7cb518]" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-[#1a1a1a] dark:text-white">Address Book</h2>
+            <p className="text-xs text-[#aeaeae]">Save wallet addresses with names for quick invoicing</p>
+          </div>
+        </div>
+        {!showAddForm && !editingId && (
+          <Button
+            size="sm"
+            onClick={() => { setShowAddForm(true); setForm({ name: '', address: '', email: '' }) }}
+            className="bg-[#c8ff00] hover:bg-[#b8ef00] text-[#1a1a1a] font-semibold rounded-xl"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Add
+          </Button>
+        )}
+      </div>
+
+      {/* Add / Edit Form */}
+      {(showAddForm || editingId) && (
+        <div className="mb-4 space-y-3 rounded-xl bg-[#f8f8f8] dark:bg-gray-800 p-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="text-[#696969] dark:text-gray-400 text-xs">Name</Label>
+              <Input
+                placeholder="e.g. Alice"
+                value={form.name}
+                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                className="rounded-xl border-[#e8e8e8] dark:border-gray-600 focus:border-[#c8ff00] focus:ring-[#c8ff00]/20 text-sm"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[#696969] dark:text-gray-400 text-xs">Email (optional)</Label>
+              <Input
+                placeholder="alice@example.com"
+                value={form.email}
+                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                className="rounded-xl border-[#e8e8e8] dark:border-gray-600 focus:border-[#c8ff00] focus:ring-[#c8ff00]/20 text-sm"
+              />
+            </div>
+          </div>
+          {showAddForm && (
+            <div className="space-y-1.5">
+              <Label className="text-[#696969] dark:text-gray-400 text-xs">Wallet Address</Label>
+              <Input
+                placeholder="0x..."
+                value={form.address}
+                onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
+                className="rounded-xl border-[#e8e8e8] dark:border-gray-600 focus:border-[#c8ff00] focus:ring-[#c8ff00]/20 text-sm font-mono"
+              />
+            </div>
+          )}
+          <div className="flex gap-2 pt-1">
+            <Button
+              size="sm"
+              onClick={() => editingId ? handleUpdate(editingId) : handleAdd()}
+              className="bg-[#c8ff00] hover:bg-[#b8ef00] text-[#1a1a1a] font-semibold rounded-xl"
+            >
+              <Check className="h-4 w-4 mr-1" />
+              {editingId ? 'Update' : 'Save'}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={resetForm} className="rounded-xl">
+              <X className="h-4 w-4 mr-1" />
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Contact List */}
+      {isLoading ? (
+        <div className="flex justify-center py-6">
+          <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+        </div>
+      ) : contacts.length === 0 ? (
+        <div className="text-center py-6 text-sm text-[#aeaeae]">
+          No contacts saved yet
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {contacts.map(c => (
+            <div
+              key={c.id}
+              className="flex items-center justify-between rounded-xl bg-[#f8f8f8] dark:bg-gray-800 px-4 py-3"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-[#1a1a1a] dark:text-white truncate">{c.contact_name}</p>
+                <p className="text-xs font-mono text-[#aeaeae] truncate">{c.contact_address}</p>
+                {c.contact_email && (
+                  <p className="text-xs text-[#aeaeae] truncate">{c.contact_email}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 hover:bg-[#c8ff00]/10"
+                  onClick={() => startEdit(c)}
+                >
+                  <Pencil className="h-3.5 w-3.5 text-[#696969]" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  onClick={() => handleDelete(c.id)}
+                >
+                  <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

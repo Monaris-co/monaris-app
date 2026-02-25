@@ -2,20 +2,19 @@
   "network": "arbitrumMainnet",
   "chainId": "42161",
   "chainName": "Arbitrum One",
-  "deployer": "0xEbF48F51c719b89fB5BE22B3F386ebC525C91193",
+  "deployer": "0x6Ad1DccEC7B46db9c4b4A8f9fb52235c7e7aE0eB",
   "contracts": {
     "DemoUSDC": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
-    "InvoiceNFT": "0x300718D45Ac08894839261d81Adef42797B87854",
-    "InvoiceRegistry": "0x1a9751dE68C4B33463682BD3f9a54e6eDBc04F35",
-    "USMTPlus": "0x990cF8A72974739E3F918dA33793A8b639889520",
-    "Vault": "0xAc9B0123000328Bb3780e3138815C6f4A12160Be",
-    "Staking": "0x2099329241882Ad465e4B8455FC536f86df9Fff5",
-    "AdvanceEngine": "0x7Ad0CcE4cCa1A1bdF86bfFfaA0befb2c7B4118eC",
-    "Reputation": "0x43Ea89114A06f9A39dCbABa25F362b6FBf07260c",
-    "SettlementRouter": "0xc49F8d05751F5C12EC29b5fD91fb009fA52cd475",
-    "Treasury": "0xEbF48F51c719b89fB5BE22B3F386ebC525C91193",
+    "InvoiceNFT": "0x14F3b6cB45A8bfA56C167Ca4bBe01B54687Ddc31",
+    "InvoiceRegistry": "0x7a8060E483aecb1795224e7B56bB114bb4e23eB2",
+    "USMTPlus": "0x25082339C9A62B3A2d6B4F2b4455988027d05fe1",
+    "Vault": "0x61Cc69Ee831755F4EE866Af7f269322EedC3d537",
+    "Staking": "0x849298c38481a9d18E56fa6Cf2E3fFD3a3d7493e",
+    "AdvanceEngine": "0x0D8DC5f327bDD5043F0B10D08f025eAc4F82A08E",
+    "Reputation": "0x6baD5b67FA6ac72D2921D7171118A423a6fA8C73",
+    "SettlementRouter": "0x90379cDd2763123e69c9d021dA7A97f83B84336d",
+    "Treasury": "0x6Ad1DccEC7B46db9c4b4A8f9fb52235c7e7aE0eB",
     "ProtocolFeeBps": "50"
   },
-  "deployedAt": "2026-01-10T06:17:31.872Z",
-  "lastUpdated": "2026-01-10T06:17:31.872Z"
+  "deployedAt": "2026-02-25T11:30:49.982Z"
 }

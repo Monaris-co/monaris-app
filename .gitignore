@@ -36,6 +36,10 @@ coverage.json
 # Contract addresses
 contracts.json
 
+# Hardhat artifacts (auto-generated)
+artifacts/
+cache/
+
 # Environment variables - NEVER commit secrets
 .env
 .env.*

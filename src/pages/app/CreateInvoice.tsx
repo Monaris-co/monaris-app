@@ -33,6 +33,8 @@ import { usePrivy, useWallets } from "@privy-io/react-auth"
 import { getExplorerUrl } from "@/lib/chain-utils"
 import { isAddress, decodeEventLog } from "viem"
 import { InvoiceRegistryABI } from "@/lib/abis"
+import { supabase, isSupabaseConfigured } from "@/lib/supabase"
+import { useContacts } from "@/hooks/useContacts"
 
 interface LineItem {
   id: string
@@ -61,6 +63,9 @@ export default function CreateInvoice() {
   const { authenticated, ready, login } = usePrivy()
   const { wallets } = useWallets()
   const { createInvoice, isPending, isConfirming, isSuccess, error, hash, receipt } = useCreateInvoice()
+  const { contacts, findContact, addContact } = useContacts()
+  const [contactSuggestions, setContactSuggestions] = useState<typeof contacts>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
   
   // Find embedded wallet
   const embeddedWallet = wallets.find(w => {
@@ -133,7 +138,8 @@ export default function CreateInvoice() {
 
   // Show success toast and modal when transaction is confirmed and store buyer metadata
   useEffect(() => {
-    if (hash && isSuccess && receipt && successToastShown.current !== hash) {
+    if (!(hash && isSuccess && receipt && successToastShown.current !== hash)) return
+    const persist = async () => {
       successToastShown.current = hash
       setIsSubmitting(false)
       setSuccessHash(hash)
@@ -171,38 +177,61 @@ export default function CreateInvoice() {
         console.error('Error decoding invoice ID from receipt:', e)
       }
       
-      // Store full invoice metadata in localStorage keyed by invoice ID
-      // This includes line items, descriptions, memo, and buyer info
-      if (invoiceId) {
-        const invoiceMetadata = {
-          buyerName: formData.buyerName || '',
-          buyerEmail: formData.buyerEmail || '',
-          memo: formData.memo || '',
-          lineItems: lineItems.map(item => ({
-            description: item.description,
-            quantity: item.quantity,
-            rate: item.rate,
-          })),
+      // Store invoice metadata in localStorage as fallback
+      const invoiceMetadata = {
+        buyerName: formData.buyerName || '',
+        buyerEmail: formData.buyerEmail || '',
+        memo: formData.memo || '',
+        lineItems: lineItems.map(item => ({
+          description: item.description,
+          quantity: item.quantity,
+          rate: item.rate,
+        })),
+      }
+      const storageKey = invoiceId
+        ? `invoice_metadata_${invoiceId.toString()}`
+        : `invoice_metadata_hash_${hash}`
+      localStorage.setItem(storageKey, JSON.stringify(invoiceMetadata))
+
+      // Persist to Supabase and create buyer notification
+      if (isSupabaseConfigured()) {
+        const dueDateTs = formData.dueDate ? new Date(formData.dueDate).toISOString() : new Date().toISOString()
+        const { data: inv, error: invErr } = await supabase
+          .from('invoices')
+          .insert({
+            chain_invoice_id: invoiceId ? Number(invoiceId) : 0,
+            chain_id: chainId,
+            seller_address: address?.toLowerCase() || '',
+            buyer_address: formData.buyerAddress.toLowerCase(),
+            amount: totalAmount,
+            due_date: dueDateTs,
+            status: 'issued',
+            tx_hash: hash,
+            buyer_name: formData.buyerName || null,
+            buyer_email: formData.buyerEmail || null,
+            memo: formData.memo || null,
+            line_items: invoiceMetadata.lineItems,
+          })
+          .select('id')
+          .single()
+
+        if (invErr) {
+          console.error('Supabase invoice insert error:', invErr)
+        } else if (inv) {
+          await supabase.from('notifications').insert({
+            recipient_address: formData.buyerAddress.toLowerCase(),
+            type: 'invoice_created',
+            title: 'New Invoice',
+            message: `You have a new invoice for $${totalAmount.toFixed(2)} due ${new Date(dueDateTs).toLocaleDateString()}`,
+            invoice_id: inv.id,
+            chain_invoice_id: invoiceId ? Number(invoiceId) : null,
+            chain_id: chainId,
+          })
         }
-        localStorage.setItem(`invoice_metadata_${invoiceId.toString()}`, JSON.stringify(invoiceMetadata))
-        console.log('📝 Stored invoice metadata:', invoiceMetadata)
-      } else if (hash) {
-        // Fallback: store with transaction hash if invoice ID not found
-        const invoiceMetadata = {
-          buyerName: formData.buyerName || '',
-          buyerEmail: formData.buyerEmail || '',
-          memo: formData.memo || '',
-          lineItems: lineItems.map(item => ({
-            description: item.description,
-            quantity: item.quantity,
-            rate: item.rate,
-          })),
-        }
-        localStorage.setItem(`invoice_metadata_hash_${hash}`, JSON.stringify(invoiceMetadata))
-        console.log('📝 Stored invoice metadata (by hash):', invoiceMetadata)
       }
     }
-  }, [hash, isSuccess, receipt, formData.buyerName, formData.buyerEmail])
+    persist().catch(console.error)
+  }, [hash, isSuccess, receipt, formData.buyerName, formData.buyerEmail, formData.buyerAddress, formData.dueDate, formData.memo, address, chainId, lineItems, totalAmount])
 
 
   // Watch for errors - only show if transaction actually failed (not if it succeeded)
@@ -459,19 +488,65 @@ export default function CreateInvoice() {
         <div className="rounded-[20px] border border-[#f1f1f1] dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04)]">
           <h2 className="mb-4 text-lg font-semibold text-[#1a1a1a] dark:text-white">Buyer Details</h2>
           <div className="space-y-4">
-            <div className="space-y-2">
+            <div className="space-y-2 relative">
               <Label htmlFor="buyerAddress">
                 <User className="mr-2 inline h-4 w-4" />
                 Buyer Wallet Address <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="buyerAddress"
-                placeholder="0x..."
+                placeholder="0x... or search contacts"
                 value={formData.buyerAddress}
-                onChange={(e) => setFormData({ ...formData, buyerAddress: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setFormData({ ...formData, buyerAddress: val })
+                  if (val.length >= 2 && contacts.length > 0) {
+                    const matches = findContact(val)
+                    setContactSuggestions(matches)
+                    setShowSuggestions(matches.length > 0)
+                  } else {
+                    setShowSuggestions(false)
+                  }
+                }}
+                onFocus={() => {
+                  if (formData.buyerAddress.length >= 2) {
+                    const matches = findContact(formData.buyerAddress)
+                    setContactSuggestions(matches)
+                    setShowSuggestions(matches.length > 0)
+                  } else if (formData.buyerAddress.length === 0 && contacts.length > 0) {
+                    setContactSuggestions(contacts.slice(0, 5))
+                    setShowSuggestions(true)
+                  }
+                }}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                 required
                 className="font-mono"
+                autoComplete="off"
               />
+              {showSuggestions && contactSuggestions.length > 0 && (
+                <div className="absolute z-50 left-0 right-0 top-full mt-1 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg overflow-hidden">
+                  {contactSuggestions.map(c => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      className="w-full text-left px-4 py-2.5 hover:bg-[#c8ff00]/10 transition-colors border-b border-gray-50 dark:border-gray-800 last:border-0"
+                      onMouseDown={(e) => {
+                        e.preventDefault()
+                        setFormData({
+                          ...formData,
+                          buyerAddress: c.contact_address,
+                          buyerName: c.contact_name,
+                          buyerEmail: c.contact_email || formData.buyerEmail,
+                        })
+                        setShowSuggestions(false)
+                      }}
+                    >
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{c.contact_name}</p>
+                      <p className="text-xs font-mono text-gray-500 dark:text-gray-400">{c.contact_address}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">
                 The Ethereum address that will receive and pay the invoice
               </p>
@@ -753,6 +828,23 @@ export default function CreateInvoice() {
                 >
                   View Invoices
                 </Button>
+                {formData.buyerAddress && formData.buyerName && isSupabaseConfigured() && (
+                  <Button
+                    variant="ghost"
+                    className="w-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
+                    onClick={async () => {
+                      const result = await addContact(
+                        formData.buyerAddress,
+                        formData.buyerName,
+                        formData.buyerEmail || undefined
+                      )
+                      if (result) toast.success(`Saved ${formData.buyerName} to contacts`)
+                      else toast.error('Failed to save contact')
+                    }}
+                  >
+                    Save Buyer as Contact
+                  </Button>
+                )}
               </div>
             </div>
           )}

@@ -1,4 +1,5 @@
-import { Bell, Mail, ChevronDown, Wallet, Copy, LogOut, ExternalLink, DollarSign, Loader2, Menu, User, Globe } from "lucide-react"
+import { Mail, ChevronDown, Wallet, Copy, LogOut, ExternalLink, DollarSign, Loader2, Menu, User, Globe } from "lucide-react"
+import { NotificationBell } from "@/components/NotificationBell"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -198,10 +199,9 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
           <Mail className="h-5 w-5" />
         </Button>
 
-        <Button variant="ghost" size="icon" className="relative text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hidden sm:flex">
-          <Bell className="h-5 w-5" />
-          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
-        </Button>
+        <div className="hidden sm:flex">
+          <NotificationBell />
+        </div>
 
         {/* User Profile Dropdown */}
         {isConnected && walletAddress ? (

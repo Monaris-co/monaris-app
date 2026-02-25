@@ -139,6 +139,63 @@ contract SettlementRouter is AccessControl {
     }
     
     /**
+     * @notice Pay an invoice on behalf of the buyer — anyone can call this
+     * @param invoiceId Invoice ID to pay
+     */
+    function payInvoiceOnBehalf(uint256 invoiceId) external {
+        IInvoiceRegistry.Invoice memory invoice = invoiceRegistry.getInvoice(invoiceId);
+        require(invoice.invoiceId != 0, "Invoice not found");
+        require(invoice.status != IInvoiceRegistry.InvoiceStatus.Cleared, "Already cleared");
+
+        // Pull payment from the caller (not necessarily the buyer)
+        token.safeTransferFrom(msg.sender, address(this), invoice.amount);
+
+        // Update invoice status to Paid
+        invoiceRegistry.updateInvoiceStatus(invoiceId, IInvoiceRegistry.InvoiceStatus.Paid);
+
+        uint256 feeAmount = (invoice.amount * protocolFeeBps) / BASIS_POINTS;
+
+        uint256 repaymentAmount = 0;
+        try advanceEngine.getRepaymentAmount(invoiceId) returns (uint256 amount) {
+            repaymentAmount = amount;
+        } catch {}
+
+        uint256 sellerAmount = invoice.amount - feeAmount - repaymentAmount;
+        require(
+            feeAmount + repaymentAmount + sellerAmount == invoice.amount,
+            "SETTL.ement math mismatch"
+        );
+
+        if (feeAmount > 0) {
+            token.safeTransfer(treasury, feeAmount);
+        }
+
+        if (repaymentAmount > 0) {
+            token.approve(address(vault), repaymentAmount);
+            vault.repay(repaymentAmount);
+            token.approve(address(vault), 0);
+            advanceEngine.markRepaid(invoiceId);
+        }
+
+        if (sellerAmount > 0) {
+            token.safeTransfer(invoice.seller, sellerAmount);
+        }
+
+        invoiceRegistry.markCleared(invoiceId, sellerAmount, feeAmount, repaymentAmount);
+        reputation.updateReputation(invoice.seller, invoice.amount);
+
+        emit InvoiceSettled(
+            invoiceId,
+            msg.sender,
+            invoice.seller,
+            invoice.amount,
+            feeAmount,
+            repaymentAmount,
+            sellerAmount
+        );
+    }
+
+    /**
      * @notice Set protocol fee (admin only)
      */
     function setProtocolFee(uint256 newFeeBps) external onlyRole(DEFAULT_ADMIN_ROLE) {

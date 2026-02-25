@@ -1,7 +1,3 @@
-// Separate Privy Provider for Payment page (/pay)
-// This uses a different Privy app ID for buyer payments
-// Supports: Email login, WalletConnect, MetaMask, Embedded wallets, Gas sponsorship
-
 import { PrivyProvider } from '@privy-io/react-auth';
 import { WagmiProvider as PrivyWagmiProvider, createConfig } from '@privy-io/wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -33,10 +29,10 @@ const arbitrumMainnet = {
   },
   rpcUrls: {
     default: {
-      http: ['https://arb-mainnet.g.alchemy.com/v2/Ttr4Yy-wi3x955XdNdqAFgPopLH47Owl'],
+      http: ['https://arbitrum-one-rpc.publicnode.com'],
     },
     public: {
-      http: ['https://arb-mainnet.g.alchemy.com/v2/Ttr4Yy-wi3x955XdNdqAFgPopLH47Owl'],
+      http: ['https://arbitrum-one-rpc.publicnode.com'],
     },
   },
   blockExplorers: {
@@ -53,7 +49,7 @@ const arbitrumMainnet = {
 const paymentWagmiConfig = createConfig({
   chains: [arbitrum],
   transports: {
-    [arbitrum.id]: http('https://arb-mainnet.g.alchemy.com/v2/Ttr4Yy-wi3x955XdNdqAFgPopLH47Owl'),
+    [arbitrum.id]: http('https://arbitrum-one-rpc.publicnode.com'),
   },
 });
 

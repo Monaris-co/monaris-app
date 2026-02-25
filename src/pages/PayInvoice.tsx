@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useInvoice } from "@/hooks/useInvoice"
 import { useInvoiceNFT } from "@/hooks/useInvoiceNFT"
-import { useReadContract, useWaitForTransactionReceipt, usePublicClient, useChainId, useSwitchChain } from "wagmi"
+import { useReadContract, useWaitForTransactionReceipt, usePublicClient, useChainId, useSwitchChain, useAccount as useWagmiAccount, useWalletClient, useConnect, useDisconnect } from "wagmi"
 import { useSendTransaction, useWallets, usePrivy } from "@privy-io/react-auth"
 import { usePrivyAccount } from "@/hooks/usePrivyAccount"
 import { useChainAddresses } from "@/hooks/useChainAddresses"
@@ -34,6 +34,7 @@ import { toast } from "sonner"
 import { Link } from "react-router-dom"
 import { getExplorerUrl, getExplorerAddressUrl, getPaymentLink, CHAIN_IDS } from "@/lib/chain-utils"
 import { useSearchParams } from "react-router-dom"
+import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 
 const STATUS_LABELS = {
   0: "Issued",
@@ -48,7 +49,15 @@ export default function PayInvoice() {
   const params = useParams<{ invoiceId?: string; chainId?: string }>()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const { address } = usePrivyAccount()
+  const privyAccount = usePrivyAccount()
+  const wagmiAccount = useWagmiAccount()
+  const { data: walletClient } = useWalletClient()
+  const [manuallyDisconnected, setManuallyDisconnected] = useState(() => 
+    sessionStorage.getItem('pay_disconnected') === 'true'
+  )
+  
+  // Use wagmi address as fallback when Privy auth fails but wallet is connected
+  const address = manuallyDisconnected ? undefined : (privyAccount.address || wagmiAccount.address)
   
   // Extract invoiceId and chainId from URL params
   // Support both formats: /pay/:chainId/:invoiceId and /pay/:invoiceId
@@ -74,14 +83,59 @@ export default function PayInvoice() {
   const queryChainId = searchParams.get('chainId')
   const targetChainId = urlChainIdParam || queryChainId ? parseInt(urlChainIdParam || queryChainId || '0', 10) : null
   
+  // Fetch invoice metadata from Supabase (persisted across devices)
+  const [supabaseMetadata, setSupabaseMetadata] = useState<{
+    buyer_name?: string; buyer_email?: string; memo?: string; line_items?: any[]
+  } | null>(null)
+  useEffect(() => {
+    if (!invoiceId || !isSupabaseConfigured()) return
+    const cid = targetChainId || 42161
+    supabase
+      .from('invoices')
+      .select('buyer_name, buyer_email, memo, line_items')
+      .eq('chain_invoice_id', Number(invoiceId))
+      .eq('chain_id', cid)
+      .maybeSingle()
+      .then(({ data }) => { if (data) setSupabaseMetadata(data) })
+  }, [invoiceId, targetChainId])
+
   const { invoice, isLoading: isLoadingInvoice } = useInvoice(invoiceId)
   const { tokenId, nftAddress, isLoading: isLoadingNFT } = useInvoiceNFT(invoiceId ? BigInt(invoiceId) : undefined)
   const { sendTransaction } = useSendTransaction()
   const { wallets } = useWallets()
   const { login, logout, ready, authenticated } = usePrivy()
+  const { connect, connectors } = useConnect()
+  const { disconnect } = useDisconnect()
+
+  const nukeWalletConnection = () => {
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('wagmi') || key.startsWith('privy') || key.startsWith('wc@') || key.startsWith('walletconnect')) {
+        localStorage.removeItem(key)
+      }
+    })
+    sessionStorage.setItem('pay_disconnected', 'true')
+    disconnect()
+    if (authenticated) logout().catch(() => {})
+    // Revoke MetaMask permissions so next connect shows account picker
+    const eth = (window as any).ethereum
+    if (eth?.request) {
+      eth.request({ method: 'wallet_revokePermissions', params: [{ eth_accounts: {} }] }).catch(() => {})
+    }
+    window.location.reload()
+  }
+
+  const connectWallet = () => {
+    sessionStorage.removeItem('pay_disconnected')
+    setManuallyDisconnected(false)
+    login()
+    toast.info("Check your wallet extension", {
+      description: "If you don't see a popup, click the MetaMask icon in your browser toolbar to sign.",
+      duration: 8000,
+    })
+  }
   
-  // Check if actually logged in - use address or wallets as the source of truth
-  const isActuallyLoggedIn = authenticated && (address || wallets.length > 0)
+  // Check if actually logged in - Privy auth OR wagmi wallet connected (but not if user disconnected)
+  const isActuallyLoggedIn = !manuallyDisconnected && ((authenticated && (address || wallets.length > 0)) || wagmiAccount.isConnected)
   const currentChainId = useChainId()
   const addresses = useChainAddresses()
   const publicClient = usePublicClient({ chainId: currentChainId })
@@ -128,7 +182,6 @@ export default function PayInvoice() {
   }, [invoiceId, targetChainId, currentChainId, navigate])
   
   // Find the wallet that matches the currently connected address
-  // This ensures we use the wallet the user actually connected (could be MetaMask, Privy, etc.)
   const connectedWallet = address 
     ? wallets.find(w => w.address.toLowerCase() === address.toLowerCase()) || wallets[0]
     : wallets[0]
@@ -136,6 +189,9 @@ export default function PayInvoice() {
   // Check if wallet is an embedded (Privy) wallet - only embedded wallets support gas sponsorship
   const isEmbeddedWallet = connectedWallet?.walletClientType === 'privy' || 
                            connectedWallet?.connectorType === 'embedded'
+
+  // Whether we should use wagmi's wallet client directly (fallback when Privy auth isn't active)
+  const useWagmiFallback = !authenticated && wagmiAccount.isConnected && !!walletClient
   
   // Check if contracts are configured for current chain
   useEffect(() => {
@@ -313,19 +369,6 @@ export default function PayInvoice() {
       return
     }
 
-    if (!connectedWallet) {
-      toast.error("No wallet available")
-      return
-    }
-
-    // Ensure the connected wallet address matches the active address
-    if (connectedWallet.address.toLowerCase() !== address.toLowerCase()) {
-      toast.error("Wallet address mismatch", {
-        description: "Please ensure you're using the connected wallet"
-      })
-      return
-    }
-
     setIsApproving(true)
     try {
       const data = encodeFunctionData({
@@ -337,28 +380,34 @@ export default function PayInvoice() {
         ],
       })
 
-      // Check if chain has gas sponsorship enabled (testnets + Arbitrum Mainnet)
-      // BUT only embedded wallets support sponsorship - external wallets (MetaMask, WalletConnect) do NOT
-      const chainSupportsSponsorship = chainId === 5003 || chainId === 421614 || chainId === 11155111 || chainId === 42161;
-      const canUseSponsoredTx = chainSupportsSponsorship && isEmbeddedWallet;
+      const explorerBaseUrl = getExplorerUrl(chainId, '')?.replace(/\/tx\/$/, '') || 'https://arbiscan.io'
 
-      // For external wallets, use their native provider directly
+      // Path 1: Use wagmi wallet client directly (most reliable for external wallets)
+      if (useWagmiFallback && walletClient) {
+        console.log('[Approval] Using wagmi wallet client...')
+        const txHash = await walletClient.sendTransaction({
+          to: addresses.DemoUSDC as `0x${string}`,
+          data: data,
+          value: 0n,
+          chain: walletClient.chain,
+          account: address as `0x${string}`,
+        })
+        console.log('[Approval] Transaction submitted:', txHash)
+        setApproveHash(txHash)
+        toast.success("Approval transaction submitted!")
+        return
+      }
+
+      // Path 2: Privy external wallet provider
       if (!isEmbeddedWallet && connectedWallet) {
         try {
-          // Get the wallet's ethereum provider
           const provider = await connectedWallet.getEthereumProvider()
           
-          console.log('[Approval] Verifying wallet connection...')
-          
-          // IMPORTANT: First verify the connection is active by requesting accounts
-          // This ensures WalletConnect session is properly established
           try {
             const accounts = await provider.request({ method: 'eth_accounts' })
             if (!accounts || accounts.length === 0) {
-              // Try to request account access
               await provider.request({ method: 'eth_requestAccounts' })
             }
-            console.log('[Approval] Wallet connection verified, accounts:', accounts)
           } catch (connError: any) {
             console.error('[Approval] Connection verification failed:', connError)
             toast.error("Wallet not connected", {
@@ -368,13 +417,11 @@ export default function PayInvoice() {
             return
           }
           
-          console.log('[Approval] Sending approval via external wallet provider...')
           toast.info("Check your wallet", {
             description: "Please confirm the approval transaction in your wallet app.",
             duration: 10000,
           })
           
-          // Send transaction via the wallet's provider
           const txHash = await provider.request({
             method: 'eth_sendTransaction',
             params: [{
@@ -385,50 +432,29 @@ export default function PayInvoice() {
             }],
           })
           
-          console.log('[Approval] Transaction submitted:', txHash)
-          
           setApproveHash(txHash as `0x${string}`)
-          toast.success("Approval transaction submitted!", {
-            description: (
-              <div>
-                <a 
-                  href={`https://arbiscan.io/tx/${txHash}`} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-primary underline"
-                >
-                  View on Arbiscan →
-                </a>
-              </div>
-            ),
-            duration: 10000,
-          })
+          toast.success("Approval transaction submitted!")
           return
         } catch (providerError: any) {
           console.error("Provider transaction error:", providerError)
-          // If "not authorized" error, prompt user to reconnect
-          if (providerError.message?.includes('not been authorized') || 
-              providerError.message?.includes('eth_accounts')) {
-            toast.error("Wallet not authorized", {
-              description: "Please disconnect and reconnect your wallet, then approve the connection request.",
-              duration: 8000,
-            })
-            return
-          }
-          // User rejected
           if (providerError.code === 4001 || providerError.message?.includes('rejected')) {
-            toast.error("Transaction rejected", {
-              description: "You rejected the transaction in your wallet.",
-              duration: 5000,
-            })
+            toast.error("Transaction rejected")
             return
           }
           throw providerError
         }
       }
 
-      // For embedded wallets, use Privy's sendTransaction with sponsorship
+      // Path 3: Privy embedded wallet with gas sponsorship
+      const chainSupportsSponsorship = chainId === 5003 || chainId === 421614 || chainId === 11155111 || chainId === 42161;
+      const canUseSponsoredTx = chainSupportsSponsorship && isEmbeddedWallet;
       const gasLimit = canUseSponsoredTx ? 100000n : undefined;
+
+      if (!connectedWallet) {
+        toast.error("No wallet available. Please connect a wallet first.")
+        return
+      }
+
       const result = await sendTransaction(
         {
           to: addresses.DemoUSDC as `0x${string}`,
@@ -440,9 +466,7 @@ export default function PayInvoice() {
         {
           address: connectedWallet.address,
           sponsor: canUseSponsoredTx,
-          uiOptions: {
-            showWalletUIs: false,
-          },
+          uiOptions: { showWalletUIs: false },
         }
       )
 
@@ -451,17 +475,12 @@ export default function PayInvoice() {
     } catch (error: any) {
       console.error("Approval error:", error)
       
-      // Handle specific error messages
       let errorMsg = error.message || "Please try again"
-      if (errorMsg.includes('not been authorized') || errorMsg.includes('eth_accounts')) {
-        errorMsg = "Wallet connection not authorized. Please disconnect and reconnect your wallet."
-      } else if (errorMsg.includes('User rejected') || errorMsg.includes('user rejected')) {
+      if (errorMsg.includes('User rejected') || errorMsg.includes('user rejected')) {
         errorMsg = "Transaction was rejected by the user."
       }
       
-      toast.error("Approval failed", {
-        description: errorMsg,
-      })
+      toast.error("Approval failed", { description: errorMsg })
     } finally {
       setIsApproving(false)
     }
@@ -478,22 +497,13 @@ export default function PayInvoice() {
       return
     }
 
-    if (!connectedWallet) {
-      toast.error("No wallet available")
+    if (!connectedWallet && !useWagmiFallback) {
+      toast.error("No wallet available. Please connect a wallet.")
       return
     }
 
-    // Ensure the connected wallet address matches the active address
-    if (connectedWallet.address.toLowerCase() !== address.toLowerCase()) {
-      toast.error("Wallet address mismatch", {
-        description: "Please ensure you're using the connected wallet"
-      })
-      return
-    }
-
-    // Only allow Privy wallet payment for now (card/bank are demo)
     if (paymentMethod !== "privy") {
-      toast.info("Card and bank transfer are demo only. Please use Privy wallet to pay.")
+      toast.info("Card and bank transfer are demo only. Please use Wallet to pay.")
       return
     }
 
@@ -554,17 +564,7 @@ export default function PayInvoice() {
             return
           }
 
-          // 4. Verify buyer address
-          if (address.toLowerCase() !== onChainInvoice.buyer.toLowerCase()) {
-            toast.error("Not the invoice buyer", {
-              description: "Only the buyer address can pay this invoice. Please connect the correct wallet.",
-              duration: 8000,
-            })
-            setIsPaying(false)
-            return
-          }
-
-          // 5. Check if invoice has an advance and verify repayment is valid
+          // 4. Check if invoice has an advance and verify repayment is valid
           try {
             // First check if advance exists and get repayment amount
             let repaymentAmount = 0n
@@ -649,51 +649,62 @@ export default function PayInvoice() {
         }
       }
 
+      const payFn = isBuyer ? "payInvoice" : "payInvoiceOnBehalf"
       const data = encodeFunctionData({
         abi: SettlementRouterABI,
-        functionName: "payInvoice",
+        functionName: payFn,
         args: [BigInt(invoiceId)],
       })
 
-      // Check if chain has gas sponsorship enabled (testnets + Arbitrum Mainnet)
-      // BUT only embedded wallets support sponsorship - external wallets (MetaMask, WalletConnect) do NOT
-      const chainSupportsSponsorship = chainId === 5003 || chainId === 421614 || chainId === 11155111 || chainId === 42161;
-      const canUseSponsoredTx = chainSupportsSponsorship && isEmbeddedWallet;
+      // Path 1: Use wagmi wallet client directly (most reliable for external wallets)
+      if (useWagmiFallback && walletClient) {
+        console.log('[Payment] Using wagmi wallet client...')
+        const txHash = await walletClient.sendTransaction({
+          to: addresses.SettlementRouter as `0x${string}`,
+          data: data,
+          value: 0n,
+          chain: walletClient.chain,
+          account: address as `0x${string}`,
+        })
+        console.log('[Payment] Transaction submitted:', txHash)
+        try {
+          localStorage.setItem(`pending_payment_${invoiceId}`, JSON.stringify({
+            txHash, chainId, invoiceId, timestamp: Date.now(), address,
+          }))
+        } catch (e) { /* ignore */ }
+        setPayHash(txHash)
+        toast.success("Transaction submitted!", {
+          description: "Waiting for on-chain confirmation...",
+          duration: 10000,
+        })
+        return
+      }
 
-      // For external wallets, use their native provider directly
+      // Path 2: Privy external wallet provider
       if (!isEmbeddedWallet && connectedWallet) {
         try {
-          // Get the wallet's ethereum provider
           const provider = await connectedWallet.getEthereumProvider()
           
-          console.log('[Payment] Verifying wallet connection...')
-          
-          // IMPORTANT: First verify the connection is active by requesting accounts
-          // This ensures WalletConnect session is properly established
           try {
             const accounts = await provider.request({ method: 'eth_accounts' })
             if (!accounts || accounts.length === 0) {
-              // Try to request account access
               await provider.request({ method: 'eth_requestAccounts' })
             }
-            console.log('[Payment] Wallet connection verified, accounts:', accounts)
           } catch (connError: any) {
             console.error('[Payment] Connection verification failed:', connError)
             toast.error("Wallet not connected", {
-              description: "Please check your wallet app and approve the connection, then try again.",
+              description: "Please check your wallet app and try again.",
               duration: 8000,
             })
             setIsPaying(false)
             return
           }
           
-          console.log('[Payment] Sending transaction via external wallet provider...')
           toast.info("Check your wallet", {
             description: "Please confirm the payment transaction in your wallet app.",
             duration: 10000,
           })
           
-          // Send transaction via the wallet's provider
           const txHash = await provider.request({
             method: 'eth_sendTransaction',
             params: [{
@@ -704,57 +715,22 @@ export default function PayInvoice() {
             }],
           })
           
-          console.log('[Payment] Transaction submitted:', txHash)
-          
-          // Store transaction hash in localStorage for recovery
           try {
             localStorage.setItem(`pending_payment_${invoiceId}`, JSON.stringify({
-              txHash,
-              chainId,
-              invoiceId,
-              timestamp: Date.now(),
-              address,
+              txHash, chainId, invoiceId, timestamp: Date.now(), address,
             }))
-          } catch (e) {
-            console.warn('Could not save pending transaction to localStorage:', e)
-          }
+          } catch (e) { /* ignore */ }
           
           setPayHash(txHash as `0x${string}`)
           toast.success("Transaction submitted!", {
-            description: (
-              <div>
-                <p>Waiting for on-chain confirmation...</p>
-                <a 
-                  href={`https://arbiscan.io/tx/${txHash}`} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-primary underline"
-                >
-                  View on Arbiscan →
-                </a>
-              </div>
-            ),
-            duration: 15000,
+            description: "Waiting for on-chain confirmation...",
+            duration: 10000,
           })
           return
         } catch (providerError: any) {
           console.error("Provider transaction error:", providerError)
-          // If "not authorized" error, prompt user to reconnect
-          if (providerError.message?.includes('not been authorized') || 
-              providerError.message?.includes('eth_accounts')) {
-            toast.error("Wallet not authorized", {
-              description: "Please disconnect and reconnect your wallet, then approve the connection request.",
-              duration: 8000,
-            })
-            setIsPaying(false)
-            return
-          }
-          // User rejected
           if (providerError.code === 4001 || providerError.message?.includes('rejected')) {
-            toast.error("Transaction rejected", {
-              description: "You rejected the transaction in your wallet.",
-              duration: 5000,
-            })
+            toast.error("Transaction rejected")
             setIsPaying(false)
             return
           }
@@ -762,8 +738,17 @@ export default function PayInvoice() {
         }
       }
 
-      // For embedded wallets, use Privy's sendTransaction with sponsorship
+      // Path 3: Privy embedded wallet with gas sponsorship
+      const chainSupportsSponsorship = chainId === 5003 || chainId === 421614 || chainId === 11155111 || chainId === 42161;
+      const canUseSponsoredTx = chainSupportsSponsorship && isEmbeddedWallet;
       const gasLimit = canUseSponsoredTx ? 500000n : undefined;
+
+      if (!connectedWallet) {
+        toast.error("No wallet available. Please connect a wallet first.")
+        setIsPaying(false)
+        return
+      }
+
       const result = await sendTransaction(
         {
           to: addresses.SettlementRouter as `0x${string}`,
@@ -775,15 +760,13 @@ export default function PayInvoice() {
         {
           address: connectedWallet.address,
           sponsor: canUseSponsoredTx,
-          uiOptions: {
-            showWalletUIs: false,
-          },
+          uiOptions: { showWalletUIs: false },
         }
       )
 
       setPayHash(result.hash)
       toast.info("Transaction submitted", {
-        description: "Please confirm the transaction in your wallet, then wait for on-chain confirmation...",
+        description: "Waiting for on-chain confirmation...",
         duration: 5000,
       })
     } catch (error: any) {
@@ -792,24 +775,18 @@ export default function PayInvoice() {
       let errorMessage = "Payment failed"
       let errorDescription = error.message || "Please try again"
       
-      if (error.message?.includes('not been authorized') || error.message?.includes('eth_accounts')) {
-        errorMessage = "Wallet not authorized"
-        errorDescription = "Please disconnect and reconnect your wallet, then approve the connection request."
-      } else if (error.message?.includes("User rejected") || error.message?.includes("user rejected")) {
+      if (error.message?.includes("User rejected") || error.message?.includes("user rejected")) {
         errorMessage = "Transaction rejected"
         errorDescription = "You rejected the transaction in your wallet."
-      } else if (error.message?.includes("Not invoice buyer") || error.message?.includes("buyer")) {
-        errorMessage = "Not the invoice buyer"
-        errorDescription = "Only the buyer address can pay this invoice. Please connect the correct wallet."
       } else if (error.message?.includes("Already cleared") || error.message?.includes("cleared")) {
         errorMessage = "Invoice already cleared"
         errorDescription = "This invoice has already been paid and cleared."
       } else if (error.message?.includes("Execution reverted")) {
         errorMessage = "Transaction failed"
-        errorDescription = "The transaction was rejected. Common causes: insufficient USDC allowance (try approving again), insufficient balance, or invoice already paid. Please check and try again."
+        errorDescription = "Insufficient USDC allowance or balance, or invoice already paid. Please check and try again."
       } else if (error.message?.includes("Repay exceeds borrowed")) {
         errorMessage = "Repayment error"
-        errorDescription = "Cannot repay the advance - the amount exceeds what was borrowed. This invoice may have already been paid. Please refresh the page and check the invoice status."
+        errorDescription = "This invoice may have already been paid. Please refresh the page."
       }
       
       toast.error(errorMessage, {
@@ -867,37 +844,31 @@ export default function PayInvoice() {
   const isPastDue = Number(invoice.dueDate) < Math.floor(Date.now() / 1000)
   const dueDate = new Date(Number(invoice.dueDate) * 1000)
   
-  // Get buyer metadata from localStorage
+  // Get buyer metadata — Supabase first, localStorage as fallback
   const getInvoiceMetadata = () => {
-    try {
-      // Try invoice ID first
-      const stored = localStorage.getItem(`invoice_metadata_${invoiceId}`)
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        console.log('📋 Invoice metadata found for invoice', invoiceId, ':', parsed)
-        return parsed
+    if (supabaseMetadata) {
+      return {
+        buyerName: supabaseMetadata.buyer_name || '',
+        buyerEmail: supabaseMetadata.buyer_email || '',
+        memo: supabaseMetadata.memo || '',
+        lineItems: supabaseMetadata.line_items || [],
+        sellerName: '',
       }
-      
-      // Try with BigInt version
+    }
+    try {
+      const stored = localStorage.getItem(`invoice_metadata_${invoiceId}`)
+      if (stored) return JSON.parse(stored)
       if (invoiceId) {
         const storedBigInt = localStorage.getItem(`invoice_metadata_${BigInt(invoiceId).toString()}`)
-        if (storedBigInt) {
-          const parsed = JSON.parse(storedBigInt)
-          console.log('📋 Invoice metadata found (BigInt key):', parsed)
-          return parsed
-        }
+        if (storedBigInt) return JSON.parse(storedBigInt)
       }
     } catch (e) {
       console.error('Error reading invoice metadata:', e)
     }
-    
-    console.log('⚠️ No invoice metadata found for invoice', invoiceId)
-    console.log('🔍 Available localStorage keys:', Object.keys(localStorage).filter(k => k.includes('invoice_metadata')))
     return { buyerName: '', buyerEmail: '', sellerName: '' }
   }
-  
+
   const metadata = getInvoiceMetadata()
-  // Show buyer name if available, otherwise show formatted wallet address
   const buyerName = metadata.buyerName && metadata.buyerName.trim() !== '' 
     ? metadata.buyerName 
     : invoice.buyer.slice(0, 6) + '...' + invoice.buyer.slice(-4)
@@ -972,62 +943,25 @@ export default function PayInvoice() {
               <Button variant="ghost" size="sm" onClick={copyPaymentLink} className="h-8 w-8 p-0">
                 <Copy className="h-3.5 w-3.5" />
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={async () => {
-                  if (!authenticated && !address && wallets.length === 0) {
-                    toast.info('Not logged in')
-                    return
-                  }
-                  try {
-                    console.log('🔴 Starting logout process...')
-                    
-                    // First, try to disconnect any connected wallets
-                    try {
-                      const ethereum = (window as any).ethereum
-                      if (ethereum && ethereum.isMetaMask && ethereum.request) {
-                        // Try to disconnect MetaMask if connected
-                        try {
-                          await ethereum.request({ 
-                            method: 'wallet_revokePermissions',
-                            params: [{ eth_accounts: {} }]
-                          }).catch(() => {
-                            // Ignore if not supported
-                          })
-                        } catch (e) {
-                          console.log('MetaMask disconnect not needed:', e)
-                        }
-                      }
-                    } catch (e) {
-                      console.log('Wallet disconnect attempt failed:', e)
-                    }
-                    
-                    // Logout from Privy
-                    console.log('🔴 Calling Privy logout...')
-                    await logout()
-                    
-                    // Give Privy a moment to process
-                    await new Promise(resolve => setTimeout(resolve, 500))
-                    
-                    console.log('✅ Logout successful')
-                    toast.success('Logged out successfully')
-                    
-                    // Optionally clear local storage if needed (but keep invoice metadata)
-                    // localStorage.clear() // Don't clear as it might clear invoice data
-                    
-                    // Stay on the same page - user can reconnect their wallet to pay
-                  } catch (error: any) {
-                    console.error('❌ Logout error:', error)
-                    toast.error('Failed to logout', {
-                      description: error?.message || 'Please try again or refresh the page'
-                    })
-                  }
-                }}
-                className="h-8 text-sm font-semibold px-3 border-2 border-red-500 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 hover:border-red-600 shadow-sm"
-              >
-                Logout
-              </Button>
+              {isActuallyLoggedIn ? (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={nukeWalletConnection}
+                  className="h-8 text-sm font-semibold px-3 border-2 border-red-500 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 hover:border-red-600 shadow-sm"
+                >
+                  {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Disconnect'}
+                </Button>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={connectWallet}
+                  className="h-8 text-sm font-semibold px-3 border-2 border-primary bg-primary/5 text-primary hover:bg-primary/10 shadow-sm"
+                >
+                  Connect Wallet
+                </Button>
+              )}
               <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
                   <a
                     href={getExplorerAddressUrl(chainId, addresses.InvoiceRegistry || '')}
@@ -1110,20 +1044,9 @@ export default function PayInvoice() {
               {/* Payment Method Options */}
               <div className="mb-4 flex gap-2">
                 <button
-                  onClick={async () => {
-                    if (!isBuyer && (!authenticated || !ready)) {
-                      try {
-                        await login()
-                        toast.success("Please connect your wallet to pay this invoice")
-                      } catch (error: any) {
-                        console.error("Login error:", error)
-                        toast.error("Failed to connect wallet", {
-                          description: error?.message || "Please try again"
-                        })
-                      }
-                    } else {
-                      setPaymentMethod("privy")
-                    }
+                  onClick={() => {
+                    setPaymentMethod("privy")
+                    if (!address) connectWallet()
                   }}
                   className={`flex-1 rounded-lg border-2 p-3 transition-all ${
                     paymentMethod === "privy"
@@ -1175,21 +1098,21 @@ export default function PayInvoice() {
               {/* Payment Form */}
               {paymentMethod === "privy" && (
                 <div className="space-y-3">
-                  {!isBuyer && (
-                    <div className="rounded-lg border border-warning/20 bg-warning/5 p-3">
+                  {!isBuyer && address && (
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20 p-3">
                       <div className="flex items-start gap-2">
-                        <AlertCircle className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
+                        <User className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
                         <div className="flex-1">
-                          <p className="text-sm font-medium mb-1">Connect the buyer wallet</p>
+                          <p className="text-sm font-medium mb-1">Paying on behalf</p>
                           <p className="text-xs text-muted-foreground">
-                            Buyer address: <span className="font-mono">{invoice.buyer.slice(0, 6)}...{invoice.buyer.slice(-4)}</span>
+                            You're paying this invoice on behalf of <span className="font-mono">{invoice.buyer.slice(0, 6)}...{invoice.buyer.slice(-4)}</span>
                           </p>
                         </div>
                       </div>
                     </div>
                   )}
 
-                  {isBuyer && (
+                  {address && (
                     <>
                       {step === "approve" && needsApproval && (
                         <div className="space-y-2">
@@ -1364,11 +1287,15 @@ export default function PayInvoice() {
               </div>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <div className="h-2 w-2 rounded-full bg-current" style={{ 
+              <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ 
                 backgroundColor: isActuallyLoggedIn ? '#22c55e' : '#ef4444',
                 opacity: isActuallyLoggedIn ? 1 : 0.5
               }} />
-              <span>{isActuallyLoggedIn ? 'Connected' : 'Not connected'}</span>
+              {isActuallyLoggedIn && address ? (
+                <span className="font-mono">{address.slice(0, 6)}...{address.slice(-4)}</span>
+              ) : (
+                <span>Not connected</span>
+              )}
             </div>
           </div>
         </motion.div>
