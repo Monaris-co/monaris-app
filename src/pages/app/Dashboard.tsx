@@ -17,7 +17,9 @@ import {
   Coins,
   ChevronDown,
   QrCode,
-  Download
+  Download,
+  Camera,
+  X
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
@@ -1128,12 +1130,60 @@ function WithdrawDialog({
   const [hash, setHash] = useState<string | null>(null)
   const [isPending, setIsPending] = useState(false)
   const withdrawSuccessToastShown = useRef<string | null>(null)
+  const [showScanner, setShowScanner] = useState(false)
+  const scannerRef = useRef<any>(null)
+  const scannerContainerId = "qr-reader-withdraw"
 
   const embeddedWallet = wallets.find(w => {
     const ct = w.connectorType?.toLowerCase() || ''
     const wct = w.walletClientType?.toLowerCase() || ''
     return ct === 'embedded' || wct === 'privy' || ct.includes('privy') || ct.includes('embedded')
   }) || wallets[0]
+
+  const stopScanner = async () => {
+    if (scannerRef.current) {
+      try {
+        await scannerRef.current.stop()
+        scannerRef.current.clear()
+      } catch {}
+      scannerRef.current = null
+    }
+    setShowScanner(false)
+  }
+
+  const startScanner = async () => {
+    setShowScanner(true)
+    setTimeout(async () => {
+      try {
+        const { Html5Qrcode } = await import('html5-qrcode')
+        const scanner = new Html5Qrcode(scannerContainerId)
+        scannerRef.current = scanner
+        await scanner.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 200, height: 200 } },
+          (decodedText: string) => {
+            let addr = decodedText
+            if (addr.startsWith('ethereum:')) addr = addr.replace('ethereum:', '')
+            if (addr.includes('@')) addr = addr.split('@')[0]
+            if (addr.startsWith('0x') && addr.length >= 42) {
+              setToAddress(addr.substring(0, 42))
+            } else {
+              setToAddress(addr)
+            }
+            stopScanner()
+          },
+          () => {}
+        )
+      } catch (err) {
+        console.error('QR scanner error:', err)
+        setShowScanner(false)
+      }
+    }, 100)
+  }
+
+  useEffect(() => {
+    if (!open) stopScanner()
+  }, [open])
 
   // Get native token balance (ETH/ArbETH on Arbitrum, MNT on Mantle)
   const { data: nativeBalance, isLoading: isLoadingNative } = useBalance({
@@ -1422,14 +1472,35 @@ function WithdrawDialog({
           {/* Recipient Address */}
           <div className="space-y-2">
             <Label htmlFor="toAddress">Recipient Address</Label>
-            <Input
-              id="toAddress"
-              type="text"
-              placeholder="0x..."
-              value={toAddress}
-              onChange={(e) => setToAddress(e.target.value)}
-              disabled={isPending || isConfirming}
-            />
+            <div className="flex gap-2">
+              <Input
+                id="toAddress"
+                type="text"
+                placeholder="0x..."
+                value={toAddress}
+                onChange={(e) => setToAddress(e.target.value)}
+                disabled={isPending || isConfirming}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={showScanner ? stopScanner : startScanner}
+                disabled={isPending || isConfirming}
+                title="Scan QR code"
+              >
+                {showScanner ? <X className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
+              </Button>
+            </div>
+            {showScanner && (
+              <div className="rounded-lg overflow-hidden border border-border bg-black">
+                <div id={scannerContainerId} className="w-full" />
+                <p className="text-xs text-center text-muted-foreground py-2 bg-background">
+                  Point your camera at a wallet QR code
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Withdraw Amount Input */}
