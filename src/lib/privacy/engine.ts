@@ -390,9 +390,11 @@ async function doLoadProvider(): Promise<void> {
     // SDK requires total provider weight >= 2 (shared-models/fallback-provider.js).
     // Use dedicated RPCs for RAILGUN that don't overlap with Privy/Wagmi
     // (which share VITE_RPC_URL_42161) to avoid hitting shared rate limits.
+    // arb1.arbitrum.io/rpc has broken CORS (duplicate Access-Control-Allow-Origin).
+    // These RPCs are browser-safe and separate from the Privy/Wagmi shared RPC.
     const RAILGUN_RPCS = [
-      'https://arb1.arbitrum.io/rpc',
       'https://rpc.ankr.com/arbitrum',
+      'https://arbitrum.drpc.org',
     ];
 
     const fallbackProviders = {
