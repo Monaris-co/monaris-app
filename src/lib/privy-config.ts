@@ -1,6 +1,6 @@
 // Privy configuration — Arbitrum Mainnet only
 
-const KNOWN_BAD_RPCS = ['pocket.network', 'llamarpc.com'];
+const KNOWN_BAD_RPCS = ['pocket.network', 'llamarpc.com', '1rpc.io'];
 
 function getChainRpcUrl(chainId: number): string {
   const envKey = `VITE_RPC_URL_${chainId}`;
@@ -8,8 +8,8 @@ function getChainRpcUrl(chainId: number): string {
   if (envValue && !KNOWN_BAD_RPCS.some(bad => envValue.includes(bad))) return envValue;
 
   const defaults: Record<number, string> = {
-    42161: 'https://1rpc.io/arb',
-    1: 'https://eth.llamarpc.com',
+    42161: 'https://rpc.ankr.com/arbitrum',
+    1: 'https://rpc.ankr.com/eth',
   };
   return defaults[chainId] || '';
 }
