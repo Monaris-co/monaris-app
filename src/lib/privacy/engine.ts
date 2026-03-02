@@ -383,19 +383,18 @@ async function doLoadProvider(): Promise<void> {
 
     const walletModule = await getWalletModule();
     const sharedModels = await getSharedModels();
-    const { loadProvider } = walletModule;
+    const { loadProvider, unloadProvider } = walletModule;
     const { NetworkName } = sharedModels;
 
     const chainId = Number(import.meta.env.VITE_DEFAULT_CHAIN_ID || '42161');
     const networkName =
       chainId === 42161 ? NetworkName.Arbitrum : NetworkName.Arbitrum;
 
-    // SDK requires total provider weight >= 2 (shared-models/fallback-provider.js).
-    // Dedicated RPCs for RAILGUN — separate from Privy/Wagmi shared RPC.
-    // arb1.arbitrum.io has broken CORS; these are browser-safe.
+    // These RPCs must NOT overlap with Wagmi's (1rpc, ankr, drpc)
+    // to avoid shared rate limits in production.
     const RAILGUN_RPCS = [
-      'https://rpc.ankr.com/arbitrum',
-      'https://arbitrum.drpc.org',
+      'https://arb-pokt.nodies.app',
+      'https://arbitrum-one.public.blastapi.io',
     ];
 
     setStatus('syncing');
@@ -404,6 +403,12 @@ async function doLoadProvider(): Promise<void> {
     let lastErr: any;
     for (let attempt = 1; attempt <= MAX_PROVIDER_RETRIES; attempt++) {
       try {
+        // SDK caches the pollingProvider — unload fully before retries
+        // so we get a fresh polling provider each time.
+        if (attempt > 1) {
+          try { await unloadProvider(networkName); } catch (_) {}
+        }
+
         const fallbackProviders = {
           chainId,
           providers: RAILGUN_RPCS.map((rpc, i) => ({
@@ -425,7 +430,7 @@ async function doLoadProvider(): Promise<void> {
         lastErr = err;
         console.warn(`[RAILGUN] loadProvider attempt ${attempt}/${MAX_PROVIDER_RETRIES} failed:`, err?.message);
         if (attempt < MAX_PROVIDER_RETRIES) {
-          const delay = RETRY_BASE_MS * attempt;
+          const delay = RETRY_BASE_MS * Math.pow(2, attempt - 1);
           console.log(`[RAILGUN] Retrying in ${delay}ms...`);
           await new Promise(r => setTimeout(r, delay));
         }
