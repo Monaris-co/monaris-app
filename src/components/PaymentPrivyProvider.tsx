@@ -29,10 +29,10 @@ const arbitrumMainnet = {
   },
   rpcUrls: {
     default: {
-      http: ['https://arb-mainnet.g.alchemy.com/v2/Ttr4Yy-wi3x955XdNdqAFgPopLH47Owl'],
+      http: ['https://arbitrum-one-rpc.publicnode.com'],
     },
     public: {
-      http: ['https://arb-mainnet.g.alchemy.com/v2/Ttr4Yy-wi3x955XdNdqAFgPopLH47Owl'],
+      http: ['https://arbitrum-one-rpc.publicnode.com'],
     },
   },
   blockExplorers: {
@@ -49,7 +49,7 @@ const arbitrumMainnet = {
 const paymentWagmiConfig = createConfig({
   chains: [arbitrum],
   transports: {
-    [arbitrum.id]: http('https://arb-mainnet.g.alchemy.com/v2/Ttr4Yy-wi3x955XdNdqAFgPopLH47Owl'),
+    [arbitrum.id]: http('https://arbitrum-one-rpc.publicnode.com'),
   },
 });
 

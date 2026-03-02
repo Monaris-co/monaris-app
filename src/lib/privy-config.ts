@@ -11,8 +11,8 @@ function getChainRpcUrl(chainId: number): string {
   const defaults: Record<number, string> = {
     5003: 'https://rpc.sepolia.mantle.xyz',
     5000: 'https://rpc.mantle.xyz',
-    421614: 'https://arbitrum-sepolia-rpc.publicnode.com', // Public RPC without CORS issues
-    42161: 'https://arb-mainnet.g.alchemy.com/v2/Ttr4Yy-wi3x955XdNdqAFgPopLH47Owl', // Alchemy RPC - reliable
+    421614: 'https://arbitrum-sepolia-rpc.publicnode.com',
+    42161: 'https://arbitrum-one-rpc.publicnode.com',
     11155111: 'https://rpc.sepolia.org',
     1: 'https://eth.llamarpc.com',
   };

@@ -16,7 +16,7 @@ export const PAYMENT_PRIVY_APP_ID = 'cmkhjjrfu00xci60cenylo2s5';
 export const WALLETCONNECT_PROJECT_ID = '502d1ca774d0698fb6875db2c5d94873';
 
 // RPC URL for Arbitrum Mainnet
-export const ARBITRUM_RPC_URL = 'https://arb-mainnet.g.alchemy.com/v2/Ttr4Yy-wi3x955XdNdqAFgPopLH47Owl';
+export const ARBITRUM_RPC_URL = 'https://arbitrum-one-rpc.publicnode.com';
 
 // USDC contract address on Arbitrum Mainnet
 export const ARBITRUM_USDC_ADDRESS = '0xaf88d065e77c8cC2239327C5EDb3A432268e5831';

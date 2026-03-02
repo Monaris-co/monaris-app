@@ -73,7 +73,7 @@ function getChainRpcUrl(chainId: number): string {
     5003: 'https://rpc.sepolia.mantle.xyz',
     5000: 'https://rpc.mantle.xyz',
     421614: 'https://arbitrum-sepolia-rpc.publicnode.com', // Fallback if Privy RPC not available
-    42161: 'https://arb-mainnet.g.alchemy.com/v2/Ttr4Yy-wi3x955XdNdqAFgPopLH47Owl', // Alchemy RPC - reliable
+    42161: 'https://arbitrum-one-rpc.publicnode.com',
     11155111: 'https://rpc.sepolia.org',
     1: 'https://eth.llamarpc.com',
   };
@@ -117,9 +117,8 @@ supportedChains.forEach((chain) => {
     return;
   }
   
-  // For Arbitrum Mainnet, use Alchemy RPC - most reliable
   if (chain.id === 42161) {
-    transports[chain.id] = http('https://arb-mainnet.g.alchemy.com/v2/Ttr4Yy-wi3x955XdNdqAFgPopLH47Owl');
+    transports[chain.id] = http('https://arbitrum-one-rpc.publicnode.com');
     return;
   }
   

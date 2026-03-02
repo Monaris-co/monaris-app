@@ -37,7 +37,7 @@ export function getChainMetadata(chainId: number): ChainMetadata | null {
     [CHAIN_IDS.MANTLE_SEPOLIA]: 'https://rpc.sepolia.mantle.xyz',
     [CHAIN_IDS.MANTLE_MAINNET]: 'https://rpc.mantle.xyz',
     [CHAIN_IDS.ARBITRUM_SEPOLIA]: 'https://arbitrum-sepolia-rpc.publicnode.com', // Public RPC without CORS issues
-    [CHAIN_IDS.ARBITRUM_MAINNET]: 'https://arb-mainnet.g.alchemy.com/v2/Ttr4Yy-wi3x955XdNdqAFgPopLH47Owl', // Alchemy RPC - reliable
+    [CHAIN_IDS.ARBITRUM_MAINNET]: 'https://arbitrum-one-rpc.publicnode.com',
     [CHAIN_IDS.ETH_SEPOLIA]: 'https://rpc.sepolia.org',
     [CHAIN_IDS.ETH_MAINNET]: 'https://eth.llamarpc.com',
   };
