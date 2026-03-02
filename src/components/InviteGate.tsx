@@ -109,7 +109,7 @@ export function InviteGate({ children }: InviteGateProps) {
               {/* Title */}
               <div className="text-center mb-6">
                 <h1 className="text-xl font-semibold text-white mb-2">
-                  {success ? 'Welcome to Monaris' : 'Early Access Only'}
+                  {success ? 'Welcome to Monaris' : 'MonarisEarly Access Only'}
                 </h1>
                 <p className="text-sm text-white/50 leading-relaxed">
                   {success
