@@ -26,6 +26,10 @@ interface ImportMetaEnv {
   readonly VITE_REPUTATION_ADDRESS?: string
   readonly VITE_SETTLEMENT_ROUTER_ADDRESS?: string
   readonly VITE_MANTLE_RPC_URL?: string
+  readonly VITE_PRIVATE_PAYMENTS_ENABLED?: string
+  readonly VITE_RPC_URL_42161?: string
+  readonly VITE_RPC_URL_421614?: string
+  readonly VITE_DEFAULT_CHAIN_ID?: string
 }
 
 interface ImportMeta {

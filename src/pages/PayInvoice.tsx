@@ -17,7 +17,9 @@ import {
   CreditCard,
   Building2,
   Download,
-  MoreHorizontal
+  MoreHorizontal,
+  Shield,
+  Lock
 } from "lucide-react"
 import { downloadInvoicePDF } from "@/lib/generateInvoicePDF"
 import { Button } from "@/components/ui/button"
@@ -35,6 +37,10 @@ import { Link } from "react-router-dom"
 import { getExplorerUrl, getExplorerAddressUrl, getPaymentLink, CHAIN_IDS } from "@/lib/chain-utils"
 import { useSearchParams } from "react-router-dom"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
+import { PRIVATE_PAYMENTS_ENABLED } from "@/lib/privacy/config"
+import { PrivatePayButton } from "@/components/privacy/PrivatePayButton"
+import { ShieldDialog } from "@/components/privacy/ShieldDialog"
+import { usePrivateBalance } from "@/hooks/usePrivateBalance"
 
 const STATUS_LABELS = {
   0: "Issued",
@@ -43,7 +49,7 @@ const STATUS_LABELS = {
   3: "Cleared",
 }
 
-type PaymentMethod = "privy" | "card" | "bank"
+type PaymentMethod = "private" | "privy" | "card" | "bank"
 
 export default function PayInvoice() {
   const params = useParams<{ invoiceId?: string; chainId?: string }>()
@@ -203,7 +209,9 @@ export default function PayInvoice() {
     }
   }, [authenticated, address, chainId, addresses.InvoiceRegistry, addresses.SettlementRouter, addresses.DemoUSDC])
   
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("privy")
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PRIVATE_PAYMENTS_ENABLED ? "private" : "privy")
+  const [shieldDialogOpen, setShieldDialogOpen] = useState(false)
+  const { privateUsdcBalance, isEnabled: isPrivacyEnabled } = usePrivateBalance()
   const [cardNumber, setCardNumber] = useState("")
   const [cardExpiry, setCardExpiry] = useState("")
   const [cardCVC, setCardCVC] = useState("")
@@ -1043,6 +1051,27 @@ export default function PayInvoice() {
               
               {/* Payment Method Options */}
               <div className="mb-4 flex gap-2">
+                {isPrivacyEnabled && (
+                  <button
+                    onClick={() => {
+                      setPaymentMethod("private")
+                      if (!address) connectWallet()
+                    }}
+                    className={`flex-1 rounded-lg border-2 p-3 transition-all ${
+                      paymentMethod === "private"
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <Shield className="h-4 w-4" />
+                      <span className="font-medium text-sm">Private</span>
+                    </div>
+                    {paymentMethod === "private" && (
+                      <p className="text-[9px] text-primary mt-0.5 text-center">Recommended</p>
+                    )}
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     setPaymentMethod("privy")
@@ -1056,7 +1085,7 @@ export default function PayInvoice() {
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Wallet className="h-4 w-4" />
-                    <span className="font-medium text-sm">Wallet</span>
+                    <span className="font-medium text-sm">{isPrivacyEnabled ? "Public" : "Wallet"}</span>
                   </div>
                 </button>
                 
@@ -1095,7 +1124,86 @@ export default function PayInvoice() {
                 </button>
               </div>
 
-              {/* Payment Form */}
+              {/* Private Payment Form */}
+              {paymentMethod === "private" && isPrivacyEnabled && (
+                <div className="space-y-3">
+                  {!address ? (
+                    <div className="text-center py-4">
+                      <Lock className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Connect your wallet to pay privately
+                      </p>
+                      <Button onClick={connectWallet} variant="hero" className="w-full">
+                        Connect & Pay Privately
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                        <div className="flex items-start gap-2">
+                          <Shield className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-xs font-medium">Private Payment</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                              Sender, receiver and amount are hidden from on-chain observers
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {privateUsdcBalance < amountDisplay && (
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20 p-3">
+                          <div className="flex items-start gap-2">
+                            <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <p className="text-xs font-medium">Insufficient private balance</p>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">
+                                You have {privateUsdcBalance.toFixed(2)} USDC in your private balance.
+                                Shield more funds to pay privately.
+                              </p>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="mt-2 h-7 text-xs"
+                                onClick={() => setShieldDialogOpen(true)}
+                              >
+                                <Shield className="mr-1 h-3 w-3" />
+                                Add Funds to Private Balance
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <PrivatePayButton
+                        invoiceId={invoiceId || ''}
+                        sellerAddress={invoice.seller}
+                        tokenAddress={addresses.DemoUSDC || ''}
+                        amount={invoice.amount}
+                        chainId={chainId}
+                        onSuccess={(txRef) => {
+                          setStep("complete")
+                          toast.success("Invoice paid privately!")
+                        }}
+                        onInsufficientBalance={() => setShieldDialogOpen(true)}
+                        disabled={isPaying || step === "complete"}
+                      />
+
+                      {step === "complete" && (
+                        <div className="rounded-lg border border-success/20 bg-success/5 p-3 text-center">
+                          <CheckCircle2 className="mx-auto h-8 w-8 text-success" />
+                          <h3 className="mt-2 text-base font-semibold">Paid Privately!</h3>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Payment is confirmed. The transfer details are hidden on-chain.
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Public Wallet Payment Form */}
               {paymentMethod === "privy" && (
                 <div className="space-y-3">
                   {!isBuyer && address && (
@@ -1300,6 +1408,13 @@ export default function PayInvoice() {
           </div>
         </motion.div>
       </div>
+
+      {isPrivacyEnabled && (
+        <ShieldDialog
+          open={shieldDialogOpen}
+          onOpenChange={setShieldDialogOpen}
+        />
+      )}
     </div>
   )
 }

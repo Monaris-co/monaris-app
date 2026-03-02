@@ -19,7 +19,7 @@ import {
   QrCode,
   Download,
   Camera,
-  X
+  X,
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
@@ -1102,6 +1102,7 @@ export default function Dashboard() {
         onOpenChange={setReceiveFundsDialogOpen}
         address={address}
       />
+
     </motion.div>
   )
 }
@@ -1121,15 +1122,12 @@ function WithdrawDialog({
   const { sendTransaction } = useSendTransaction()
   const { wallets } = useWallets()
   const chainId = useChainId()
-  const chainMetadata = getChainMetadata(chainId)
-  const nativeTokenSymbol = chainMetadata?.nativeCurrency.symbol || "ETH"
   const addresses = useChainAddresses()
-  const [tokenType, setTokenType] = useState<"USDC" | "NATIVE" | "USMT+">("USDC")
   const [withdrawAmount, setWithdrawAmount] = useState("")
   const [toAddress, setToAddress] = useState("")
   const [hash, setHash] = useState<string | null>(null)
   const [isPending, setIsPending] = useState(false)
-  const withdrawSuccessToastShown = useRef<string | null>(null)
+  const [step, setStep] = useState<'input' | 'sending' | 'confirming' | 'done'>('input')
   const [showScanner, setShowScanner] = useState(false)
   const scannerRef = useRef<any>(null)
   const scannerContainerId = "qr-reader-withdraw"
@@ -1185,393 +1183,292 @@ function WithdrawDialog({
     if (!open) stopScanner()
   }, [open])
 
-  // Get native token balance (ETH/ArbETH on Arbitrum, MNT on Mantle)
-  const { data: nativeBalance, isLoading: isLoadingNative } = useBalance({
-    address: address as `0x${string}` | undefined,
-    query: {
-      enabled: !!address,
-      refetchInterval: 20000,
-    },
-  })
-
-  const nativeBalanceFormatted = nativeBalance ? parseFloat(formatUnits(nativeBalance.value, 18)) : 0
-
-  // Get USMT+ balance
-  const { balance: usmtBalance, isLoading: isLoadingUSMT } = useUSMTBalance()
-
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash: hash as `0x${string}` | undefined,
     chainId,
     query: {
       enabled: !!hash,
       retry: 5,
-      retryDelay: 1000, // Reduced from 2000ms to 1000ms for faster polling
+      retryDelay: 1000,
     },
   })
 
-  // Get current balance based on token type
-  const currentBalance = tokenType === "USDC" ? usdcBalance : tokenType === "USMT+" ? usmtBalance : nativeBalanceFormatted
-  const isLoadingBalance = tokenType === "USDC" ? false : tokenType === "USMT+" ? isLoadingUSMT : isLoadingNative
-
-  // Handle withdraw success
-  useEffect(() => {
-    if (hash && isSuccess && withdrawSuccessToastShown.current !== hash) {
-      withdrawSuccessToastShown.current = hash
-      
-      const copyToClipboard = () => {
-        navigator.clipboard.writeText(hash)
-        toast.success("Transaction hash copied!")
-      }
-      
-      toast.success(
-        <div className="flex items-center gap-2">
-          <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-500 flex-shrink-0" />
-          <span className="font-semibold">Withdrawal Successful!</span>
-        </div>,
-        {
-          description: (
-            <div className="space-y-3 mt-2">
-               <p className="font-medium text-sm">Your withdrawal of {withdrawAmount} {tokenType} has been successfully sent to {toAddress.slice(0, 6)}...{toAddress.slice(-4)}.</p>
-              
-              <div className="space-y-2 pt-2 border-t border-border/50">
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">TRANSACTION HASH</span>
-                  <div className="relative">
-                    <Input
-                      type="text"
-                      value={hash}
-                      readOnly
-                      className="font-mono text-xs pr-10"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        copyToClipboard();
-                      }}
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-                
-                <Button asChild className="w-full mt-4">
-                  <a
-                    href={getExplorerUrl(chainId, hash || '')}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    View on Explorer
-                  </a>
-                </Button>
-                <Button variant="outline" className="w-full mt-2" onClick={() => {
-                  setWithdrawAmount("")
-                  setToAddress("")
-                  onOpenChange(false)
-                }}>
-                  Done
-                </Button>
-              </div>
-            </div>
-          ),
-          duration: 10000,
-          id: 'withdraw-success',
-        }
-      )
-      
-      setWithdrawAmount("")
-      setToAddress("")
-      onOpenChange(false)
-    }
-  }, [hash, isSuccess, isConfirming, withdrawAmount, tokenType, toAddress, onOpenChange])
+  if (isSuccess && step === 'confirming') {
+    setStep('done')
+  }
 
   const handleWithdraw = async () => {
     if (!withdrawAmount) {
       toast.error("Enter withdrawal amount")
       return
     }
-
     if (!toAddress || !isAddress(toAddress)) {
-      toast.error("Invalid address", {
-        description: "Please enter a valid Ethereum address",
-      })
+      toast.error("Invalid address", { description: "Please enter a valid Ethereum address" })
       return
     }
-
     const amount = parseFloat(withdrawAmount)
     if (isNaN(amount) || amount <= 0) {
-      toast.error("Invalid amount", {
-        description: "Amount must be greater than 0",
+      toast.error("Invalid amount", { description: "Amount must be greater than 0" })
+      return
+    }
+    if (amount > usdcBalance) {
+      toast.error("Insufficient balance", {
+        description: `You have ${usdcBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC available`,
       })
       return
     }
-
-    if (amount > currentBalance) {
-       toast.error("Insufficient balance", {
-         description: `You have ${currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${tokenType} available`,
-       })
-      return
-    }
-
     if (!embeddedWallet) {
-      toast.error("No wallet available", {
-        description: "Please connect your Privy embedded wallet",
-      })
+      toast.error("No wallet available", { description: "Please connect your Privy embedded wallet" })
       return
     }
 
     setIsPending(true)
+    setStep('sending')
     setHash(null)
 
-    // Check if chain has gas sponsorship enabled (testnets + Arbitrum Mainnet)
-    const isGasSponsored = chainId === 5003 || chainId === 421614 || chainId === 11155111 || chainId === 42161;
-    const gasLimit = isGasSponsored ? 150000n : undefined; // Manual gas limit for ERC20 transfers
+    const isGasSponsored = chainId === 5003 || chainId === 421614 || chainId === 11155111 || chainId === 42161
+    const gasLimit = isGasSponsored ? 150000n : undefined
 
     try {
-      if (tokenType === "USDC") {
-        // Transfer USDC (ERC20 transfer)
-        if (!addresses.DemoUSDC) {
-          throw new Error(`USDC contract address not configured for chain ${chainId}`)
-        }
-
-        const amountBigInt = parseUnits(withdrawAmount, 6) // USDC has 6 decimals
-        
-        const data = encodeFunctionData({
-          abi: DemoUSDCABI,
-          functionName: "transfer",
-          args: [toAddress as `0x${string}`, amountBigInt],
-        })
-
-        const result = await sendTransaction(
-          {
-            to: addresses.DemoUSDC as `0x${string}`,
-            data: data,
-            value: 0n,
-            chainId,
-            ...(gasLimit && { gas: gasLimit }), // Set manual gas limit for gas-sponsored chains
-          },
-          {
-            address: embeddedWallet.address,
-            sponsor: isGasSponsored, // Enable gas sponsorship for configured chains
-            uiOptions: {
-              showWalletUIs: false,
-            },
-          }
-        )
-
-        setHash(result.hash)
-      } else if (tokenType === "USMT+") {
-        // Transfer USMT+ (ERC20 transfer)
-        if (!addresses.USMTPlus) {
-          throw new Error(`USMT+ contract address not configured for chain ${chainId}`)
-        }
-
-        const amountBigInt = parseUnits(withdrawAmount, 6) // USMT+ has 6 decimals
-        
-        const data = encodeFunctionData({
-          abi: USMTPlusABI,
-          functionName: "transfer",
-          args: [toAddress as `0x${string}`, amountBigInt],
-        })
-
-        const result = await sendTransaction(
-          {
-            to: addresses.USMTPlus as `0x${string}`,
-            data: data,
-            value: 0n,
-            chainId,
-            ...(gasLimit && { gas: gasLimit }), // Set manual gas limit for gas-sponsored chains
-          },
-          {
-            address: embeddedWallet.address,
-            sponsor: isGasSponsored, // Enable gas sponsorship for configured chains
-            uiOptions: {
-              showWalletUIs: false,
-            },
-          }
-        )
-
-        setHash(result.hash)
-      } else if (tokenType === "NATIVE") {
-        // Transfer native token (ETH/ArbETH on Arbitrum/Ethereum, MNT on Mantle)
-        const amountBigInt = parseUnits(withdrawAmount, 18) // Native tokens have 18 decimals
-        const nativeGasLimit = isGasSponsored ? 21000n : undefined; // Lower limit for native transfers
-        
-        const result = await sendTransaction(
-          {
-            to: toAddress as `0x${string}`,
-            data: "0x" as `0x${string}`,
-            value: amountBigInt,
-            chainId,
-            ...(nativeGasLimit && { gas: nativeGasLimit }), // Set manual gas limit for gas-sponsored chains
-          },
-          {
-            address: embeddedWallet.address,
-            sponsor: isGasSponsored, // Enable gas sponsorship for configured chains
-            uiOptions: {
-              showWalletUIs: false,
-            },
-          }
-        )
-
-        setHash(result.hash)
+      if (!addresses.DemoUSDC) {
+        throw new Error(`USDC contract address not configured for chain ${chainId}`)
       }
 
+      const amountBigInt = parseUnits(withdrawAmount, 6)
+      const data = encodeFunctionData({
+        abi: DemoUSDCABI,
+        functionName: "transfer",
+        args: [toAddress as `0x${string}`, amountBigInt],
+      })
+
+      const result = await sendTransaction(
+        {
+          to: addresses.DemoUSDC as `0x${string}`,
+          data,
+          value: 0n,
+          chainId,
+          ...(gasLimit && { gas: gasLimit }),
+        },
+        {
+          address: embeddedWallet.address,
+          sponsor: isGasSponsored,
+          uiOptions: { showWalletUIs: false },
+        }
+      )
+
+      setHash(result.hash)
+      setStep('confirming')
       setIsPending(false)
     } catch (error: any) {
       setIsPending(false)
-      toast.error("Withdrawal failed", {
-        description: error.message || "Please try again",
-      })
+      setStep('input')
+      toast.error("Withdrawal failed", { description: error.message || "Please try again" })
     }
   }
 
+  const resetDialog = () => {
+    setWithdrawAmount("")
+    setToAddress("")
+    setHash(null)
+    setIsPending(false)
+    setStep('input')
+  }
+
+  const parsedWithdrawAmount = parseFloat(withdrawAmount) || 0
+  const isValidAddress = toAddress.length > 0 && isAddress(toAddress)
+  const isDisabled = !withdrawAmount || !toAddress || isPending || isConfirming || parsedWithdrawAmount <= 0 || parsedWithdrawAmount > usdcBalance
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-         <DialogHeader>
-           <DialogTitle>Withdraw Funds</DialogTitle>
-           <DialogDescription>
-             Send tokens to any address. Gas fees are paid in {nativeTokenSymbol}.
-           </DialogDescription>
-         </DialogHeader>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) resetDialog(); onOpenChange(v); }}>
+      <DialogContent className="sm:max-w-[440px] p-0 overflow-hidden border border-[#2a2a2a] dark:border-[#2a2a2a] rounded-[24px] bg-white dark:bg-[#111111] shadow-[0px_32px_64px_-16px_rgba(0,0,0,0.35)]">
 
-        <div className="space-y-4 py-4">
-          {/* Token Type Selector */}
-          <div className="space-y-2">
-            <Label htmlFor="tokenType">Token Type</Label>
-            <Select value={tokenType} onValueChange={(value: "USDC" | "NATIVE" | "USMT+") => {
-              setTokenType(value)
-              setWithdrawAmount("") // Reset amount when changing token type
-            }}>
-              <SelectTrigger id="tokenType">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="USDC">USDC</SelectItem>
-                <SelectItem value="USMT+">USMT+</SelectItem>
-                <SelectItem value="NATIVE">{nativeTokenSymbol} (Native)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Current Balance */}
-          <div className="rounded-lg border border-border bg-secondary/50 p-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Available Balance</span>
-               <span className="text-lg font-semibold">
-                 {isLoadingBalance ? "..." : `${currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${tokenType}`}
-               </span>
+        {step === 'done' ? (
+          <div className="px-6 py-8 text-center space-y-4">
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-[#ddf9e4] flex items-center justify-center">
+              <CheckCircle2 className="h-7 w-7 text-[#22c55e]" />
             </div>
-          </div>
-
-          {/* Recipient Address */}
-          <div className="space-y-2">
-            <Label htmlFor="toAddress">Recipient Address</Label>
-            <div className="flex gap-2">
-              <Input
-                id="toAddress"
-                type="text"
-                placeholder="0x..."
-                value={toAddress}
-                onChange={(e) => setToAddress(e.target.value)}
-                disabled={isPending || isConfirming}
-                className="flex-1"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={showScanner ? stopScanner : startScanner}
-                disabled={isPending || isConfirming}
-                title="Scan QR code"
-              >
-                {showScanner ? <X className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
-              </Button>
+            <div>
+              <h3 className="text-lg font-semibold text-[#1a1a1a] dark:text-white">Sent Successfully</h3>
+              <p className="text-[13px] text-[#888] mt-1.5">
+                {withdrawAmount} USDC sent to {toAddress.slice(0, 6)}...{toAddress.slice(-4)}
+              </p>
             </div>
-            {showScanner && (
-              <div className="rounded-lg overflow-hidden border border-border bg-black">
-                <div id={scannerContainerId} className="w-full" />
-                <p className="text-xs text-center text-muted-foreground py-2 bg-background">
-                  Point your camera at a wallet QR code
-                </p>
+            {hash && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-[#fafafa] dark:bg-[#151515] border border-[#222] dark:border-[#333]">
+                  <span className="flex-1 text-[11px] font-mono text-[#888] truncate">{hash}</span>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(hash); toast.success("Copied!"); }}
+                    className="p-1.5 rounded-lg hover:bg-[#e0e0e0] dark:hover:bg-[#222] transition-colors flex-shrink-0"
+                  >
+                    <Copy className="h-3.5 w-3.5 text-[#666]" />
+                  </button>
+                </div>
+                <a
+                  href={getExplorerUrl(chainId, hash)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-[#222] dark:border-[#333] text-[12px] font-medium text-[#1a1a1a] dark:text-[#aaa] hover:bg-[#fafafa] dark:hover:bg-[#151515] transition-colors"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  View on Explorer
+                </a>
               </div>
             )}
+            <button
+              onClick={() => { resetDialog(); onOpenChange(false); }}
+              className="w-full py-3.5 rounded-xl bg-[#c8ff00] hover:bg-[#bbee00] text-[#1a1a1a] font-bold text-[14px] transition-colors"
+            >
+              Done
+            </button>
           </div>
-
-          {/* Withdraw Amount Input */}
-          <div className="space-y-2">
-             <Label htmlFor="withdrawAmount">Amount to Withdraw</Label>
-            <Input
-              id="withdrawAmount"
-              type="number"
-              placeholder="0.00"
-              value={withdrawAmount}
-              onChange={(e) => setWithdrawAmount(e.target.value)}
-              min="0"
-              step="0.01"
-              disabled={isPending || isConfirming || isLoadingBalance}
-            />
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setWithdrawAmount((currentBalance * 0.25).toFixed(2))}
-                disabled={currentBalance === 0 || isLoadingBalance}
-              >
-                25%
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setWithdrawAmount((currentBalance * 0.5).toFixed(2))}
-                disabled={currentBalance === 0 || isLoadingBalance}
-              >
-                50%
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setWithdrawAmount((currentBalance * 0.75).toFixed(2))}
-                disabled={currentBalance === 0 || isLoadingBalance}
-              >
-                75%
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setWithdrawAmount(currentBalance.toFixed(2))}
-                disabled={currentBalance === 0 || isLoadingBalance}
-              >
-                Max
-              </Button>
+        ) : (
+          <>
+            {/* Header */}
+            <div className="px-6 pt-6 pb-4 border-b border-[#222]/15 dark:border-[#333]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-[14px] bg-[#c8ff00] flex items-center justify-center">
+                  <svg className="h-5 w-5 text-[#1a1a1a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg>
+                </div>
+                <div>
+                  <h2 className="text-[18px] font-bold text-[#1a1a1a] dark:text-white tracking-tight" style={{ fontFamily: "'Inter', 'SF Pro Display', system-ui, sans-serif" }}>Send USDC</h2>
+                  <p className="text-[12px] text-[#aeaeae] mt-0.5">Transfer to any wallet address</p>
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* Withdraw Button */}
-          <Button
-            onClick={handleWithdraw}
-            disabled={!withdrawAmount || !toAddress || isPending || isConfirming || parseFloat(withdrawAmount) <= 0 || parseFloat(withdrawAmount) > currentBalance || isLoadingBalance}
-            className="w-full"
-            variant="default"
-          >
-            {isPending || isConfirming ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {isPending ? "Waiting for wallet..." : "Processing..."}
-              </>
-            ) : (
-               <>
-                 <ArrowUpLeft className="mr-2 h-4 w-4" />
-                 Send {withdrawAmount || "0"} {tokenType}
-               </>
-             )}
-          </Button>
-        </div>
+            <div className="px-6 pb-6 pt-5 space-y-5">
+              {/* Balance card */}
+              <div className="rounded-2xl border-2 border-[#1a1a1a]/10 dark:border-[#333] bg-[#fafafa] dark:bg-[#151515] p-4">
+                <div className="flex items-center gap-3">
+                  <svg className="w-10 h-10 flex-shrink-0" viewBox="0 0 2000 2000" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="1000" cy="1000" r="1000" fill="#2775CA"/><path d="M1275 1158.33c0-145.83-87.5-195.83-262.5-216.66-125-16.67-150-50-150-108.34 0-58.33 41.67-95.83 125-95.83 75 0 116.67 25 137.5 87.5 4.17 12.5 16.67 20.83 29.17 20.83h66.66c16.67 0 29.17-12.5 29.17-29.16v-4.17c-20.83-91.67-95.83-162.5-191.67-175V533.33c0-16.66-12.5-29.16-33.33-33.33h-62.5c-16.67 0-29.17 12.5-33.33 33.33v100c-129.17 16.67-212.5 100-212.5 204.17 0 137.5 83.33 191.66 258.33 212.5 116.67 20.83 154.17 45.83 154.17 112.5 0 66.66-58.34 112.5-137.5 112.5-108.34 0-145.84-45.84-158.34-108.34-4.16-16.66-16.66-25-29.16-25h-70.84c-16.66 0-29.16 12.5-29.16 29.17v4.17c25 100 87.5 158.33 229.16 179.16V1462.5c0 16.67 12.5 29.17 33.34 33.33h62.5c16.66 0 29.16-12.5 33.33-33.33v-104.17c129.17-20.83 216.67-108.33 216.67-216.66z" fill="white"/><path d="M787.5 1595.83c-325-116.66-491.67-479.16-379.17-800 66.67-195.83 220.84-345.83 379.17-408.33 16.67-8.34 25-20.84 25-41.67v-58.33c0-16.67-8.33-29.17-25-33.34-4.17 0-12.5 0-16.67 4.17-395.83 125-612.5 545.83-487.5 941.67 75 237.5 262.5 420.83 487.5 495.83 16.67 8.33 33.34 0 37.5-16.67 4.17-4.16 4.17-12.5 4.17-16.66v-58.34c0-12.5-12.5-25-25-8.33zM1229.17 258.33c-16.67-8.33-33.34 0-37.5 16.67-4.17 4.17-4.17 12.5-4.17 16.67v58.33c0 16.67 12.5 29.17 25 41.67 325 116.67 491.67 479.17 379.17 800-66.67 195.83-220.84 345.83-379.17 408.33-16.67 8.34-25 20.84-25 41.67v58.33c0 16.67 8.33 29.17 25 33.34 4.17 0 12.5 0 16.67-4.17 395.83-125 612.5-545.83 487.5-941.67-75-241.66-266.67-425-487.5-529.17z" fill="white"/></svg>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[14px] font-bold text-[#1a1a1a] dark:text-white" style={{ fontFamily: "'Inter', 'SF Pro Display', system-ui, sans-serif" }}>USDC</p>
+                    <p className="text-[11px] text-[#aeaeae] mt-0.5">USD Coin</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[16px] font-bold text-[#1a1a1a] dark:text-white tabular-nums" style={{ fontFamily: "'Inter', 'SF Pro Display', system-ui, sans-serif" }}>{usdcBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <p className="text-[11px] text-[#aeaeae] mt-0.5">Available</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recipient */}
+              <div>
+                <label className="block text-[12px] font-semibold text-[#1a1a1a] dark:text-[#ccc] mb-2" style={{ fontFamily: "'Inter', 'SF Pro Display', system-ui, sans-serif" }}>Recipient Address</label>
+                <div className="flex items-stretch gap-2.5">
+                  <div className="flex-1 relative">
+                    <input
+                      type="text"
+                      placeholder="Enter wallet address (0x...)"
+                      value={toAddress}
+                      onChange={(e) => setToAddress(e.target.value)}
+                      disabled={isPending || isConfirming}
+                      className="w-full h-12 bg-white dark:bg-[#1a1a1a] border-2 border-[#1a1a1a]/15 dark:border-[#333] focus:border-[#1a1a1a] dark:focus:border-[#c8ff00] rounded-xl px-4 text-[13px] text-[#1a1a1a] dark:text-white placeholder:text-[#bbb] dark:placeholder:text-[#555] outline-none transition-colors disabled:opacity-50" style={{ fontFamily: "'SF Mono', 'Fira Code', 'Menlo', monospace" }}
+                    />
+                  </div>
+                  <button
+                    onClick={showScanner ? stopScanner : startScanner}
+                    disabled={isPending || isConfirming}
+                    className="w-12 h-12 flex items-center justify-center rounded-xl border-2 border-[#1a1a1a]/15 dark:border-[#333] bg-white dark:bg-[#1a1a1a] hover:border-[#1a1a1a] dark:hover:border-[#c8ff00] transition-colors disabled:opacity-50"
+                  >
+                    {showScanner ? <X className="h-4 w-4 text-[#666]" /> : (
+                      <svg className="h-[18px] w-[18px] text-[#666]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+                    )}
+                  </button>
+                </div>
+                {showScanner && (
+                  <div className="mt-2 rounded-xl overflow-hidden border-2 border-[#1a1a1a]/15 dark:border-[#333] bg-black">
+                    <div id={scannerContainerId} className="w-full" />
+                    <p className="text-[11px] text-center text-[#888] py-2 bg-[#fafafa] dark:bg-[#151515]">
+                      Point camera at a wallet QR code
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Amount */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-[12px] font-semibold text-[#1a1a1a] dark:text-[#ccc]" style={{ fontFamily: "'Inter', 'SF Pro Display', system-ui, sans-serif" }}>Amount</label>
+                  <button
+                    onClick={() => setWithdrawAmount(usdcBalance.toFixed(2))}
+                    disabled={usdcBalance === 0}
+                    className="text-[11px] font-bold text-[#7cb518] hover:text-[#6aa516] transition-colors disabled:opacity-30"
+                  >
+                    Use Max
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type="number"
+                    placeholder="0.00"
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    min="0"
+                    step="0.01"
+                    disabled={isPending || isConfirming}
+                    className="w-full h-[60px] bg-white dark:bg-[#1a1a1a] border-2 border-[#1a1a1a]/15 dark:border-[#333] focus:border-[#1a1a1a] dark:focus:border-[#c8ff00] rounded-xl pl-5 pr-[100px] text-[24px] font-bold text-[#1a1a1a] dark:text-white placeholder:text-[#d1d1d1] dark:placeholder:text-[#444] outline-none transition-colors disabled:opacity-50" style={{ fontFamily: "'Inter', 'SF Pro Display', system-ui, sans-serif" }}
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 bg-[#f0f0f0] dark:bg-[#222] pl-2.5 pr-3 py-1.5 rounded-lg border border-[#1a1a1a]/10 dark:border-[#444]">
+                    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 2000 2000" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="1000" cy="1000" r="1000" fill="#2775CA"/><path d="M1275 1158.33c0-145.83-87.5-195.83-262.5-216.66-125-16.67-150-50-150-108.34 0-58.33 41.67-95.83 125-95.83 75 0 116.67 25 137.5 87.5 4.17 12.5 16.67 20.83 29.17 20.83h66.66c16.67 0 29.17-12.5 29.17-29.16v-4.17c-20.83-91.67-95.83-162.5-191.67-175V533.33c0-16.66-12.5-29.16-33.33-33.33h-62.5c-16.67 0-29.17 12.5-33.33 33.33v100c-129.17 16.67-212.5 100-212.5 204.17 0 137.5 83.33 191.66 258.33 212.5 116.67 20.83 154.17 45.83 154.17 112.5 0 66.66-58.34 112.5-137.5 112.5-108.34 0-145.84-45.84-158.34-108.34-4.16-16.66-16.66-25-29.16-25h-70.84c-16.66 0-29.16 12.5-29.16 29.17v4.17c25 100 87.5 158.33 229.16 179.16V1462.5c0 16.67 12.5 29.17 33.34 33.33h62.5c16.66 0 29.16-12.5 33.33-33.33v-104.17c129.17-20.83 216.67-108.33 216.67-216.66z" fill="white"/><path d="M787.5 1595.83c-325-116.66-491.67-479.16-379.17-800 66.67-195.83 220.84-345.83 379.17-408.33 16.67-8.34 25-20.84 25-41.67v-58.33c0-16.67-8.33-29.17-25-33.34-4.17 0-12.5 0-16.67 4.17-395.83 125-612.5 545.83-487.5 941.67 75 237.5 262.5 420.83 487.5 495.83 16.67 8.33 33.34 0 37.5-16.67 4.17-4.16 4.17-12.5 4.17-16.66v-58.34c0-12.5-12.5-25-25-8.33zM1229.17 258.33c-16.67-8.33-33.34 0-37.5 16.67-4.17 4.17-4.17 12.5-4.17 16.67v58.33c0 16.67 12.5 29.17 25 41.67 325 116.67 491.67 479.17 379.17 800-66.67 195.83-220.84 345.83-379.17 408.33-16.67 8.34-25 20.84-25 41.67v58.33c0 16.67 8.33 29.17 25 33.34 4.17 0 12.5 0 16.67-4.17 395.83-125 612.5-545.83 487.5-941.67-75-241.66-266.67-425-487.5-529.17z" fill="white"/></svg>
+                    <span className="text-[12px] font-bold text-[#1a1a1a] dark:text-white" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>USDC</span>
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-2.5">
+                  {[0.25, 0.5, 0.75, 1].map((pct) => (
+                    <button
+                      key={pct}
+                      onClick={() => setWithdrawAmount((usdcBalance * pct).toFixed(2))}
+                      disabled={usdcBalance === 0}
+                      className="flex-1 py-2 rounded-lg border-2 border-[#1a1a1a]/10 dark:border-[#333] bg-white dark:bg-[#1a1a1a] text-[11px] font-bold text-[#666] dark:text-[#888] hover:border-[#1a1a1a] dark:hover:border-[#c8ff00] hover:text-[#1a1a1a] dark:hover:text-[#c8ff00] transition-all disabled:opacity-30"
+                    >
+                      {pct === 1 ? 'MAX' : `${pct * 100}%`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Summary */}
+              {parsedWithdrawAmount > 0 && isValidAddress && (
+                <div className="rounded-xl border-2 border-[#1a1a1a]/10 dark:border-[#333] bg-[#fafafa] dark:bg-[#151515] px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[12px] text-[#aeaeae]">Sending</span>
+                    <span className="text-[13px] font-bold text-[#1a1a1a] dark:text-white">{withdrawAmount} USDC</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1.5">
+                    <span className="text-[12px] text-[#aeaeae]">To</span>
+                    <span className="text-[12px] text-[#666] dark:text-[#aaa]" style={{ fontFamily: "'SF Mono', 'Fira Code', monospace" }}>{toAddress.slice(0, 8)}...{toAddress.slice(-6)}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Processing */}
+              {(step === 'sending' || step === 'confirming') && (
+                <div className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-[#c8ff00]/30 bg-[#c8ff00]/8">
+                  <div className="w-5 h-5 rounded-full border-2 border-[#c8ff00] border-t-transparent animate-spin" />
+                  <span className="text-[13px] font-semibold text-[#7cb518]">{step === 'sending' ? "Sending transaction..." : "Confirming on-chain..."}</span>
+                </div>
+              )}
+
+              {/* Action button */}
+              <button
+                onClick={handleWithdraw}
+                disabled={isDisabled}
+                className="w-full flex items-center justify-center gap-2.5 h-[52px] rounded-xl bg-[#c8ff00] hover:bg-[#bbee00] text-[#1a1a1a] font-bold text-[14px] transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_4px_16px_rgba(200,255,0,0.25)] hover:shadow-[0_4px_24px_rgba(200,255,0,0.4)]" style={{ fontFamily: "'Inter', 'SF Pro Display', system-ui, sans-serif" }}
+              >
+                {isPending || isConfirming ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> {step === 'sending' ? "Sending..." : "Confirming..."}</>
+                ) : (
+                  <>
+                    <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg>
+                    Send {withdrawAmount || "0"} USDC
+                  </>
+                )}
+              </button>
+            </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   )
@@ -1692,30 +1589,37 @@ function ReceiveFundsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Receive Funds</DialogTitle>
-          <DialogDescription>
-            Scan this QR code or copy your wallet address to receive funds
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-[440px] p-0 overflow-hidden border border-[#2a2a2a] dark:border-[#2a2a2a] rounded-[24px] bg-white dark:bg-[#111111] shadow-[0px_32px_64px_-16px_rgba(0,0,0,0.35)]">
 
-        <div className="space-y-6 py-4">
+        {/* Header */}
+        <div className="px-6 pt-6 pb-4 border-b border-[#222]/15 dark:border-[#333]">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-[14px] bg-[#c8ff00] flex items-center justify-center">
+              <svg className="h-5 w-5 text-[#1a1a1a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </div>
+            <div>
+              <h2 className="text-[18px] font-bold text-[#1a1a1a] dark:text-white tracking-tight" style={{ fontFamily: "'Inter', 'SF Pro Display', system-ui, sans-serif" }}>Receive Funds</h2>
+              <p className="text-[12px] text-[#aeaeae] mt-0.5">Scan QR or copy your wallet address</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 pb-6 pt-5 space-y-5">
           {/* QR Code */}
           <div className="flex justify-center">
-            <div 
+            <div
               ref={qrCodeRef}
-              className="relative p-4 bg-white rounded-lg border border-border"
+              className="relative p-4 bg-white rounded-2xl border-2 border-[#1a1a1a]/10 dark:border-[#333]"
             >
               <QRCodeSVG
                 value={address}
-                size={256}
+                size={200}
                 level="H"
                 includeMargin={false}
                 imageSettings={{
                   src: '/monar.png',
-                  height: 56,
-                  width: 66,
+                  height: 44,
+                  width: 52,
                   excavate: true,
                 }}
               />
@@ -1723,51 +1627,47 @@ function ReceiveFundsDialog({
           </div>
 
           {/* Wallet Address */}
-          <div className="space-y-2">
-            <Label htmlFor="walletAddress">Wallet Address</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="walletAddress"
-                type="text"
-                value={address}
-                readOnly
-                className="font-mono text-sm"
-              />
-              <Button
-                variant="outline"
-                size="icon"
+          <div>
+            <label className="block text-[12px] font-semibold text-[#1a1a1a] dark:text-[#ccc] mb-2" style={{ fontFamily: "'Inter', 'SF Pro Display', system-ui, sans-serif" }}>Wallet Address</label>
+            <div className="flex items-stretch gap-2">
+              <div className="flex-1 min-w-0 bg-[#fafafa] dark:bg-[#151515] border-2 border-[#1a1a1a]/10 dark:border-[#333] rounded-xl px-4 flex items-center h-12">
+                <span className="text-[12px] text-[#1a1a1a] dark:text-white truncate block" style={{ fontFamily: "'SF Mono', 'Fira Code', 'Menlo', monospace" }}>{address}</span>
+              </div>
+              <button
                 onClick={copyAddress}
+                className="w-12 h-12 flex items-center justify-center rounded-xl border-2 border-[#1a1a1a]/10 dark:border-[#333] bg-white dark:bg-[#1a1a1a] hover:border-[#1a1a1a] dark:hover:border-[#c8ff00] transition-colors"
                 title="Copy Address"
               >
-                <Copy className="h-4 w-4" />
-              </Button>
+                <Copy className="h-4 w-4 text-[#666]" />
+              </button>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
+          <div className="flex gap-2.5">
+            <button
               onClick={copyAddress}
-              className="flex-1"
+              className="flex-1 flex items-center justify-center gap-2 h-12 rounded-xl border-2 border-[#1a1a1a]/10 dark:border-[#333] bg-white dark:bg-[#1a1a1a] text-[#1a1a1a] dark:text-white font-bold text-[13px] hover:border-[#1a1a1a] dark:hover:border-[#c8ff00] transition-all" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
             >
-              <Copy className="h-4 w-4 mr-2" />
+              <Copy className="h-4 w-4" />
               Copy Address
-            </Button>
-            <Button
-              variant="default"
+            </button>
+            <button
               onClick={downloadQR}
-              className="flex-1"
+              className="flex-1 flex items-center justify-center gap-2 h-12 rounded-xl bg-[#c8ff00] hover:bg-[#bbee00] text-[#1a1a1a] font-bold text-[13px] transition-all shadow-[0_4px_16px_rgba(200,255,0,0.25)]" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
             >
-              <Download className="h-4 w-4 mr-2" />
+              <Download className="h-4 w-4" />
               Download QR
-            </Button>
+            </button>
           </div>
 
-          {/* Footer Text */}
-          <p className="text-xs text-center text-muted-foreground">
-            Share this QR code or address to receive funds on any supported chain
-          </p>
+          {/* Footer */}
+          <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-xl border-2 border-[#1a1a1a]/10 dark:border-[#333] bg-[#fafafa] dark:bg-[#151515]">
+            <svg className="h-4 w-4 text-[#aeaeae] mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            <p className="text-[11px] text-[#888] leading-relaxed">
+              Share QR code or address to receive funds on any supported chain
+            </p>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

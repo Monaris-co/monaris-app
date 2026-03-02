@@ -7,24 +7,28 @@ import {
   Vault,
   Award,
   ShieldCheck,
+  Shield,
   Settings,
   Sparkles,
   ArrowUpRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { prefetchPrivacyModules } from "@/lib/privacy"
 
 const navigation = [
   { name: "Dashboard", href: "/app", icon: LayoutDashboard },
   { name: "Invoices", href: "/app/invoices", icon: FileText },
-  { name: "Financing", href: "/app/financing", icon: Banknote },
-  { name: "Funding Pool", href: "/app/vault", icon: Vault },
+  { name: "Private Pay", href: "/app/private-payments", icon: Shield },
   { name: "Reputation", href: "/app/reputation", icon: Award },
-  { name: "Proofs", href: "/app/proofs", icon: ShieldCheck },
-  { name: "Settings", href: "/app/settings", icon: Settings },
-]
+  { name: "Home", href: "/app/settings", icon: Settings },
+  { name: "Financing", href: "/app/financing", icon: Banknote, comingSoon: true },
+  { name: "Funding Pool", href: "/app/vault", icon: Vault, comingSoon: true },
+  { name: "Proofs", href: "/app/proofs", icon: ShieldCheck, comingSoon: true },
+
+] as const
 
 interface SidebarContentProps {
   collapsed?: boolean
@@ -33,6 +37,10 @@ interface SidebarContentProps {
 
 function SidebarContent({ collapsed = false, onNavigate }: SidebarContentProps) {
   const location = useLocation()
+
+  const handleMouseEnter = useCallback((href: string) => {
+    if (href === '/app/private-payments') prefetchPrivacyModules();
+  }, []);
 
   return (
     <div className="flex flex-col h-full">
@@ -53,13 +61,33 @@ function SidebarContent({ collapsed = false, onNavigate }: SidebarContentProps) 
       {/* Navigation */}
       <nav className="flex-1 px-4 py-4 space-y-1">
         {navigation.map((item) => {
-          const isActive = location.pathname === item.href || 
-            (item.href !== '/app' && location.pathname.startsWith(item.href))
+          const isDisabled = 'comingSoon' in item && item.comingSoon;
+          const isActive = !isDisabled && (location.pathname === item.href || 
+            (item.href !== '/app' && location.pathname.startsWith(item.href)))
+
+          if (isDisabled) {
+            return (
+              <div
+                key={item.name}
+                className="w-full flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium opacity-35 cursor-not-allowed select-none"
+              >
+                <item.icon className="h-5 w-5 shrink-0 text-gray-400 dark:text-gray-600" />
+                {!collapsed && (
+                  <>
+                    <span className="text-gray-400 dark:text-gray-600">{item.name}</span>
+                    <span className="ml-auto text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-600">Soon</span>
+                  </>
+                )}
+              </div>
+            )
+          }
+
           return (
             <Link
               key={item.name}
               to={item.href}
               onClick={() => onNavigate?.()}
+              onMouseEnter={() => handleMouseEnter(item.href)}
               className={cn(
                 "w-full flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200",
                 isActive

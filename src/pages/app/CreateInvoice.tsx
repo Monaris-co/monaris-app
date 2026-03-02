@@ -271,7 +271,7 @@ export default function CreateInvoice() {
       } else if (isInsufficientFunds) {
         // Show user-friendly message for insufficient funds
         const nativeToken = chainId === 5003 || chainId === 5000 ? "MNT" : "ETH";
-        toast.error("💸 Insufficient Funds", {
+        toast.error("Insufficient Funds", {
           description: (
             <div className="space-y-1">
               <p>{error.message || `You don't have enough ${nativeToken} to pay for gas fees.`}</p>
@@ -282,7 +282,7 @@ export default function CreateInvoice() {
         })
       } else if (isTemporaryRpcError) {
         // Show user-friendly message for temporary RPC errors
-        toast.error("⚠️ Network Error - Please Retry", {
+        toast.error("Network Error — Please Retry", {
           description: (
             <div className="space-y-1">
               <p>{error.message || "The network is temporarily unavailable. Please wait a moment and try again."}</p>
@@ -293,7 +293,7 @@ export default function CreateInvoice() {
         })
       } else {
         // Only show error if transaction definitely failed (no hash, no success)
-        toast.error("❌ Failed to create invoice", {
+        toast.error("Failed to create invoice", {
           description: (
             <div className="space-y-1">
               <p>{error.message || "Please check your wallet and try again"}</p>
@@ -436,7 +436,7 @@ export default function CreateInvoice() {
       
       if (!isAlreadyKnown) {
         if (isContractConfigError) {
-          toast.error("⚠️ Contract Configuration Error", {
+          toast.error("Contract Configuration Error", {
             description: "InvoiceNFT contract is not properly configured. The InvoiceRegistry contract needs MINTER_ROLE on InvoiceNFT. Please run the contract setup script or contact support.",
             duration: 15000,
           })

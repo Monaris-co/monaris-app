@@ -387,7 +387,7 @@ export default function Invoices() {
                       Invoice
                       {addresses.InvoiceNFT && (
                         <span className="text-xs text-purple-600 dark:text-purple-400" title="Invoices are tokenized">
-                          🎨 Tokenized
+                          ◆ Tokenized
                         </span>
                       )}
                     </div>

@@ -741,7 +741,7 @@ function DepositDialog({
            errorMsgLower.includes('approval') || 
            errorMsgLower.includes('transferfrom') ||
            errorMsgLower.includes('execution reverted')) {
-         errorMessage = "❌ Insufficient allowance. Please click the 'Approve USDC' button first, wait for it to complete, then try depositing again."
+         errorMessage = "Insufficient allowance. Please click the 'Approve USDC' button first, wait for it to complete, then try depositing again."
         
         // Show approval button hint
         toast.error("Approval Required", {

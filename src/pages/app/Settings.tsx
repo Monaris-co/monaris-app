@@ -1,4 +1,5 @@
 import { motion } from "framer-motion"
+import { Link } from "react-router-dom"
 import { 
   User, 
   Wallet, 
@@ -28,6 +29,7 @@ import { useChainId, useReadContract, useWaitForTransactionReceipt } from "wagmi
 import { useSendTransaction, useWallets } from "@privy-io/react-auth"
 import { usePrivyAccount } from "@/hooks/usePrivyAccount"
 import { useChainAddresses } from "@/hooks/useChainAddresses"
+import { PRIVATE_PAYMENTS_ENABLED } from "@/lib/privacy/config"
 import { useContacts, Contact } from "@/hooks/useContacts"
 import { DemoUSDCABI } from "@/lib/abis"
 import { parseUnits, formatUnits, encodeFunctionData } from "viem"
@@ -210,6 +212,28 @@ export default function Settings() {
             defaultChecked
           />
         </div>
+
+        {PRIVATE_PAYMENTS_ENABLED && (
+          <div className="mt-6 pt-6 border-t border-[#f1f1f1] dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-[#1a1a1a] dark:text-white">Private Payments</p>
+                <p className="text-sm text-[#aeaeae]">Manage your shielded wallet, balances, and private transfers</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-xl border-[#e8e8e8] dark:border-gray-600 hover:border-[#c8ff00] hover:bg-[#c8ff00]/10"
+                asChild
+              >
+                <Link to="/app/private-payments">
+                  <Shield className="mr-2 h-4 w-4" />
+                  Open Private Pay
+                </Link>
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Demo Setup */}
@@ -469,7 +493,7 @@ function DemoSetupPanel({
               
               {!isAnyTestnet && (
                 <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
-                  ⚠️ Switch to a testnet (Mantle Sepolia, Arbitrum Sepolia, or Ethereum Sepolia) to enable minting
+                  Switch to a testnet (Mantle Sepolia, Arbitrum Sepolia, or Ethereum Sepolia) to enable minting
                 </p>
               )}
           </div>
@@ -681,3 +705,4 @@ function NotificationToggle({
     </div>
   )
 }
+
