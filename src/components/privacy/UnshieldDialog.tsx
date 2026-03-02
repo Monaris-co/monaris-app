@@ -316,17 +316,27 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
 
       const proofStart = Date.now();
 
-      const result = await buildUnshieldTransaction(
-        { tokenAddress, amount: amountBigInt, toAddress: recipientAddress },
-        wallet.id,
-        wallet.encryptionKey,
-        networkName,
-        (progress, stage) => {
-          usePrivacyStore.getState().setProofProgress(progress, stage);
-        },
-      );
+      // Retry up to 3 times — the IPFS artifact download can timeout on first
+      // attempt but succeeds quickly on retry since partially cached in IndexedDB.
+      let result: Awaited<ReturnType<typeof buildUnshieldTransaction>> | undefined;
+      const MAX_BUILD_RETRIES = 3;
+      for (let attempt = 1; attempt <= MAX_BUILD_RETRIES; attempt++) {
+        result = await buildUnshieldTransaction(
+          { tokenAddress, amount: amountBigInt, toAddress: recipientAddress },
+          wallet.id,
+          wallet.encryptionKey,
+          networkName,
+          (progress, stage) => {
+            usePrivacyStore.getState().setProofProgress(progress, stage);
+          },
+        );
+        if (result.success && result.transaction) break;
+        const isArtifactTimeout = result.error?.includes('Timed out downloading artifact');
+        if (!isArtifactTimeout || attempt === MAX_BUILD_RETRIES) break;
+        console.warn(`[Unshield] Artifact download timed out, retry ${attempt}/${MAX_BUILD_RETRIES}...`);
+      }
 
-      if (!result.success || !result.transaction) throw new Error(result.error || 'Transaction build failed');
+      if (!result?.success || !result.transaction) throw new Error(result?.error || 'Transaction build failed');
 
       const proofTime = result.proofTime || (Date.now() - proofStart);
 
