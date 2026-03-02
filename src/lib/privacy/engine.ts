@@ -387,23 +387,29 @@ async function doLoadProvider(): Promise<void> {
     const networkName =
       chainId === 42161 ? NetworkName.Arbitrum : NetworkName.Arbitrum;
 
-    const RELIABLE_RPCS = [
-      'https://1rpc.io/arb',
-      'https://rpc.ankr.com/arbitrum',
-      'https://arbitrum.drpc.org',
-    ];
-
     const customRpc = import.meta.env[`VITE_RPC_URL_${chainId}`];
     const isCustomRpcReliable = customRpc
       && !customRpc.includes('pocket.network')
-      && !customRpc.includes('llamarpc')
-      && RELIABLE_RPCS.every(r => r !== customRpc);
+      && !customRpc.includes('llamarpc');
 
+    // ethers FallbackProvider quorum = ceil(totalWeight / 2).
+    // With 2 providers of weight 1 each: totalWeight=2, quorum=1.
+    // A single provider responding is enough to pass quorum.
     const providers = [
-      ...(isCustomRpcReliable ? [{ provider: customRpc, priority: 1, weight: 2, maxLogsPerBatch: 100, stallTimeout: 2000 }] : []),
-      { provider: RELIABLE_RPCS[0], priority: isCustomRpcReliable ? 2 : 1, weight: 2, maxLogsPerBatch: 100, stallTimeout: 2000 },
-      { provider: RELIABLE_RPCS[1], priority: isCustomRpcReliable ? 3 : 2, weight: 1, maxLogsPerBatch: 100, stallTimeout: 2500 },
-      { provider: RELIABLE_RPCS[2], priority: isCustomRpcReliable ? 4 : 3, weight: 1, maxLogsPerBatch: 100, stallTimeout: 2500 },
+      {
+        provider: isCustomRpcReliable ? customRpc : 'https://1rpc.io/arb',
+        priority: 1,
+        weight: 1,
+        maxLogsPerBatch: 100,
+        stallTimeout: 5000,
+      },
+      {
+        provider: 'https://rpc.ankr.com/arbitrum',
+        priority: 2,
+        weight: 1,
+        maxLogsPerBatch: 100,
+        stallTimeout: 5000,
+      },
     ];
 
     const fallbackProviders = {
