@@ -24,6 +24,23 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('@railgun-community/engine')) return 'railgun-engine';
+          if (id.includes('@railgun-community/wallet')) return 'railgun-wallet';
+          if (id.includes('@railgun-community/shared-models')) return 'railgun-shared';
+          if (id.includes('snarkjs')) return 'snarkjs';
+          if (id.includes('ethers')) return 'ethers';
+          if (id.includes('@privy-io')) return 'privy';
+          if (id.includes('wagmi') || id.includes('@wagmi')) return 'wagmi';
+          if (id.includes('viem')) return 'viem';
+        },
+      },
+    },
+    chunkSizeWarningLimit: 2000,
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

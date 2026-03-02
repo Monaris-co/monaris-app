@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "hardhat compile && vite build",
-    "build:vercel": "NODE_OPTIONS='--max-old-space-size=8192' vite build",
+    "build:vercel": "NODE_OPTIONS='--max-old-space-size=6144' vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
