@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { CheckCircle2, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react';
 import {
   Dialog,
@@ -42,6 +42,47 @@ function UsdcIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
+function EthIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 32 32" fill="none">
+      <circle cx="16" cy="16" r="16" fill="#627EEA"/>
+      <path d="M16.498 4v8.87l7.497 3.35L16.498 4z" fill="white" fillOpacity="0.6"/>
+      <path d="M16.498 4L9 16.22l7.498-3.35V4z" fill="white"/>
+      <path d="M16.498 21.968v6.027L24 17.616l-7.502 4.352z" fill="white" fillOpacity="0.6"/>
+      <path d="M16.498 27.995v-6.028L9 17.616l7.498 10.379z" fill="white"/>
+      <path d="M16.498 20.573l7.497-4.353-7.497-3.348v7.701z" fill="white" fillOpacity="0.2"/>
+      <path d="M9 16.22l7.498 4.353v-7.701L9 16.22z" fill="white" fillOpacity="0.6"/>
+    </svg>
+  );
+}
+
+function UsmtPlusIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 32 32" fill="none">
+      <circle cx="16" cy="16" r="16" fill="#1a1a1a"/>
+      <circle cx="16" cy="16" r="14.5" stroke="#c8ff00" strokeWidth="1"/>
+      <text x="16" y="18" textAnchor="middle" fill="#c8ff00" fontSize="9" fontWeight="700" fontFamily="Inter, system-ui, sans-serif">U+</text>
+    </svg>
+  );
+}
+
+type TokenOption = {
+  id: string;
+  symbol: string;
+  name: string;
+  network: string;
+  icon: React.ComponentType<{ className?: string }>;
+  decimals: number;
+  enabled: boolean;
+  comingSoon?: boolean;
+};
+
+const TOKEN_OPTIONS: TokenOption[] = [
+  { id: 'USDC', symbol: 'USDC', name: 'USD Coin', network: 'Arbitrum', icon: UsdcIcon, decimals: 6, enabled: true },
+  { id: 'ETH', symbol: 'ETH', name: 'Ethereum', network: 'Arbitrum', icon: EthIcon, decimals: 18, enabled: true },
+  { id: 'USMT+', symbol: 'USMT+', name: 'USMT Plus', network: 'Arbitrum', icon: UsmtPlusIcon, decimals: 18, enabled: false, comingSoon: true },
+];
 
 function LockShieldIcon({ className }: { className?: string }) {
   return (
@@ -191,6 +232,8 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
   const { wallets } = useWallets();
 
   const [token, setToken] = useState<SupportedPrivateToken>('USDC');
+  const [selectedTokenId, setSelectedTokenId] = useState('USDC');
+  const [showTokenDropdown, setShowTokenDropdown] = useState(false);
   const [amount, setAmount] = useState('');
   const [step, setStep] = useState<UnshieldStep>('input');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -199,6 +242,21 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
   const [txHash, setTxHash] = useState<string | null>(null);
   const [recipientMode, setRecipientMode] = useState<'self' | 'other'>('self');
   const [customRecipient, setCustomRecipient] = useState('');
+
+  const selectedToken = TOKEN_OPTIONS.find(t => t.id === selectedTokenId) || TOKEN_OPTIONS[0];
+  const TokenIcon = selectedToken.icon;
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showTokenDropdown) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowTokenDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showTokenDropdown]);
 
   const isValidCustomAddress = customRecipient.length > 0 && isAddress(customRecipient);
   const isSendingToOther = recipientMode === 'other';
@@ -210,8 +268,8 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
     return ct === 'embedded' || wct === 'privy' || ct.includes('privy');
   }) || wallets[0];
 
-  const currentBalance = token === 'USDC' ? privateUsdcBalance : privateUsdtBalance;
-  const currentSpendable = token === 'USDC' ? spendableUsdc : spendableUsdt;
+  const currentBalance = selectedTokenId === 'USDC' ? privateUsdcBalance : selectedTokenId === 'ETH' ? 0 : privateUsdtBalance;
+  const currentSpendable = selectedTokenId === 'USDC' ? spendableUsdc : selectedTokenId === 'ETH' ? 0 : spendableUsdt;
   const isPending = currentBalance > 0 && currentSpendable < currentBalance;
 
   const handleUnshield = useCallback(async () => {
@@ -223,14 +281,14 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
 
     const parsedAmt = parseFloat(amount) || 0;
     if (parsedAmt <= 0) return;
-    if (parsedAmt > currentSpendable) {
+      if (parsedAmt > currentSpendable) {
       if (isPending) {
         toast.error('Funds are still pending', {
-          description: `${currentBalance.toFixed(2)} USDC shielded, but only ${currentSpendable.toFixed(2)} is spendable. Wait a few minutes for POI validation.`,
+          description: `${currentBalance.toFixed(2)} ${selectedToken.symbol} shielded, but only ${currentSpendable.toFixed(2)} is spendable. Wait a few minutes for POI validation.`,
         });
       } else {
         toast.error('Insufficient spendable balance', {
-          description: `You have ${currentSpendable.toFixed(2)} USDC spendable.`,
+          description: `You have ${currentSpendable.toFixed(2)} ${selectedToken.symbol} spendable.`,
         });
       }
       return;
@@ -347,8 +405,8 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
       refreshBalances();
       toast.success(isSendingToOther ? 'Private payment sent!' : 'Funds unshielded!', {
         description: isSendingToOther
-          ? `${amount} USDC sent privately to ${resolvedRecipient?.slice(0, 6)}...${resolvedRecipient?.slice(-4)}`
-          : `${amount} USDC returned to your public wallet.`,
+          ? `${amount} ${selectedToken.symbol} sent privately to ${resolvedRecipient?.slice(0, 6)}...${resolvedRecipient?.slice(-4)}`
+          : `${amount} ${selectedToken.symbol} returned to your public wallet.`,
       });
     } catch (err: any) {
       console.error('[Unshield] Error:', err);
@@ -372,6 +430,8 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
     setTxHash(null);
     setRecipientMode('self');
     setCustomRecipient('');
+    setSelectedTokenId('USDC');
+    setShowTokenDropdown(false);
   };
 
   const parsedAmount = parseFloat(amount) || 0;
@@ -399,8 +459,8 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
               </h3>
               <p className="text-sm text-[#888] mt-2">
                 {isSendingToOther
-                  ? <>{amount} USDC sent privately to<br/><span className="font-mono text-[12px] text-[#555] dark:text-[#aaa]">{customRecipient.slice(0, 10)}...{customRecipient.slice(-8)}</span></>
-                  : <>{amount} USDC is back in your public wallet.</>
+                  ? <>{amount} {selectedToken.symbol} sent privately to<br/><span className="font-mono text-[12px] text-[#555] dark:text-[#aaa]">{customRecipient.slice(0, 10)}...{customRecipient.slice(-8)}</span></>
+                  : <>{amount} {selectedToken.symbol} is back in your public wallet.</>
                 }
               </p>
               {txHash && (
@@ -451,8 +511,8 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
                   <WithdrawIcon className="h-5 w-5 text-[#1a1a1a]" />
                 </div>
                 <div>
-                  <h2 className="text-[17px] font-bold text-[#1a1a1a] dark:text-white tracking-tight">Unshield Funds</h2>
-                  <p className="text-[12px] text-[#999]">Withdraw to public wallet</p>
+                  <h2 className="text-[17px] font-bold text-[#1a1a1a] dark:text-white tracking-tight">Send {selectedToken.symbol}</h2>
+                  <p className="text-[12px] text-[#999]">Transfer to any wallet address</p>
                 </div>
               </div>
             </div>
@@ -468,7 +528,7 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
                     <>
                       <p className="text-sm font-semibold text-[#1a1a1a] dark:text-white">Funds pending validation</p>
                       <p className="text-xs text-[#888] mt-1 text-center">
-                        {currentBalance.toFixed(2)} USDC shielded but awaiting Proof of Innocence validation.
+                        {currentBalance.toFixed(2)} {selectedToken.symbol} shielded but awaiting Proof of Innocence validation.
                         This usually takes 2-5 minutes.
                       </p>
                       <button
@@ -481,7 +541,7 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
                   ) : (
                     <>
                       <p className="text-sm font-semibold text-[#1a1a1a] dark:text-white">No shielded balance</p>
-                      <p className="text-xs text-[#888] mt-1 text-center">Shield USDC first, then you can withdraw here.</p>
+                      <p className="text-xs text-[#888] mt-1 text-center">Shield tokens first, then you can withdraw here.</p>
                     </>
                   )}
                 </div>
@@ -490,30 +550,94 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
               {/* Token + Amount card (hidden during processing) */}
               {step === 'input' && (
                 <>
-                  <div className="rounded-2xl border-2 border-[#1a1a1a]/10 dark:border-[#333] bg-[#fafafa] dark:bg-[#151515] overflow-hidden">
-                    <div className="flex items-center justify-between px-4 pt-4 pb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-full bg-white dark:bg-[#1a1a1a] border-2 border-[#1a1a1a]/8 dark:border-[#333] flex items-center justify-center shadow-sm">
-                          <UsdcIcon className="w-7 h-7" />
+                  <div className="rounded-2xl border-2 border-[#1a1a1a]/10 dark:border-[#333] bg-[#fafafa] dark:bg-[#151515] overflow-visible">
+                    {/* Token selector header */}
+                    <div className="relative" ref={dropdownRef}>
+                      <button
+                        type="button"
+                        onClick={() => setShowTokenDropdown(!showTokenDropdown)}
+                        className="w-full flex items-center justify-between px-4 pt-4 pb-3 hover:bg-[#f5f5f5] dark:hover:bg-[#1a1a1a] transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-11 h-11 rounded-full bg-white dark:bg-[#1a1a1a] border-2 border-[#1a1a1a]/8 dark:border-[#333] flex items-center justify-center shadow-sm">
+                            <TokenIcon className="w-7 h-7" />
+                          </div>
+                          <div className="text-left">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[15px] font-bold text-[#1a1a1a] dark:text-white" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>{selectedToken.symbol}</span>
+                              <ChevronDown className={`h-3.5 w-3.5 text-[#999] transition-transform duration-200 ${showTokenDropdown ? 'rotate-180' : ''}`} />
+                            </div>
+                            <span className="block text-[11px] text-[#999] font-medium">{selectedToken.name} · {selectedToken.network}</span>
+                          </div>
                         </div>
-                        <div>
-                          <span className="block text-[15px] font-bold text-[#1a1a1a] dark:text-white" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>USDC</span>
-                          <span className="block text-[11px] text-[#999] font-medium">USD Coin · Arbitrum</span>
+                        <div className="text-right">
+                          <span className="block text-[15px] font-bold text-[#1a1a1a] dark:text-white" style={{ fontFamily: "'SF Mono', 'Fira Code', monospace" }}>{currentSpendable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          <span className="block text-[11px] text-[#999] font-medium">Available</span>
+                          {isPending && (
+                            <span className="block text-[10px] text-[#7cb518] font-medium mt-0.5">
+                              +{(currentBalance - currentSpendable).toFixed(2)} pending
+                            </span>
+                          )}
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <span className="block text-[15px] font-bold text-[#1a1a1a] dark:text-white" style={{ fontFamily: "'SF Mono', 'Fira Code', monospace" }}>{currentSpendable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        <span className="block text-[11px] text-[#999] font-medium">Spendable</span>
-                        {isPending && (
-                          <span className="block text-[10px] text-[#7cb518] font-medium mt-0.5">
-                            +{(currentBalance - currentSpendable).toFixed(2)} pending
-                          </span>
-                        )}
-                      </div>
+                      </button>
+
+                      {/* Dropdown */}
+                      {showTokenDropdown && (
+                        <div className="absolute left-0 right-0 top-full z-50 mx-3 mt-1 rounded-xl border border-[#e0e0e0] dark:border-[#2a2a2a] bg-white dark:bg-[#151515] shadow-[0_8px_24px_rgba(0,0,0,0.12)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+                          {TOKEN_OPTIONS.map((tk) => {
+                            const TkIcon = tk.icon;
+                            const isSelected = tk.id === selectedTokenId;
+                            const tkBalance = tk.id === 'USDC' ? spendableUsdc : tk.id === 'ETH' ? 0 : spendableUsdt;
+                            return (
+                              <button
+                                key={tk.id}
+                                type="button"
+                                disabled={!tk.enabled}
+                                onClick={() => {
+                                  if (!tk.enabled) return;
+                                  setSelectedTokenId(tk.id);
+                                  setToken(tk.id === 'USDC' ? 'USDC' : 'USDT');
+                                  setAmount('');
+                                  setShowTokenDropdown(false);
+                                }}
+                                className={`w-full flex items-center justify-between px-4 py-3 transition-colors ${
+                                  !tk.enabled
+                                    ? 'opacity-50 cursor-not-allowed'
+                                    : isSelected
+                                    ? 'bg-[#c8ff00]/10'
+                                    : 'hover:bg-[#f5f5f5] dark:hover:bg-[#1a1a1a]'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="w-9 h-9 rounded-full bg-white dark:bg-[#1a1a1a] border border-[#e8e8e8] dark:border-[#333] flex items-center justify-center">
+                                    <TkIcon className="w-6 h-6" />
+                                  </div>
+                                  <div className="text-left">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-[13px] font-bold text-[#1a1a1a] dark:text-white">{tk.symbol}</span>
+                                      {tk.comingSoon && (
+                                        <span className="px-1.5 py-0.5 rounded-md bg-[#c8ff00]/20 text-[8px] font-bold text-[#7cb518] uppercase tracking-wide">Soon</span>
+                                      )}
+                                      {isSelected && (
+                                        <Check className="h-3.5 w-3.5 text-[#7cb518]" />
+                                      )}
+                                    </div>
+                                    <span className="block text-[10px] text-[#999] font-medium">{tk.name} · {tk.network}</span>
+                                  </div>
+                                </div>
+                                <span className="text-[13px] font-bold text-[#1a1a1a] dark:text-white" style={{ fontFamily: "'SF Mono', 'Fira Code', monospace" }}>
+                                  {tkBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
 
                     <div className="mx-4 h-px bg-[#1a1a1a]/8 dark:bg-[#333]" />
 
+                    {/* Amount input */}
                     <div className="p-4 space-y-3">
                       <div className="relative">
                         <input
@@ -525,8 +649,8 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
                           className="w-full bg-white dark:bg-[#1a1a1a] border-2 border-[#1a1a1a]/10 dark:border-[#333] focus:border-[#1a1a1a] dark:focus:border-[#c8ff00] rounded-xl px-4 py-4 text-2xl font-bold text-[#1a1a1a] dark:text-white placeholder:text-[#d1d1d1] dark:placeholder:text-[#444] outline-none transition-colors disabled:opacity-50" style={{ fontFamily: "'SF Mono', 'Fira Code', monospace" }}
                         />
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 bg-[#f0f0f0] dark:bg-[#222] px-2.5 py-1.5 rounded-lg">
-                          <UsdcIcon className="w-4 h-4" />
-                          <span className="text-xs font-bold text-[#555] dark:text-[#aaa]">USDC</span>
+                          <TokenIcon className="w-4 h-4" />
+                          <span className="text-xs font-bold text-[#555] dark:text-[#aaa]">{selectedToken.symbol}</span>
                         </div>
                       </div>
 
@@ -534,7 +658,7 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
                         {[0.25, 0.5, 0.75, 1].map((pct) => (
                           <button
                             key={pct}
-                            onClick={() => setAmount((currentSpendable * pct).toFixed(2))}
+                            onClick={() => setAmount((currentSpendable * pct).toFixed(selectedTokenId === 'ETH' ? 6 : 2))}
                             disabled={currentSpendable === 0}
                             className="flex-1 py-2 rounded-lg border-2 border-[#1a1a1a]/8 dark:border-[#333] bg-white dark:bg-[#1a1a1a] text-[11px] font-bold text-[#666] dark:text-[#888] hover:border-[#1a1a1a] dark:hover:border-[#c8ff00] hover:text-[#1a1a1a] dark:hover:text-[#c8ff00] transition-all disabled:opacity-30"
                           >
@@ -669,8 +793,8 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
                     </p>
                     <p className="text-[11px] text-[#888]">
                       {isSendingToOther
-                        ? <>Sending {amount} USDC to <span className="font-mono">{customRecipient.slice(0, 6)}...{customRecipient.slice(-4)}</span></>
-                        : <>Withdrawing {amount} USDC to public wallet</>}
+                        ? <>Sending {amount} {selectedToken.symbol} to <span className="font-mono">{customRecipient.slice(0, 6)}...{customRecipient.slice(-4)}</span></>
+                        : <>Withdrawing {amount} {selectedToken.symbol} to public wallet</>}
                     </p>
                   </div>
 
@@ -746,12 +870,12 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
                   {isSendingToOther ? (
                     <>
                       <LockShieldIcon className="h-[18px] w-[18px]" />
-                      Send {parsedAmount > 0 ? amount : '0'} USDC Privately
+                      Send {parsedAmount > 0 ? amount : '0'} {selectedToken.symbol} Privately
                     </>
                   ) : (
                     <>
                       <WithdrawIcon className="h-[18px] w-[18px]" />
-                      Withdraw {parsedAmount > 0 ? amount : '0'} USDC
+                      Withdraw {parsedAmount > 0 ? amount : '0'} {selectedToken.symbol}
                     </>
                   )}
                 </button>

@@ -145,25 +145,7 @@ export default function PrivatePayments() {
           </div>
         </div>
 
-        {/* POI Validation Banner */}
-        {hasPendingFunds && (
-          <motion.div
-            variants={item}
-            className="bg-[#fef3c7] dark:bg-[#78350f]/30 border border-[#f59e0b]/30 rounded-[16px] sm:rounded-[20px] p-3 sm:p-4 mb-4"
-          >
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-[#f59e0b]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Shield className="h-4 w-4 text-[#f59e0b]" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#f59e0b] animate-pulse" />
-                  <span className="text-[11px] text-[#a16207] dark:text-[#fcd34d]/60 font-medium">$0.40 USDC is being screened by the RAILGUN privacy compliance system. This takes up to 1 hour on mainnet. </span>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
+       
 
         {/* Top Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 mb-6">
