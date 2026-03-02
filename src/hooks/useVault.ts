@@ -18,7 +18,7 @@ export function useVault() {
     chainId,
     query: {
       enabled: !!addresses.Vault,
-      refetchInterval: 30000, // Reduced frequency to avoid rate limits
+      refetchInterval: 120_000,
     },
   });
 
@@ -29,7 +29,7 @@ export function useVault() {
     chainId,
     query: {
       enabled: !!addresses.Vault,
-      refetchInterval: 30000, // Reduced frequency to avoid rate limits
+      refetchInterval: 120_000,
     },
   });
 
@@ -40,7 +40,7 @@ export function useVault() {
     chainId,
     query: {
       enabled: !!addresses.Vault,
-      refetchInterval: 30000, // Reduced frequency to avoid rate limits
+      refetchInterval: 120_000,
     },
   });
 
@@ -52,7 +52,7 @@ export function useVault() {
     chainId,
     query: {
       enabled: !!addresses.Vault && !!address,
-      refetchInterval: 30000, // Reduced frequency to avoid rate limits
+      refetchInterval: 120_000,
     },
   });
 
@@ -64,7 +64,7 @@ export function useVault() {
     chainId,
     query: {
       enabled: !!addresses.Vault && !!address,
-      refetchInterval: 30000, // Reduced frequency to avoid rate limits
+      refetchInterval: 120_000,
     },
   });
 
@@ -75,7 +75,7 @@ export function useVault() {
     chainId,
     query: {
       enabled: !!addresses.Vault,
-      refetchInterval: 30000, // Reduced frequency to avoid rate limits
+      refetchInterval: 120_000,
     },
   });
 

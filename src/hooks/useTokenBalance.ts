@@ -57,10 +57,10 @@ export function useTokenBalance() {
     chainId,
     query: {
       enabled: isEnabled,
-      refetchInterval: 15000, // Refetch every 15s
-      staleTime: 10000, // Consider data stale after 10s
-      retry: 3,
-      retryDelay: 1000,
+      refetchInterval: 60_000,
+      staleTime: 30_000,
+      retry: 2,
+      retryDelay: 3000,
     },
   });
 

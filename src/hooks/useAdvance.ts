@@ -37,7 +37,7 @@ export function useAdvance(invoiceId: bigint | string | undefined) {
     chainId,
     query: {
       enabled: !!invoiceId && !!addresses.AdvanceEngine,
-      refetchInterval: 30000, // Reduced frequency to avoid rate limits
+      refetchInterval: 120_000,
     },
   });
 
@@ -92,7 +92,7 @@ export function useTotalDebt(sellerAddress?: string) {
     chainId,
     query: {
       enabled: !!seller && !!addresses.AdvanceEngine,
-      refetchInterval: 30000, // Reduced frequency to avoid rate limits
+      refetchInterval: 120_000,
     },
   });
 

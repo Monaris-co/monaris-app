@@ -23,9 +23,9 @@ export function useUSMTBalance() {
     chainId,
     query: {
       enabled: isEnabled,
-      refetchInterval: isEnabled ? 30000 : false, // Refetch every 30s only when enabled
-      retry: 2, // Retry up to 2 times on failure
-      retryDelay: 1000, // Wait 1s between retries
+      refetchInterval: isEnabled ? 120_000 : false,
+      retry: 2,
+      retryDelay: 3000,
     },
   });
 

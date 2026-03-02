@@ -39,7 +39,7 @@ export function useInvoice(invoiceId: bigint | string | undefined) {
     chainId,
     query: {
       enabled: !!invoiceId && !!addresses.InvoiceRegistry,
-      refetchInterval: 15000, // Reduced frequency to avoid rate limits
+      refetchInterval: 60_000,
     },
   });
 
@@ -439,7 +439,7 @@ export function useSellerInvoices(sellerAddress?: string) {
     chainId,
     query: {
       enabled: !!seller && !!addresses.InvoiceRegistry,
-      refetchInterval: 10000, // Poll every 10 seconds for invoice updates
+      refetchInterval: 60_000,
     },
   });
 

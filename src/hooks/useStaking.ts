@@ -19,7 +19,7 @@ export function useStaking() {
     chainId,
     query: {
       enabled: !!addresses.Staking && !!address,
-      refetchInterval: 30000,
+      refetchInterval: 120_000,
     },
   });
 
@@ -31,7 +31,7 @@ export function useStaking() {
     chainId,
     query: {
       enabled: !!addresses.Staking && !!address,
-      refetchInterval: 30000,
+      refetchInterval: 120_000,
     },
   });
 
@@ -42,7 +42,7 @@ export function useStaking() {
     chainId,
     query: {
       enabled: !!addresses.Staking,
-      refetchInterval: 30000,
+      refetchInterval: 120_000,
     },
   });
 
@@ -251,7 +251,7 @@ export function useUSMTAllowance(spender?: string) {
     chainId,
     query: {
       enabled: !!address && !!spender && !!addresses.USMTPlus,
-      refetchInterval: 15000,
+      refetchInterval: 120_000,
     },
   });
 

@@ -1,7 +1,7 @@
 import { PrivyProvider } from '@privy-io/react-auth';
 import { WagmiProvider as PrivyWagmiProvider, createConfig } from '@privy-io/wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { http } from 'viem';
+import { http, fallback } from 'viem';
 import { arbitrum } from 'viem/chains';
 import { 
   PAYMENT_PRIVY_APP_ID,
@@ -29,10 +29,10 @@ const arbitrumMainnet = {
   },
   rpcUrls: {
     default: {
-      http: ['https://arbitrum-one-rpc.publicnode.com'],
+      http: ['https://arb1.arbitrum.io/rpc'],
     },
     public: {
-      http: ['https://arbitrum-one-rpc.publicnode.com'],
+      http: ['https://arb1.arbitrum.io/rpc'],
     },
   },
   blockExplorers: {
@@ -49,7 +49,12 @@ const arbitrumMainnet = {
 const paymentWagmiConfig = createConfig({
   chains: [arbitrum],
   transports: {
-    [arbitrum.id]: http('https://arbitrum-one-rpc.publicnode.com'),
+    [arbitrum.id]: fallback([
+      http('https://arb1.arbitrum.io/rpc'),
+      http('https://arbitrum-one-rpc.publicnode.com'),
+      http('https://1rpc.io/arb'),
+      http('https://rpc.ankr.com/arbitrum'),
+    ], { rank: true }),
   },
 });
 

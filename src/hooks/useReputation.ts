@@ -55,7 +55,7 @@ export function useReputation(sellerAddress?: string) {
     chainId,
     query: {
       enabled: !!seller && !!addresses.Reputation,
-      refetchInterval: 30000, // Background polling every 30s
+      refetchInterval: 120_000,
     },
   });
 
@@ -67,7 +67,7 @@ export function useReputation(sellerAddress?: string) {
     chainId,
     query: {
       enabled: !!seller && !!addresses.Reputation,
-      refetchInterval: 30000, // Background polling every 30s
+      refetchInterval: 120_000,
     },
   });
 
@@ -79,7 +79,7 @@ export function useReputation(sellerAddress?: string) {
     chainId,
     query: {
       enabled: !!seller && !!addresses.Reputation,
-      refetchInterval: 30000, // Background polling every 30s
+      refetchInterval: 120_000,
     },
   });
 

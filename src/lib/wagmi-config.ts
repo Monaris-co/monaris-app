@@ -1,24 +1,26 @@
 import { createConfig } from '@privy-io/wagmi';
-import { http } from 'viem';
+import { http, fallback } from 'viem';
 import { arbitrum } from 'viem/chains';
 
 export const supportedChains = [arbitrum] as const;
 
-function getChainRpcUrl(chainId: number): string {
-  const envKey = `VITE_RPC_URL_${chainId}`;
-  const envValue = import.meta.env[envKey];
-  if (envValue) return envValue;
+const envRpc = import.meta.env.VITE_RPC_URL_42161;
 
-  const defaults: Record<number, string> = {
-    42161: 'https://arbitrum-one-rpc.publicnode.com',
-  };
-  return defaults[chainId] || '';
-}
+const arbitrumTransport = fallback(
+  [
+    ...(envRpc ? [http(envRpc)] : []),
+    http('https://arb1.arbitrum.io/rpc'),
+    http('https://arbitrum-one-rpc.publicnode.com'),
+    http('https://1rpc.io/arb'),
+    http('https://rpc.ankr.com/arbitrum'),
+  ],
+  { rank: true }
+);
 
 export const wagmiConfig = createConfig({
   chains: supportedChains as any,
   transports: {
-    [arbitrum.id]: http(getChainRpcUrl(42161)),
+    [arbitrum.id]: arbitrumTransport,
   } as any,
 });
 
