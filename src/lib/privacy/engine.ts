@@ -374,6 +374,9 @@ export async function loadProviderAndSync(): Promise<void> {
   return _providerLoadPromise;
 }
 
+const MAX_PROVIDER_RETRIES = 4;
+const RETRY_BASE_MS = 3000;
+
 async function doLoadProvider(): Promise<void> {
   try {
     await ensureEngineStarted();
@@ -388,38 +391,51 @@ async function doLoadProvider(): Promise<void> {
       chainId === 42161 ? NetworkName.Arbitrum : NetworkName.Arbitrum;
 
     // SDK requires total provider weight >= 2 (shared-models/fallback-provider.js).
-    // Use dedicated RPCs for RAILGUN that don't overlap with Privy/Wagmi
-    // (which share VITE_RPC_URL_42161) to avoid hitting shared rate limits.
-    // arb1.arbitrum.io/rpc has broken CORS (duplicate Access-Control-Allow-Origin).
-    // These RPCs are browser-safe and separate from the Privy/Wagmi shared RPC.
+    // Dedicated RPCs for RAILGUN — separate from Privy/Wagmi shared RPC.
+    // arb1.arbitrum.io has broken CORS; these are browser-safe.
     const RAILGUN_RPCS = [
       'https://rpc.ankr.com/arbitrum',
       'https://arbitrum.drpc.org',
     ];
 
-    const fallbackProviders = {
-      chainId,
-      providers: RAILGUN_RPCS.map((rpc, i) => ({
-        provider: rpc,
-        priority: i + 1,
-        weight: 1,
-        maxLogsPerBatch: 10,
-        stallTimeout: 10000,
-      })),
-    };
-
     setStatus('syncing');
     console.log('[RAILGUN] Loading provider with RPCs:', RAILGUN_RPCS.join(' | '));
 
-    await loadProvider(fallbackProviders, networkName, 15_000);
+    let lastErr: any;
+    for (let attempt = 1; attempt <= MAX_PROVIDER_RETRIES; attempt++) {
+      try {
+        const fallbackProviders = {
+          chainId,
+          providers: RAILGUN_RPCS.map((rpc, i) => ({
+            provider: rpc,
+            priority: i + 1,
+            weight: 1,
+            maxLogsPerBatch: 10,
+            stallTimeout: 15000,
+          })),
+        };
 
-    _providerLoaded = true;
-    setStatus('ready');
-    console.log('[RAILGUN] Engine fully ready (provider loaded, quicksync started)');
+        await loadProvider(fallbackProviders, networkName, 15_000);
+
+        _providerLoaded = true;
+        setStatus('ready');
+        console.log('[RAILGUN] Engine fully ready (attempt', attempt + ')');
+        return;
+      } catch (err: any) {
+        lastErr = err;
+        console.warn(`[RAILGUN] loadProvider attempt ${attempt}/${MAX_PROVIDER_RETRIES} failed:`, err?.message);
+        if (attempt < MAX_PROVIDER_RETRIES) {
+          const delay = RETRY_BASE_MS * attempt;
+          console.log(`[RAILGUN] Retrying in ${delay}ms...`);
+          await new Promise(r => setTimeout(r, delay));
+        }
+      }
+    }
+
+    throw lastErr;
   } catch (err: any) {
-    console.error('[RAILGUN] loadProvider failed:', err?.message);
+    console.error('[RAILGUN] loadProvider failed after all retries:', err?.message);
     _providerLoadPromise = null;
-    // Still mark as ready so the UI isn't stuck — balances will be retried
     setStatus('ready');
   }
 }
