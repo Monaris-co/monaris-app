@@ -101,11 +101,6 @@ export function InviteGate({ children }: InviteGateProps) {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="relative w-full max-w-md mx-4"
           >
-            {/* Logo */}
-            <div className="flex justify-center mb-8">
-              <img src="/monar.png" alt="Monaris" className="h-10 w-auto brightness-0 invert" />
-            </div>
-
             {/* Card */}
             <div className="relative rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-8 shadow-2xl">
               {/* Top accent line */}
