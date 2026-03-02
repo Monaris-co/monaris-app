@@ -828,19 +828,19 @@ export default function PayInvoice() {
 
   if (isLoadingInvoice) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a]">
+        <Loader2 className="h-8 w-8 animate-spin text-[#c8ff00]" />
       </div>
     )
   }
 
   if (!invoice) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center space-y-4">
-        <AlertCircle className="h-12 w-12 text-muted-foreground" />
-        <h1 className="text-2xl font-bold">Invoice Not Found</h1>
-        <p className="text-muted-foreground">This invoice does not exist or has been removed.</p>
-        <Button asChild>
+      <div className="flex min-h-screen flex-col items-center justify-center space-y-4 bg-[#0a0a0a]">
+        <AlertCircle className="h-12 w-12 text-white/30" />
+        <h1 className="text-2xl font-bold text-white">Invoice Not Found</h1>
+        <p className="text-white/50">This invoice does not exist or has been removed.</p>
+        <Button asChild className="bg-[#c8ff00] text-black font-semibold hover:bg-[#d4ff33] border-0">
           <Link to="/">Go Home</Link>
         </Button>
       </div>
@@ -885,7 +885,7 @@ export default function PayInvoice() {
     : 'Monaris Business'
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
       <div className="mx-auto max-w-xl w-full">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -894,7 +894,7 @@ export default function PayInvoice() {
         >
           {/* Header */}
           <div className="mb-3 flex items-center justify-between">
-            <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="h-8">
+            <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="h-8 text-white/60 hover:text-white hover:bg-white/5">
               <ArrowLeft className="mr-1 h-3.5 w-3.5" />
               Back
             </Button>
@@ -948,7 +948,7 @@ export default function PayInvoice() {
                   PDF
                 </Button>
               )}
-              <Button variant="ghost" size="sm" onClick={copyPaymentLink} className="h-8 w-8 p-0">
+              <Button variant="ghost" size="sm" onClick={copyPaymentLink} className="h-8 w-8 p-0 text-white/40 hover:text-white hover:bg-white/5">
                 <Copy className="h-3.5 w-3.5" />
               </Button>
               {isActuallyLoggedIn ? (
@@ -956,7 +956,7 @@ export default function PayInvoice() {
                   variant="outline" 
                   size="sm" 
                   onClick={nukeWalletConnection}
-                  className="h-8 text-sm font-semibold px-3 border-2 border-red-500 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 hover:border-red-600 shadow-sm"
+                  className="h-8 text-sm font-semibold px-3 border border-red-500/50 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 shadow-sm"
                 >
                   {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Disconnect'}
                 </Button>
@@ -965,12 +965,12 @@ export default function PayInvoice() {
                   variant="outline" 
                   size="sm" 
                   onClick={connectWallet}
-                  className="h-8 text-sm font-semibold px-3 border-2 border-primary bg-primary/5 text-primary hover:bg-primary/10 shadow-sm"
+                  className="h-8 text-sm font-semibold px-3 border border-[#c8ff00]/50 bg-[#c8ff00]/10 text-[#c8ff00] hover:bg-[#c8ff00]/20 shadow-sm"
                 >
                   Connect Wallet
                 </Button>
               )}
-              <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
+              <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0 text-white/40 hover:text-white hover:bg-white/5">
                   <a
                     href={getExplorerAddressUrl(chainId, addresses.InvoiceRegistry || '')}
                     target="_blank"
@@ -983,24 +983,22 @@ export default function PayInvoice() {
           </div>
 
           {/* Invoice Details Card */}
-          <div className="rounded-xl border border-border bg-card p-6 shadow-lg">
-            {/* Amount Due - Prominent */}
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 shadow-2xl">
             <div className="mb-4 text-center">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Amount Due</p>
-              <p className="text-4xl font-bold">
+              <p className="text-xs font-medium text-white/40 uppercase tracking-widest mb-1">Amount Due</p>
+              <p className="text-4xl font-bold text-white">
                 ${amountDisplay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
 
-            {/* Invoice Info */}
-            <div className="mb-4 space-y-3 border-b border-border pb-4">
+            <div className="mb-4 space-y-3 border-b border-white/[0.06] pb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Due {dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                  <Calendar className="h-4 w-4 text-white/40" />
+                  <span className="text-sm text-white/50">Due {dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                 </div>
                 {tokenId && (
-                  <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-[#c8ff00]/10 border border-[#c8ff00]/20 px-3 py-1 text-xs font-medium text-[#c8ff00]">
                     <Sparkles className="h-3 w-3" />
                     Tokenized #{tokenId.toString()}
                   </div>
@@ -1009,35 +1007,34 @@ export default function PayInvoice() {
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-1">Bill to</p>
-                  <p className="text-sm font-medium">{buyerName}</p>
+                  <p className="text-xs font-medium text-white/40 mb-1">Bill to</p>
+                  <p className="text-sm font-medium text-white">{buyerName}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-1">From</p>
-                  <p className="text-sm font-medium">{sellerName}</p>
+                  <p className="text-xs font-medium text-white/40 mb-1">From</p>
+                  <p className="text-sm font-medium text-white">{sellerName}</p>
                 </div>
               </div>
             </div>
 
-            {/* Items Table */}
             <div className="mb-4 overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-border">
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase">Item / Service</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase">Description</th>
-                    <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase">Qty</th>
-                    <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground uppercase">Price</th>
-                    <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground uppercase">Total</th>
+                  <tr className="border-b border-white/[0.06]">
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-white/40 uppercase">Item / Service</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-white/40 uppercase">Description</th>
+                    <th className="px-3 py-2 text-center text-xs font-semibold text-white/40 uppercase">Qty</th>
+                    <th className="px-3 py-2 text-right text-xs font-semibold text-white/40 uppercase">Price</th>
+                    <th className="px-3 py-2 text-right text-xs font-semibold text-white/40 uppercase">Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td className="px-3 py-2.5 text-sm font-medium">Invoice Amount</td>
-                    <td className="px-3 py-2.5 text-sm text-muted-foreground">Payment for INV-{invoice.invoiceId.toString().padStart(6, '0')}</td>
-                    <td className="px-3 py-2.5 text-sm text-center">1</td>
-                    <td className="px-3 py-2.5 text-sm text-right">${amountDisplay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td className="px-3 py-2.5 text-sm font-semibold text-right">${amountDisplay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className="px-3 py-2.5 text-sm font-medium text-white">Invoice Amount</td>
+                    <td className="px-3 py-2.5 text-sm text-white/50">Payment for INV-{invoice.invoiceId.toString().padStart(6, '0')}</td>
+                    <td className="px-3 py-2.5 text-sm text-center text-white/70">1</td>
+                    <td className="px-3 py-2.5 text-sm text-right text-white/70">${amountDisplay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className="px-3 py-2.5 text-sm font-semibold text-right text-white">${amountDisplay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                   </tr>
                 </tbody>
               </table>
@@ -1046,8 +1043,8 @@ export default function PayInvoice() {
 
           {/* Payment Method Selection */}
           {invoice.status < 2 && (
-            <div className="rounded-xl border border-border bg-card p-5 shadow-lg">
-              <h2 className="text-base font-semibold mb-3">Select a payment method</h2>
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-5 shadow-2xl">
+              <h2 className="text-base font-semibold mb-3 text-white">Select a payment method</h2>
               
               {/* Payment Method Options */}
               <div className="mb-4 flex gap-2">
@@ -1057,10 +1054,10 @@ export default function PayInvoice() {
                       setPaymentMethod("private")
                       if (!address) connectWallet()
                     }}
-                    className={`flex-1 rounded-lg border-2 p-3 transition-all ${
+                    className={`flex-1 rounded-xl border p-3 transition-all ${
                       paymentMethod === "private"
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
+                        ? "border-[#c8ff00]/60 bg-[#c8ff00]/10 text-[#c8ff00]"
+                        : "border-white/[0.08] text-white/60 hover:border-white/20 hover:text-white/80"
                     }`}
                   >
                     <div className="flex items-center justify-center gap-2">
@@ -1068,7 +1065,7 @@ export default function PayInvoice() {
                       <span className="font-medium text-sm">Private</span>
                     </div>
                     {paymentMethod === "private" && (
-                      <p className="text-[9px] text-primary mt-0.5 text-center">Recommended</p>
+                      <p className="text-[9px] text-[#c8ff00] mt-0.5 text-center">Recommended</p>
                     )}
                   </button>
                 )}
@@ -1077,10 +1074,10 @@ export default function PayInvoice() {
                     setPaymentMethod("privy")
                     if (!address) connectWallet()
                   }}
-                  className={`flex-1 rounded-lg border-2 p-3 transition-all ${
+                  className={`flex-1 rounded-xl border p-3 transition-all ${
                     paymentMethod === "privy"
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/50"
+                      ? "border-[#c8ff00]/60 bg-[#c8ff00]/10 text-[#c8ff00]"
+                      : "border-white/[0.08] text-white/60 hover:border-white/20 hover:text-white/80"
                   }`}
                 >
                   <div className="flex items-center justify-center gap-2">
@@ -1091,10 +1088,10 @@ export default function PayInvoice() {
                 
                 <button
                   onClick={() => setPaymentMethod("card")}
-                  className={`flex-1 rounded-lg border-2 p-3 transition-all ${
+                  className={`flex-1 rounded-xl border p-3 transition-all ${
                     paymentMethod === "card"
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/50"
+                      ? "border-[#c8ff00]/60 bg-[#c8ff00]/10 text-[#c8ff00]"
+                      : "border-white/[0.08] text-white/60 hover:border-white/20 hover:text-white/80"
                   }`}
                 >
                   <div className="flex items-center justify-center gap-2">
@@ -1105,10 +1102,10 @@ export default function PayInvoice() {
                 
                 <button
                   onClick={() => setPaymentMethod("bank")}
-                  className={`flex-1 rounded-lg border-2 p-3 transition-all ${
+                  className={`flex-1 rounded-xl border p-3 transition-all ${
                     paymentMethod === "bank"
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/50"
+                      ? "border-[#c8ff00]/60 bg-[#c8ff00]/10 text-[#c8ff00]"
+                      : "border-white/[0.08] text-white/60 hover:border-white/20 hover:text-white/80"
                   }`}
                 >
                   <div className="flex items-center justify-center gap-2">
@@ -1118,7 +1115,7 @@ export default function PayInvoice() {
                 </button>
                 
                 <button
-                  className="rounded-lg border-2 border-border p-3 hover:border-primary/50 transition-all"
+                  className="rounded-xl border border-white/[0.08] p-3 hover:border-white/20 text-white/40 hover:text-white/60 transition-all"
                 >
                   <MoreHorizontal className="h-4 w-4" />
                 </button>
@@ -1129,22 +1126,22 @@ export default function PayInvoice() {
                 <div className="space-y-3">
                   {!address ? (
                     <div className="text-center py-4">
-                      <Lock className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                      <p className="text-sm text-muted-foreground mb-3">
+                      <Lock className="mx-auto h-8 w-8 text-white/30 mb-2" />
+                      <p className="text-sm text-white/50 mb-3">
                         Connect your wallet to pay privately
                       </p>
-                      <Button onClick={connectWallet} variant="hero" className="w-full">
+                      <Button onClick={connectWallet} className="w-full bg-[#c8ff00] text-black font-semibold hover:bg-[#d4ff33] border-0">
                         Connect & Pay Privately
                       </Button>
                     </div>
                   ) : (
                     <>
-                      <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                      <div className="rounded-lg border border-[#c8ff00]/20 bg-[#c8ff00]/5 p-3">
                         <div className="flex items-start gap-2">
-                          <Shield className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                          <Shield className="h-4 w-4 text-[#c8ff00] mt-0.5 flex-shrink-0" />
                           <div>
-                            <p className="text-xs font-medium">Private Payment</p>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                            <p className="text-xs font-medium text-white">Private Payment</p>
+                            <p className="text-[10px] text-white/50 mt-0.5">
                               Sender, receiver and amount are hidden from on-chain observers
                             </p>
                           </div>
@@ -1152,19 +1149,18 @@ export default function PayInvoice() {
                       </div>
 
                       {privateUsdcBalance < amountDisplay && (
-                        <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20 p-3">
+                        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
                           <div className="flex items-start gap-2">
-                            <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                            <AlertCircle className="h-4 w-4 text-amber-400 mt-0.5 flex-shrink-0" />
                             <div>
-                              <p className="text-xs font-medium">Insufficient private balance</p>
-                              <p className="text-[10px] text-muted-foreground mt-0.5">
+                              <p className="text-xs font-medium text-white">Insufficient private balance</p>
+                              <p className="text-[10px] text-white/50 mt-0.5">
                                 You have {privateUsdcBalance.toFixed(2)} USDC in your private balance.
                                 Shield more funds to pay privately.
                               </p>
                               <Button
                                 size="sm"
-                                variant="outline"
-                                className="mt-2 h-7 text-xs"
+                                className="mt-2 h-7 text-xs border border-white/10 bg-white/5 text-white hover:bg-white/10"
                                 onClick={() => setShieldDialogOpen(true)}
                               >
                                 <Shield className="mr-1 h-3 w-3" />
@@ -1190,10 +1186,10 @@ export default function PayInvoice() {
                       />
 
                       {step === "complete" && (
-                        <div className="rounded-lg border border-success/20 bg-success/5 p-3 text-center">
-                          <CheckCircle2 className="mx-auto h-8 w-8 text-success" />
-                          <h3 className="mt-2 text-base font-semibold">Paid Privately!</h3>
-                          <p className="mt-1 text-xs text-muted-foreground">
+                        <div className="rounded-lg border border-[#c8ff00]/20 bg-[#c8ff00]/5 p-3 text-center">
+                          <CheckCircle2 className="mx-auto h-8 w-8 text-[#c8ff00]" />
+                          <h3 className="mt-2 text-base font-semibold text-white">Paid Privately!</h3>
+                          <p className="mt-1 text-xs text-white/50">
                             Payment is confirmed. The transfer details are hidden on-chain.
                           </p>
                         </div>
@@ -1207,13 +1203,13 @@ export default function PayInvoice() {
               {paymentMethod === "privy" && (
                 <div className="space-y-3">
                   {!isBuyer && address && (
-                    <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20 p-3">
+                    <div className="rounded-lg border border-blue-400/20 bg-blue-400/10 p-3">
                       <div className="flex items-start gap-2">
-                        <User className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                        <User className="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" />
                         <div className="flex-1">
-                          <p className="text-sm font-medium mb-1">Paying on behalf</p>
-                          <p className="text-xs text-muted-foreground">
-                            You're paying this invoice on behalf of <span className="font-mono">{invoice.buyer.slice(0, 6)}...{invoice.buyer.slice(-4)}</span>
+                          <p className="text-sm font-medium mb-1 text-white">Paying on behalf</p>
+                          <p className="text-xs text-white/50">
+                            You're paying this invoice on behalf of <span className="font-mono text-white/70">{invoice.buyer.slice(0, 6)}...{invoice.buyer.slice(-4)}</span>
                           </p>
                         </div>
                       </div>
@@ -1224,18 +1220,17 @@ export default function PayInvoice() {
                     <>
                       {step === "approve" && needsApproval && (
                         <div className="space-y-2">
-                          <div className="rounded-lg border border-warning/20 bg-warning/5 p-2">
+                          <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-2">
                             <div className="flex items-center gap-2">
-                              <AlertCircle className="h-3.5 w-3.5 text-warning" />
-                              <span className="text-xs font-medium">Approve USDC to continue</span>
+                              <AlertCircle className="h-3.5 w-3.5 text-amber-400" />
+                              <span className="text-xs font-medium text-white/80">Approve USDC to continue</span>
                       </div>
                     </div>
                     <Button
                       onClick={handleApprove}
                       disabled={isApproving || isApprovalConfirming}
-                      className="w-full"
+                      className="w-full bg-[#c8ff00] text-black font-semibold hover:bg-[#d4ff33] border-0 disabled:bg-[#c8ff00]/50 disabled:text-black/50"
                             size="default"
-                      variant="hero"
                     >
                       {isApproving || isApprovalConfirming ? (
                         <>
@@ -1253,9 +1248,8 @@ export default function PayInvoice() {
                     <Button
                       onClick={handlePay}
                       disabled={isPaying || isPaymentConfirming || needsApproval}
-                      className="w-full"
+                      className="w-full bg-[#c8ff00] text-black font-semibold hover:bg-[#d4ff33] border-0 disabled:bg-[#c8ff00]/50 disabled:text-black/50"
                           size="default"
-                      variant="hero"
                     >
                       {isPaying || isPaymentConfirming ? (
                         <>
@@ -1272,10 +1266,10 @@ export default function PayInvoice() {
                       )}
 
                       {step === "complete" && (
-                        <div className="rounded-lg border border-success/20 bg-success/5 p-3 text-center">
-                          <CheckCircle2 className="mx-auto h-8 w-8 text-success" />
-                          <h3 className="mt-2 text-base font-semibold">Payment Complete!</h3>
-                          <p className="mt-1 text-xs text-muted-foreground">
+                        <div className="rounded-lg border border-[#c8ff00]/20 bg-[#c8ff00]/5 p-3 text-center">
+                          <CheckCircle2 className="mx-auto h-8 w-8 text-[#c8ff00]" />
+                          <h3 className="mt-2 text-base font-semibold text-white">Payment Complete!</h3>
+                          <p className="mt-1 text-xs text-white/50">
                             Settlement is being finalized on-chain.
                           </p>
                         </div>
@@ -1287,47 +1281,47 @@ export default function PayInvoice() {
 
               {paymentMethod === "card" && (
                 <div className="space-y-3">
-                  <div className="rounded-lg border border-muted bg-muted/30 p-2">
-                    <p className="text-xs text-muted-foreground">
+                  <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-2">
+                    <p className="text-xs text-white/40">
                       Card payments are demo only. Please use Wallet to complete payment.
                     </p>
                   </div>
                   <div className="space-y-3">
                     <div>
-                      <label className="text-xs font-medium mb-1 block">Card number</label>
+                      <label className="text-xs font-medium mb-1 block text-white/60">Card number</label>
                       <Input
                         placeholder="1234 1234 1234 1234"
                         value={cardNumber}
                         onChange={(e) => setCardNumber(e.target.value)}
                         disabled
-                        className="h-9"
+                        className="h-9 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/20"
                       />
                       <div className="flex gap-2 mt-1.5">
-                        <div className="h-5 w-8 bg-muted rounded"></div>
-                        <div className="h-5 w-8 bg-muted rounded"></div>
-                        <div className="h-5 w-8 bg-muted rounded"></div>
-                        <div className="h-5 w-8 bg-muted rounded"></div>
+                        <div className="h-5 w-8 bg-white/[0.06] rounded"></div>
+                        <div className="h-5 w-8 bg-white/[0.06] rounded"></div>
+                        <div className="h-5 w-8 bg-white/[0.06] rounded"></div>
+                        <div className="h-5 w-8 bg-white/[0.06] rounded"></div>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="text-xs font-medium mb-1 block">Expiration date</label>
+                        <label className="text-xs font-medium mb-1 block text-white/60">Expiration date</label>
                         <Input
                           placeholder="MM / YY"
                           value={cardExpiry}
                           onChange={(e) => setCardExpiry(e.target.value)}
                           disabled
-                          className="h-9"
+                          className="h-9 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/20"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-medium mb-1 block">CVC</label>
+                        <label className="text-xs font-medium mb-1 block text-white/60">CVC</label>
                         <Input
                           placeholder="CVC"
                           value={cardCVC}
                           onChange={(e) => setCardCVC(e.target.value)}
                           disabled
-                          className="h-9"
+                          className="h-9 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/20"
                         />
                       </div>
                     </div>
@@ -1337,9 +1331,8 @@ export default function PayInvoice() {
                       toast.info("Card payments are demo only. Please use Wallet to pay.")
                       setPaymentMethod("privy")
                     }}
-                    className="w-full"
+                    className="w-full bg-[#c8ff00]/50 text-black/50 font-semibold border-0 cursor-not-allowed"
                     size="default"
-                    variant="hero"
                     disabled
                   >
                     Pay ${amountDisplay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -1349,8 +1342,8 @@ export default function PayInvoice() {
 
               {paymentMethod === "bank" && (
                 <div className="space-y-3">
-                  <div className="rounded-lg border border-muted bg-muted/30 p-2">
-                    <p className="text-xs text-muted-foreground">
+                  <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-2">
+                    <p className="text-xs text-white/40">
                       Bank transfers are demo only. Please use Wallet to complete payment.
                 </p>
               </div>
@@ -1359,9 +1352,8 @@ export default function PayInvoice() {
                       toast.info("Bank transfers are demo only. Please use Wallet to pay.")
                       setPaymentMethod("privy")
                     }}
-                    className="w-full"
+                    className="w-full bg-[#c8ff00]/50 text-black/50 font-semibold border-0 cursor-not-allowed"
                     size="default"
-                    variant="hero"
                     disabled
                   >
                     Pay ${amountDisplay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -1372,12 +1364,12 @@ export default function PayInvoice() {
             )}
 
             {invoice.status >= 2 && (
-            <div className="rounded-lg border border-success/20 bg-success/5 p-4 text-center">
-              <CheckCircle2 className="mx-auto h-10 w-10 text-success" />
-              <h3 className="mt-2 text-base font-semibold">
+            <div className="rounded-2xl border border-[#c8ff00]/20 bg-[#c8ff00]/5 p-4 text-center">
+              <CheckCircle2 className="mx-auto h-10 w-10 text-[#c8ff00]" />
+              <h3 className="mt-2 text-base font-semibold text-white">
                 {invoice.status === 3 ? "Invoice Cleared" : "Invoice Paid"}
               </h3>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 text-xs text-white/50">
                 {invoice.status === 3 
                   ? "This invoice has been fully settled on-chain."
                   : "Payment has been received and settlement is in progress."}
@@ -1387,16 +1379,16 @@ export default function PayInvoice() {
 
           {/* Footer */}
           <div className="flex items-center justify-between mt-4">
-            <div className="text-left text-xs text-muted-foreground">
-              <p>Powered by Monaris</p>
+            <div className="text-left text-xs text-white/30">
+              <p>Powered by <span className="text-[#c8ff00]/60 font-medium">Monaris</span></p>
               <div className="flex items-center gap-3 mt-1">
-                <a href="#" className="hover:text-foreground transition-colors">Terms</a>
-                <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
+                <a href="#" className="hover:text-white/60 transition-colors">Terms</a>
+                <a href="#" className="hover:text-white/60 transition-colors">Privacy</a>
               </div>
             </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2 text-xs text-white/40">
               <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ 
-                backgroundColor: isActuallyLoggedIn ? '#22c55e' : '#ef4444',
+                backgroundColor: isActuallyLoggedIn ? '#c8ff00' : '#ef4444',
                 opacity: isActuallyLoggedIn ? 1 : 0.5
               }} />
               {isActuallyLoggedIn && address ? (

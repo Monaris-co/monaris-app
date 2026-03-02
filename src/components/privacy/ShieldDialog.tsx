@@ -5,7 +5,7 @@ import {
   DialogContent,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { parseUnits, encodeFunctionData, getAddress, createPublicClient, http } from 'viem';
+import { parseUnits, encodeFunctionData, getAddress, createPublicClient, http, fallback } from 'viem';
 import { arbitrum } from 'viem/chains';
 import { useChainId, useWaitForTransactionReceipt } from 'wagmi';
 import { useSendTransaction, useWallets } from '@privy-io/react-auth';
@@ -156,7 +156,11 @@ export function ShieldDialog({ open, onOpenChange }: ShieldDialogProps) {
 
       const publicClient = createPublicClient({
         chain: arbitrum,
-        transport: http(import.meta.env.VITE_RPC_URL_42161 || 'https://1rpc.io/arb'),
+        transport: fallback([
+          http('https://1rpc.io/arb'),
+          http('https://rpc.ankr.com/arbitrum'),
+          http('https://arbitrum.drpc.org'),
+        ]),
       });
       await publicClient.waitForTransactionReceipt({ hash: approveResult.hash as `0x${string}`, confirmations: 1 });
 

@@ -387,14 +387,28 @@ async function doLoadProvider(): Promise<void> {
     const networkName =
       chainId === 42161 ? NetworkName.Arbitrum : NetworkName.Arbitrum;
 
+    const RELIABLE_RPCS = [
+      'https://1rpc.io/arb',
+      'https://rpc.ankr.com/arbitrum',
+      'https://arbitrum.drpc.org',
+    ];
+
     const customRpc = import.meta.env[`VITE_RPC_URL_${chainId}`];
+    const isCustomRpcReliable = customRpc
+      && !customRpc.includes('pocket.network')
+      && !customRpc.includes('llamarpc')
+      && RELIABLE_RPCS.every(r => r !== customRpc);
+
+    const providers = [
+      ...(isCustomRpcReliable ? [{ provider: customRpc, priority: 1, weight: 2, maxLogsPerBatch: 100, stallTimeout: 2000 }] : []),
+      { provider: RELIABLE_RPCS[0], priority: isCustomRpcReliable ? 2 : 1, weight: 2, maxLogsPerBatch: 100, stallTimeout: 2000 },
+      { provider: RELIABLE_RPCS[1], priority: isCustomRpcReliable ? 3 : 2, weight: 1, maxLogsPerBatch: 100, stallTimeout: 2500 },
+      { provider: RELIABLE_RPCS[2], priority: isCustomRpcReliable ? 4 : 3, weight: 1, maxLogsPerBatch: 100, stallTimeout: 2500 },
+    ];
 
     const fallbackProviders = {
       chainId,
-      providers: [
-        { provider: customRpc || 'https://1rpc.io/arb', priority: 1, weight: 2, maxLogsPerBatch: 100, stallTimeout: 2000 },
-        { provider: 'https://arbitrum.drpc.org', priority: 2, weight: 1, maxLogsPerBatch: 100, stallTimeout: 2500 },
-      ],
+      providers,
     };
 
     setStatus('syncing');
@@ -416,6 +430,15 @@ async function doLoadProvider(): Promise<void> {
 // ---- Utilities ----
 
 export async function triggerMerkleScans(walletIds: string[]): Promise<void> {
+  if (!_providerLoaded) {
+    console.log('[RAILGUN] Provider not loaded, attempting to load before scan...');
+    try {
+      await loadProviderAndSync();
+    } catch (err: any) {
+      console.warn('[RAILGUN] Cannot load provider for scan:', err?.message);
+      return;
+    }
+  }
   if (!_providerLoaded) return;
 
   try {
@@ -446,7 +469,16 @@ export async function triggerMerkleScans(walletIds: string[]): Promise<void> {
  */
 export async function refreshPOIsForWallet(walletId: string): Promise<void> {
   if (!_providerLoaded) {
-    console.warn('[RAILGUN-POI] Provider not loaded, skipping POI refresh');
+    console.log('[RAILGUN-POI] Provider not loaded, attempting to load...');
+    try {
+      await loadProviderAndSync();
+    } catch (err: any) {
+      console.warn('[RAILGUN-POI] Cannot load provider for POI refresh:', err?.message);
+      return;
+    }
+  }
+  if (!_providerLoaded) {
+    console.warn('[RAILGUN-POI] Provider still not loaded after retry, skipping POI refresh');
     return;
   }
 

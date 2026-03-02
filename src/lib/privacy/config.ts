@@ -17,8 +17,10 @@ const KNOWN_USDT: Record<number, string> = {
 };
 
 export function getPrivacyConfig(chainId: number): PrivacyConfig {
-  const rpcUrl =
-    import.meta.env[`VITE_RPC_URL_${chainId}`] || '';
+  const envRpc = import.meta.env[`VITE_RPC_URL_${chainId}`];
+  const rpcUrl = (envRpc && !envRpc.includes('pocket.network'))
+    ? envRpc
+    : 'https://1rpc.io/arb';
 
   return {
     enabled: PRIVATE_PAYMENTS_ENABLED && !!RAILGUN_PROXY_CONTRACTS[chainId],

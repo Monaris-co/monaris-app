@@ -307,6 +307,14 @@ export async function triggerBalanceScan(
 
   await ensureEngineReady();
 
+  // Ensure provider is loaded — merkle trees only exist after loadProvider()
+  const { loadProviderAndSync } = await import('./engine');
+  try {
+    await loadProviderAndSync();
+  } catch (err: any) {
+    console.warn('[PrivateBalance] loadProviderAndSync failed during scan:', err?.message);
+  }
+
   const walletModule = await getWalletModule();
 
   try {

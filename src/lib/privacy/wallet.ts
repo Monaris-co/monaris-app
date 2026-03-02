@@ -263,21 +263,33 @@ async function generateBip39Mnemonic(): Promise<string> {
 // ---------- Block number helper ----------
 
 async function getCurrentBlockNumber(chainId: number): Promise<number | null> {
-  const rpcUrl = import.meta.env[`VITE_RPC_URL_${chainId}`]
-    || 'https://1rpc.io/arb';
+  const rpcs = [
+    'https://1rpc.io/arb',
+    'https://rpc.ankr.com/arbitrum',
+    'https://arbitrum.drpc.org',
+  ];
 
-  try {
-    const resp = await fetch(rpcUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] }),
-    });
-    const data = await resp.json();
-    return parseInt(data.result, 16);
-  } catch (err) {
-    console.warn('[PrivateWallet] Could not fetch block number:', err);
-    return null;
+  const envRpc = import.meta.env[`VITE_RPC_URL_${chainId}`];
+  if (envRpc && !envRpc.includes('pocket.network') && !envRpc.includes('llamarpc')) {
+    rpcs.unshift(envRpc);
   }
+
+  for (const rpcUrl of rpcs) {
+    try {
+      const resp = await fetch(rpcUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] }),
+      });
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      if (data.result) return parseInt(data.result, 16);
+    } catch {
+      continue;
+    }
+  }
+  console.warn('[PrivateWallet] Could not fetch block number from any RPC');
+  return null;
 }
 
 /**

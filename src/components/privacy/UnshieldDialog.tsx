@@ -5,7 +5,7 @@ import {
   DialogContent,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { parseUnits, getAddress, isAddress, createPublicClient, http } from 'viem';
+import { parseUnits, getAddress, isAddress, createPublicClient, http, fallback } from 'viem';
 import { arbitrum } from 'viem/chains';
 import { useChainId } from 'wagmi';
 import { usePrivyAccount } from '@/hooks/usePrivyAccount';
@@ -360,7 +360,11 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
 
       const publicClient = createPublicClient({
         chain: arbitrum,
-        transport: http('https://1rpc.io/arb'),
+        transport: fallback([
+          http('https://1rpc.io/arb'),
+          http('https://rpc.ankr.com/arbitrum'),
+          http('https://arbitrum.drpc.org'),
+        ]),
       });
       try {
         await publicClient.call({

@@ -4,11 +4,13 @@ import { arbitrum } from 'viem/chains';
 
 export const supportedChains = [arbitrum] as const;
 
+const KNOWN_BAD_RPCS = ['pocket.network', 'llamarpc.com'];
 const envRpc = import.meta.env.VITE_RPC_URL_42161;
+const useEnvRpc = envRpc && !KNOWN_BAD_RPCS.some(bad => envRpc.includes(bad));
 
 const arbitrumTransport = fallback(
   [
-    ...(envRpc ? [http(envRpc)] : []),
+    ...(useEnvRpc ? [http(envRpc)] : []),
     http('https://1rpc.io/arb'),
     http('https://rpc.ankr.com/arbitrum'),
     http('https://arbitrum.drpc.org'),
