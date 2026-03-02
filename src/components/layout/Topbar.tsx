@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react"
 import { Mail, ChevronDown, Wallet, Copy, LogOut, ExternalLink, DollarSign, Loader2, Menu, User, Globe } from "lucide-react"
 import { NotificationBell } from "@/components/NotificationBell"
 import { Button } from "@/components/ui/button"
@@ -69,6 +70,33 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
   }
   
   const isConnected = authenticated && user && activeWallet && activeWallet.address
+  const walletsLoading = authenticated && user && wallets.length === 0
+  const autoCreateAttempted = useRef(false)
+
+  useEffect(() => {
+    if (!authenticated || !ready || autoCreateAttempted.current) return
+    if (wallets.length > 0) return;
+
+    const timer = setTimeout(async () => {
+      if (wallets.length > 0 || autoCreateAttempted.current) return
+      autoCreateAttempted.current = true
+      if (createWallet && typeof createWallet === 'function') {
+        try {
+          console.log('[Topbar] Auto-creating embedded wallet...')
+          await createWallet()
+        } catch (e: any) {
+          console.warn('[Topbar] Auto wallet creation failed (may already exist):', e?.message)
+        }
+      }
+    }, 3000)
+
+    return () => clearTimeout(timer)
+  }, [authenticated, ready, wallets.length, createWallet])
+
+  useEffect(() => {
+    if (!authenticated) autoCreateAttempted.current = false
+  }, [authenticated])
+
   const walletAddress = activeWallet?.address
   const truncatedAddress = walletAddress 
     ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
@@ -279,14 +307,24 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
             </DropdownMenuContent>
           </DropdownMenu>
         ) : authenticated && user && !isConnected ? (
-          <Button 
-            onClick={handleWalletClick}
-            disabled={!ready}
-            className="gap-2 bg-[#c8ff00] hover:bg-[#b8ef00] text-black font-medium rounded-xl"
-          >
-            <Wallet className="h-4 w-4" />
-            <span className="hidden sm:inline">Create Wallet</span>
-          </Button>
+          walletsLoading ? (
+            <Button 
+              disabled
+              className="gap-2 bg-[#c8ff00]/60 text-black/60 font-medium rounded-xl cursor-wait"
+            >
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="hidden sm:inline">Loading...</span>
+            </Button>
+          ) : (
+            <Button 
+              onClick={handleWalletClick}
+              disabled={!ready}
+              className="gap-2 bg-[#c8ff00] hover:bg-[#b8ef00] text-black font-medium rounded-xl"
+            >
+              <Wallet className="h-4 w-4" />
+              <span className="hidden sm:inline">Create Wallet</span>
+            </Button>
+          )
         ) : (
           <Button 
             onClick={handleWalletClick}
