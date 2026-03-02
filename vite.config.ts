@@ -33,9 +33,7 @@ export default defineConfig({
           if (id.includes('@railgun-community/shared-models')) return 'railgun-shared';
           if (id.includes('snarkjs')) return 'snarkjs';
           if (id.includes('ethers')) return 'ethers';
-          if (id.includes('@privy-io')) return 'privy';
-          if (id.includes('wagmi') || id.includes('@wagmi')) return 'wagmi';
-          if (id.includes('viem')) return 'viem';
+          if (id.includes('@privy-io') || id.includes('wagmi') || id.includes('@wagmi') || id.includes('viem')) return 'web3-stack';
         },
       },
     },
