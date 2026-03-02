@@ -20,12 +20,7 @@ export interface ContractsData {
 
 // Chain ID constants
 export const CHAIN_IDS = {
-  MANTLE_SEPOLIA: 5003,
-  MANTLE_MAINNET: 5000,
-  ARBITRUM_SEPOLIA: 421614,
   ARBITRUM_MAINNET: 42161,
-  ETH_SEPOLIA: 11155111,
-  ETH_MAINNET: 1,
 } as const;
 
 // Contract address configuration interface
@@ -55,22 +50,6 @@ const HARDCODED_ADDRESSES: Record<number, ChainContractAddresses> = {
     AdvanceEngine: '0x0D8DC5f327bDD5043F0B10D08f025eAc4F82A08E',
     Reputation: '0x6baD5b67FA6ac72D2921D7171118A423a6fA8C73',
     SettlementRouter: '0x90379cDd2763123e69c9d021dA7A97f83B84336d',
-  },
-  // Arbitrum Sepolia (421614) - Testnet
-  [CHAIN_IDS.ARBITRUM_SEPOLIA]: {
-    DemoUSDC: '0x2De86556c08Df11E1D35223F0741791fBD847567',
-    InvoiceNFT: '0x56D95C3f2613b29128F31f5cbE15aBaD43dAC7f0',
-    InvoiceRegistry: '0x092511Bc54Ab7b17197FAaE5eedC889806bB94c5',
-    USMTPlus: '0x5b91BF17b4149c083e7De4B9CD86e94cD40a0b28',
-    Vault: '0x6a8B044A517B8e8f8B8F074bd981FA5149108BCb',
-    Staking: '0x77F1F00B04B3d9b77D92c59FC85e94e69a60F29b',
-    AdvanceEngine: '0x15127d7136187CBF1550B35897D495a1593Dd101',
-    Reputation: '0x28F87D31F8305B13aFc71f69b0D1d188003d1BB3',
-    SettlementRouter: '0x7630A3B6c362345d0E0D1f746dB231Ac4eB5302B',
-  },
-  // Mantle Sepolia (5003) - Testnet
-  [CHAIN_IDS.MANTLE_SEPOLIA]: {
-    DemoUSDC: '0x003aF3CFc2DeeE3751fe9e03083e45074ED493E4',
   },
 };
 

@@ -26,43 +26,29 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
   const { ready, authenticated, user, login, logout } = privy
   const chainId = useChainId()
   const { balance: usdcBalance, isLoading: isLoadingBalance } = useTokenBalance()
-  const linkWallet = 'linkWallet' in privy ? (privy as any).linkWallet : undefined
-  const createWallet = 'createWallet' in privy ? (privy as any).createWallet : undefined
   const { wallets } = useWallets()
   
-  // Determine login method
   const loginMethods = user?.linkedAccounts?.map((acc: any) => acc.type) || []
   const loggedInWithEmail = loginMethods.some((type: string) => 
     ['email', 'sms', 'google_oauth', 'twitter_oauth', 'github_oauth'].includes(type)
   )
   const loggedInWithWallet = loginMethods.includes('wallet')
   
-  // Find embedded wallet
   const embeddedWallet = wallets.find(w => {
     const ct = w.connectorType?.toLowerCase() || ''
     const wct = w.walletClientType?.toLowerCase() || ''
     return ct === 'embedded' || wct === 'privy' || ct.includes('privy') || ct.includes('embedded')
   })
   
-  // Find external wallet
   const externalWallet = wallets.find(w => {
     const ct = w.connectorType?.toLowerCase() || ''
     const wct = w.walletClientType?.toLowerCase() || ''
     return ct === 'injected' || wct === 'metamask' || ct.includes('injected') || wct.includes('metamask')
   })
   
-  // Determine active wallet
   let activeWallet
   if (loggedInWithEmail) {
-    if (embeddedWallet) {
-      activeWallet = embeddedWallet
-    } else if (!loggedInWithWallet && wallets.length === 0) {
-      activeWallet = null
-    } else if (loggedInWithWallet && !embeddedWallet) {
-      activeWallet = null
-    } else {
-      activeWallet = loggedInWithWallet ? (externalWallet || null) : null
-    }
+    activeWallet = embeddedWallet || (loggedInWithWallet ? externalWallet : null)
   } else if (loggedInWithWallet) {
     activeWallet = externalWallet || embeddedWallet
   } else {
@@ -70,33 +56,6 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
   }
   
   const isConnected = authenticated && user && activeWallet && activeWallet.address
-  const walletsLoading = authenticated && user && wallets.length === 0
-  const autoCreateAttempted = useRef(false)
-
-  useEffect(() => {
-    if (!authenticated || !ready || autoCreateAttempted.current) return
-    if (wallets.length > 0) return;
-
-    const timer = setTimeout(async () => {
-      if (wallets.length > 0 || autoCreateAttempted.current) return
-      autoCreateAttempted.current = true
-      if (createWallet && typeof createWallet === 'function') {
-        try {
-          console.log('[Topbar] Auto-creating embedded wallet...')
-          await createWallet()
-        } catch (e: any) {
-          console.warn('[Topbar] Auto wallet creation failed (may already exist):', e?.message)
-        }
-      }
-    }, 3000)
-
-    return () => clearTimeout(timer)
-  }, [authenticated, ready, wallets.length, createWallet])
-
-  useEffect(() => {
-    if (!authenticated) autoCreateAttempted.current = false
-  }, [authenticated])
-
   const walletAddress = activeWallet?.address
   const truncatedAddress = walletAddress 
     ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
@@ -106,69 +65,22 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
   const isEmbeddedWallet = walletType === 'privy' || 
                           activeWallet?.connectorType === 'embedded' ||
                           (embeddedWallet && !externalWallet)
-  const isExternalWallet = !isEmbeddedWallet && walletType !== 'unknown' && !!externalWallet
 
-  // Get user display name
   const userEmail = user?.email?.address || user?.google?.email
   const userName = userEmail ? userEmail.split('@')[0] : truncatedAddress || 'User'
   const userInitials = userName ? userName.slice(0, 2).toUpperCase() : 'U'
 
-  // Get network name from chainId
-  const getNetworkName = (id: number): string => {
-    const networks: Record<number, string> = {
-      1: 'Ethereum',
-      5: 'Goerli',
-      11155111: 'Sepolia',
-      137: 'Polygon',
-      80001: 'Mumbai',
-      42161: 'Arbitrum',
-      421614: 'Arbitrum Sepolia',
-      10: 'Optimism',
-      8453: 'Base',
-      84532: 'Base Sepolia',
-      43114: 'Avalanche',
-      56: 'BNB Chain',
-    }
-    return networks[id] || `Chain ${id}`
-  }
-  const networkName = getNetworkName(chainId)
+  const networkName = chainId === 42161 ? 'Arbitrum' : `Chain ${chainId}`
 
-  const handleWalletClick = async () => {
+  const handleLogin = async () => {
     if (!ready) return
-
-    if (!authenticated) {
-      try {
-        const originError = localStorage.getItem('privy:origin-error')
-        if (originError) {
-          toast.error("Origin Configuration Required", {
-            description: `Add ${originError} to allowed origins in Privy dashboard`,
-            duration: 15000,
-          })
-          return
-        }
-        await login()
-      } catch (error: any) {
-        console.error('Login error:', error)
-        toast.error("Failed to open login modal", {
-          description: error?.message || "Check console for details",
-        })
-      }
-    } else if (authenticated && !isConnected) {
-      if (createWallet && typeof createWallet === 'function') {
-        try {
-          toast.loading("Creating embedded wallet...", { id: 'create-wallet' })
-          await createWallet()
-          await new Promise(resolve => setTimeout(resolve, 1000))
-          toast.success("Embedded wallet created!", { id: 'create-wallet' })
-          return
-        } catch (createError: any) {
-          toast.dismiss('create-wallet')
-          toast.error("Failed to Create Wallet", {
-            description: `Please logout and login again with email only.`,
-            duration: 15000,
-          })
-        }
-      }
+    try {
+      await login()
+    } catch (error: any) {
+      console.error('Login error:', error)
+      toast.error("Failed to open login modal", {
+        description: error?.message || "Check console for details",
+      })
     }
   }
 
@@ -200,11 +112,12 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
     }
   }
 
+  // Authenticated but wallet still loading (Privy creates it during login via createOnLogin)
+  const showLoading = authenticated && user && !isConnected
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 pl-0 pr-1 sm:px-3 md:px-4 lg:px-6 backdrop-blur-xl">
-      {/* Left side - Mobile menu & Page context */}
       <div className="flex items-center gap-4">
-        {/* Mobile menu button */}
         <Button
           variant="ghost"
           size="icon"
@@ -214,15 +127,12 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
           <Menu className="h-5 w-5" />
         </Button>
         
-        {/* Breadcrumb or page title could go here */}
         <div className="hidden md:block">
           <span className="text-sm text-gray-500 dark:text-gray-400">Welcome back</span>
         </div>
       </div>
 
-      {/* Right side actions */}
       <div className="flex items-center gap-2 md:gap-4">
-        {/* Notification Icons */}
         <Button variant="ghost" size="icon" className="relative text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hidden sm:flex">
           <Mail className="h-5 w-5" />
         </Button>
@@ -231,7 +141,6 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
           <NotificationBell />
         </div>
 
-        {/* User Profile Dropdown */}
         {isConnected && walletAddress ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -306,28 +215,17 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        ) : authenticated && user && !isConnected ? (
-          walletsLoading ? (
-            <Button 
-              disabled
-              className="gap-2 bg-[#c8ff00]/60 text-black/60 font-medium rounded-xl cursor-wait"
-            >
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="hidden sm:inline">Loading...</span>
-            </Button>
-          ) : (
-            <Button 
-              onClick={handleWalletClick}
-              disabled={!ready}
-              className="gap-2 bg-[#c8ff00] hover:bg-[#b8ef00] text-black font-medium rounded-xl"
-            >
-              <Wallet className="h-4 w-4" />
-              <span className="hidden sm:inline">Create Wallet</span>
-            </Button>
-          )
+        ) : showLoading ? (
+          <Button 
+            disabled
+            className="gap-2 bg-[#c8ff00]/60 text-black/60 font-medium rounded-xl cursor-wait"
+          >
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="hidden sm:inline">Loading...</span>
+          </Button>
         ) : (
           <Button 
-            onClick={handleWalletClick}
+            onClick={handleLogin}
             disabled={!ready}
             className="gap-2 bg-[#c8ff00] hover:bg-[#b8ef00] text-black font-medium rounded-xl"
           >
