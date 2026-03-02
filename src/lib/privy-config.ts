@@ -6,7 +6,7 @@ function getChainRpcUrl(chainId: number): string {
   if (envValue) return envValue;
 
   const defaults: Record<number, string> = {
-    42161: 'https://arb1.arbitrum.io/rpc',
+    42161: 'https://arbitrum.llamarpc.com',
     1: 'https://eth.llamarpc.com',
   };
   return defaults[chainId] || '';

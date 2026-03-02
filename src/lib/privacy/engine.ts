@@ -393,7 +393,7 @@ async function doLoadProvider(): Promise<void> {
       chainId,
       providers: [
         { provider: customRpc || 'https://arbitrum-one-rpc.publicnode.com', priority: 1, weight: 2, maxLogsPerBatch: 100, stallTimeout: 2000 },
-        { provider: 'https://arb1.arbitrum.io/rpc', priority: 2, weight: 1, maxLogsPerBatch: 100, stallTimeout: 2500 },
+        { provider: 'https://arbitrum.llamarpc.com', priority: 2, weight: 1, maxLogsPerBatch: 100, stallTimeout: 2500 },
       ],
     };
 

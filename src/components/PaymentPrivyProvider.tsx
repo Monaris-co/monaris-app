@@ -29,10 +29,10 @@ const arbitrumMainnet = {
   },
   rpcUrls: {
     default: {
-      http: ['https://arb1.arbitrum.io/rpc'],
+      http: ['https://arbitrum.llamarpc.com'],
     },
     public: {
-      http: ['https://arb1.arbitrum.io/rpc'],
+      http: ['https://arbitrum.llamarpc.com'],
     },
   },
   blockExplorers: {
@@ -50,10 +50,10 @@ const paymentWagmiConfig = createConfig({
   chains: [arbitrum],
   transports: {
     [arbitrum.id]: fallback([
-      http('https://arb1.arbitrum.io/rpc'),
-      http('https://arbitrum-one-rpc.publicnode.com'),
+      http('https://arbitrum.llamarpc.com'),
       http('https://1rpc.io/arb'),
       http('https://rpc.ankr.com/arbitrum'),
+      http('https://arbitrum-one-rpc.publicnode.com'),
     ], { rank: true }),
   },
 });

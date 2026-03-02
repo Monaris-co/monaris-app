@@ -111,26 +111,6 @@ export function InviteGate({ children }: InviteGateProps) {
               {/* Top accent line */}
               <div className="absolute top-0 left-1/2 -translate-x-1/2 h-px w-24 bg-gradient-to-r from-transparent via-[#c8ff00]/50 to-transparent" />
 
-              {/* Icon */}
-              <div className="flex justify-center mb-6">
-                <div className="relative">
-                  <div className="absolute inset-0 rounded-full bg-[#c8ff00]/20 blur-xl" />
-                  <div className="relative h-14 w-14 rounded-full bg-[#c8ff00]/10 border border-[#c8ff00]/20 flex items-center justify-center">
-                    {success ? (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: 'spring', stiffness: 300 }}
-                      >
-                        <ShieldCheck className="h-7 w-7 text-[#c8ff00]" />
-                      </motion.div>
-                    ) : (
-                      <Lock className="h-6 w-6 text-[#c8ff00]" />
-                    )}
-                  </div>
-                </div>
-              </div>
-
               {/* Title */}
               <div className="text-center mb-6">
                 <h1 className="text-xl font-semibold text-white mb-2">

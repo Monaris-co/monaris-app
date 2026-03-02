@@ -360,7 +360,7 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
 
       const publicClient = createPublicClient({
         chain: arbitrum,
-        transport: http('https://arb1.arbitrum.io/rpc'),
+        transport: http('https://arbitrum.llamarpc.com'),
       });
       try {
         await publicClient.call({
