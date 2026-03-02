@@ -23,6 +23,7 @@ import PrivatePayments from "./pages/app/PrivatePayments";
 import PayInvoice from "./pages/PayInvoice";
 import { PrivyErrorHandler } from "./components/PrivyErrorHandler";
 import { PaymentPrivyProvider } from "./components/PaymentPrivyProvider";
+import { InviteGate } from "./components/InviteGate";
 
 const queryClient = new QueryClient();
 
@@ -86,11 +87,13 @@ const AppRouter = () => {
         >
           <PrivyErrorHandler />
           <WagmiProvider config={wagmiConfig}>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <MainAppRoutes />
-            </TooltipProvider>
+            <InviteGate>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <MainAppRoutes />
+              </TooltipProvider>
+            </InviteGate>
           </WagmiProvider>
         </PrivyProvider>
       </QueryClientProvider>
@@ -101,11 +104,13 @@ const AppRouter = () => {
   console.warn('Privy app ID is missing. Some wallet features may not work.');
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <MainAppRoutes />
-      </TooltipProvider>
+      <InviteGate>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <MainAppRoutes />
+        </TooltipProvider>
+      </InviteGate>
     </QueryClientProvider>
   );
 };

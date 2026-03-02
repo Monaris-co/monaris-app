@@ -30,6 +30,7 @@ interface ImportMetaEnv {
   readonly VITE_RPC_URL_42161?: string
   readonly VITE_RPC_URL_421614?: string
   readonly VITE_DEFAULT_CHAIN_ID?: string
+  readonly VITE_INVITE_CODES?: string
 }
 
 interface ImportMeta {
