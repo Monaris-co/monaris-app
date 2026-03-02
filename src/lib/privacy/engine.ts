@@ -387,40 +387,29 @@ async function doLoadProvider(): Promise<void> {
     const networkName =
       chainId === 42161 ? NetworkName.Arbitrum : NetworkName.Arbitrum;
 
-    const customRpc = import.meta.env[`VITE_RPC_URL_${chainId}`];
-    const isCustomRpcReliable = customRpc
-      && !customRpc.includes('pocket.network')
-      && !customRpc.includes('llamarpc');
-
-    // ethers FallbackProvider quorum = ceil(totalWeight / 2).
-    // With 2 providers of weight 1 each: totalWeight=2, quorum=1.
-    // A single provider responding is enough to pass quorum.
-    const providers = [
-      {
-        provider: isCustomRpcReliable ? customRpc : 'https://1rpc.io/arb',
-        priority: 1,
-        weight: 1,
-        maxLogsPerBatch: 100,
-        stallTimeout: 5000,
-      },
-      {
-        provider: 'https://rpc.ankr.com/arbitrum',
-        priority: 2,
-        weight: 1,
-        maxLogsPerBatch: 100,
-        stallTimeout: 5000,
-      },
+    // SDK requires total provider weight >= 2 (shared-models/fallback-provider.js).
+    // Use dedicated RPCs for RAILGUN that don't overlap with Privy/Wagmi
+    // (which share VITE_RPC_URL_42161) to avoid hitting shared rate limits.
+    const RAILGUN_RPCS = [
+      'https://arb1.arbitrum.io/rpc',
+      'https://rpc.ankr.com/arbitrum',
     ];
 
     const fallbackProviders = {
       chainId,
-      providers,
+      providers: RAILGUN_RPCS.map((rpc, i) => ({
+        provider: rpc,
+        priority: i + 1,
+        weight: 1,
+        maxLogsPerBatch: 10,
+        stallTimeout: 10000,
+      })),
     };
 
     setStatus('syncing');
-    console.log('[RAILGUN] Loading provider + starting quicksync...');
+    console.log('[RAILGUN] Loading provider with RPCs:', RAILGUN_RPCS.join(' | '));
 
-    await loadProvider(fallbackProviders, networkName, 8_000);
+    await loadProvider(fallbackProviders, networkName, 15_000);
 
     _providerLoaded = true;
     setStatus('ready');
