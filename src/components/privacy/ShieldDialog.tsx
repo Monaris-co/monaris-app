@@ -156,7 +156,7 @@ export function ShieldDialog({ open, onOpenChange }: ShieldDialogProps) {
 
       const publicClient = createPublicClient({
         chain: arbitrum,
-        transport: http(import.meta.env.VITE_RPC_URL_42161 || 'https://arbitrum-one-rpc.publicnode.com'),
+        transport: http(import.meta.env.VITE_RPC_URL_42161 || 'https://1rpc.io/arb'),
       });
       await publicClient.waitForTransactionReceipt({ hash: approveResult.hash as `0x${string}`, confirmations: 1 });
 

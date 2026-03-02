@@ -264,7 +264,7 @@ async function generateBip39Mnemonic(): Promise<string> {
 
 async function getCurrentBlockNumber(chainId: number): Promise<number | null> {
   const rpcUrl = import.meta.env[`VITE_RPC_URL_${chainId}`]
-    || 'https://arbitrum-one-rpc.publicnode.com';
+    || 'https://1rpc.io/arb';
 
   try {
     const resp = await fetch(rpcUrl, {

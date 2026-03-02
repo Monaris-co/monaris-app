@@ -24,7 +24,7 @@ export function getChainMetadata(chainId: number): ChainMetadata | null {
   };
 
   const rpcUrls: Record<number, string> = {
-    [CHAIN_IDS.ARBITRUM_MAINNET]: 'https://arbitrum.llamarpc.com',
+    [CHAIN_IDS.ARBITRUM_MAINNET]: 'https://1rpc.io/arb',
   };
 
   return {
