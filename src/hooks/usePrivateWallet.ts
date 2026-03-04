@@ -26,6 +26,7 @@ import {
   refreshPOIsForWallet,
 } from '@/lib/privacy';
 import { getWalletModule } from '@/lib/privacy/engine';
+import { deriveWalletPassword } from '@/lib/privacy/wallet';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 const SEED_MESSAGE = 'Monaris Private Wallet Derivation v1';
@@ -36,12 +37,6 @@ const _mnemonicCache = new Map<string, string>();
 
 // Lock to prevent concurrent wallet init (which would race on personal_sign)
 let _initLock: Promise<void> | null = null;
-
-async function deriveWalletPassword(address: string): Promise<string> {
-  const data = new TextEncoder().encode(`monaris-pw-${address.toLowerCase()}-v1`);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
 
 async function deriveDeterministicMnemonic(signature: string): Promise<string> {
   const { ethers } = await import('ethers');

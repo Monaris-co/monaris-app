@@ -393,8 +393,9 @@ async function doLoadProvider(): Promise<void> {
     // These RPCs must NOT overlap with Wagmi's (1rpc, ankr, drpc)
     // to avoid shared rate limits in production.
     const RAILGUN_RPCS = [
+      'https://arbitrum.drpc.org',
       'https://arb-pokt.nodies.app',
-      'https://arbitrum-one.public.blastapi.io',
+      'https://rpc.ankr.com/arbitrum',
     ];
 
     setStatus('syncing');
@@ -406,7 +407,7 @@ async function doLoadProvider(): Promise<void> {
         // SDK caches the pollingProvider — unload fully before retries
         // so we get a fresh polling provider each time.
         if (attempt > 1) {
-          try { await unloadProvider(networkName); } catch (_) {}
+          try { await unloadProvider(networkName); } catch (_) { }
         }
 
         const fallbackProviders = {

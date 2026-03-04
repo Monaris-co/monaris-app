@@ -1,9 +1,9 @@
 import { PrivyProvider } from '@privy-io/react-auth';
 import { WagmiProvider as PrivyWagmiProvider, createConfig } from '@privy-io/wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { http, fallback } from 'viem';
+import { http, fallback, webSocket } from 'viem';
 import { arbitrum } from 'viem/chains';
-import { 
+import {
   PAYMENT_PRIVY_APP_ID,
   WALLETCONNECT_PROJECT_ID,
 } from '@/lib/payment-privy-config';
@@ -29,10 +29,12 @@ const arbitrumMainnet = {
   },
   rpcUrls: {
     default: {
-      http: ['https://1rpc.io/arb'],
+      http: ['https://arb-mainnet.g.alchemy.com/v2/lA12jxcK7XSr4_xdTRtMG'],
+      webSocket: ['wss://arb-mainnet.g.alchemy.com/v2/lA12jxcK7XSr4_xdTRtMG'],
     },
     public: {
-      http: ['https://1rpc.io/arb'],
+      http: ['https://arb-mainnet.g.alchemy.com/v2/lA12jxcK7XSr4_xdTRtMG'],
+      webSocket: ['wss://arb-mainnet.g.alchemy.com/v2/lA12jxcK7XSr4_xdTRtMG'],
     },
   },
   blockExplorers: {
@@ -50,7 +52,8 @@ const paymentWagmiConfig = createConfig({
   chains: [arbitrum],
   transports: {
     [arbitrum.id]: fallback([
-      http('https://1rpc.io/arb'),
+      webSocket('wss://arb-mainnet.g.alchemy.com/v2/lA12jxcK7XSr4_xdTRtMG'),
+      http('https://arb-mainnet.g.alchemy.com/v2/lA12jxcK7XSr4_xdTRtMG'),
       http('https://rpc.ankr.com/arbitrum'),
       http('https://arbitrum.drpc.org'),
     ], { rank: true }),
@@ -61,7 +64,7 @@ const paymentWagmiConfig = createConfig({
 const paymentPrivyConfigOptions = {
   appearance: {
     theme: 'light' as const,
-    accentColor: '#c8ff00', // Monaris lime green branding
+    accentColor: '#c8ff00' as `#${string}`, // Monaris lime green branding
     logo: '/monar.png', // Monaris logo
     // WalletConnect QR shows directly as a top-level option for mobile wallet scanning
     walletList: ['wallet_connect_qr', 'metamask', 'coinbase_wallet', 'rainbow', 'detected_ethereum_wallets'],

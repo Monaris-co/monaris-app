@@ -20,7 +20,7 @@ export function getPrivacyConfig(chainId: number): PrivacyConfig {
   const envRpc = import.meta.env[`VITE_RPC_URL_${chainId}`];
   const rpcUrl = (envRpc && !envRpc.includes('pocket.network'))
     ? envRpc
-    : 'https://1rpc.io/arb';
+    : 'https://arbitrum.drpc.org';
 
   return {
     enabled: PRIVATE_PAYMENTS_ENABLED && !!RAILGUN_PROXY_CONTRACTS[chainId],

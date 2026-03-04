@@ -11,6 +11,14 @@ import { supabase, isSupabaseConfigured } from '../supabase';
 import { ensureEngineReady } from './engine';
 import type { PrivateWalletInfo, PrivateWalletRecord } from './types';
 
+// ---------- Password derivation ----------
+
+export async function deriveWalletPassword(address: string): Promise<string> {
+  const data = new TextEncoder().encode(`monaris-pw-${address.toLowerCase()}-v1`);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 // ---------- Encryption helpers (Web Crypto API) ----------
 
 async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
@@ -264,9 +272,9 @@ async function generateBip39Mnemonic(): Promise<string> {
 
 async function getCurrentBlockNumber(chainId: number): Promise<number | null> {
   const rpcs = [
-    'https://1rpc.io/arb',
-    'https://rpc.ankr.com/arbitrum',
     'https://arbitrum.drpc.org',
+    'https://arb-pokt.nodies.app',
+    'https://rpc.ankr.com/arbitrum',
   ];
 
   const envRpc = import.meta.env[`VITE_RPC_URL_${chainId}`];

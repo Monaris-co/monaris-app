@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { CheckCircle2, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronUp, Copy, Check, Loader2, Zap } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -36,9 +36,9 @@ interface SnarkProofData {
 function UsdcIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 32 32" fill="none">
-      <circle cx="16" cy="16" r="16" fill="#2775CA"/>
-      <path d="M20.5 18.2c0-2-1.2-2.7-3.5-3-.7-.1-1.4-.2-2-.4-.6-.2-.9-.5-.9-1 0-.6.5-1 1.3-1 .7 0 1.2.3 1.4.8.1.2.2.3.4.3h1c.2 0 .4-.2.3-.4-.2-1-1-1.8-2-2v-1c0-.2-.2-.4-.4-.4h-.8c-.2 0-.4.2-.4.4v1c-1.3.2-2.2 1.2-2.2 2.4 0 1.8 1.1 2.6 3.5 2.9.8.1 1.3.3 1.9.5.5.3.7.6.7 1.1 0 .7-.6 1.2-1.5 1.2-.9 0-1.5-.4-1.7-1-.1-.2-.2-.3-.4-.3h-1c-.2 0-.4.2-.3.4.3 1.1 1.1 1.9 2.4 2.1v1c0 .2.2.4.4.4h.8c.2 0 .4-.2.4-.4v-1c1.4-.2 2.3-1.2 2.3-2.6z" fill="white"/>
-      <path d="M13.1 24.3c-4.6-1.6-7-6.7-5.4-11.3 .8-2.3 2.6-4.1 4.9-4.9.2-.1.3-.3.3-.5v-.9c0-.2-.1-.4-.3-.3-.1 0-.2 0-.2.1-5.3 1.7-8.2 7.3-6.5 12.6 1 3.2 3.5 5.7 6.7 6.7.2.1.4 0 .5-.2 0-.1.1-.2.1-.2v-.9c-.1-.1-.2-.3-.1-.2zM19.1 6.6c-.2-.1-.4 0-.5.2 0 .1-.1.2-.1.2v.9c0 .2.2.4.4.5 4.6 1.6 7 6.7 5.4 11.3-.8 2.3-2.6 4.1-4.9 4.9-.2.1-.3.3-.3.5v.9c0 .2.1.4.3.3.1 0 .2 0 .2-.1 5.3-1.7 8.2-7.3 6.5-12.6-1-3.1-3.5-5.6-6.7-6.7-.1-.2-.2-.2-.3-.3z" fill="white"/>
+      <circle cx="16" cy="16" r="16" fill="#2775CA" />
+      <path d="M20.5 18.2c0-2-1.2-2.7-3.5-3-.7-.1-1.4-.2-2-.4-.6-.2-.9-.5-.9-1 0-.6.5-1 1.3-1 .7 0 1.2.3 1.4.8.1.2.2.3.4.3h1c.2 0 .4-.2.3-.4-.2-1-1-1.8-2-2v-1c0-.2-.2-.4-.4-.4h-.8c-.2 0-.4.2-.4.4v1c-1.3.2-2.2 1.2-2.2 2.4 0 1.8 1.1 2.6 3.5 2.9.8.1 1.3.3 1.9.5.5.3.7.6.7 1.1 0 .7-.6 1.2-1.5 1.2-.9 0-1.5-.4-1.7-1-.1-.2-.2-.3-.4-.3h-1c-.2 0-.4.2-.3.4.3 1.1 1.1 1.9 2.4 2.1v1c0 .2.2.4.4.4h.8c.2 0 .4-.2.4-.4v-1c1.4-.2 2.3-1.2 2.3-2.6z" fill="white" />
+      <path d="M13.1 24.3c-4.6-1.6-7-6.7-5.4-11.3 .8-2.3 2.6-4.1 4.9-4.9.2-.1.3-.3.3-.5v-.9c0-.2-.1-.4-.3-.3-.1 0-.2 0-.2.1-5.3 1.7-8.2 7.3-6.5 12.6 1 3.2 3.5 5.7 6.7 6.7.2.1.4 0 .5-.2 0-.1.1-.2.1-.2v-.9c-.1-.1-.2-.3-.1-.2zM19.1 6.6c-.2-.1-.4 0-.5.2 0 .1-.1.2-.1.2v.9c0 .2.2.4.4.5 4.6 1.6 7 6.7 5.4 11.3-.8 2.3-2.6 4.1-4.9 4.9-.2.1-.3.3-.3.5v.9c0 .2.1.4.3.3.1 0 .2 0 .2-.1 5.3-1.7 8.2-7.3 6.5-12.6-1-3.1-3.5-5.6-6.7-6.7-.1-.2-.2-.2-.3-.3z" fill="white" />
     </svg>
   );
 }
@@ -46,13 +46,13 @@ function UsdcIcon({ className }: { className?: string }) {
 function EthIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 32 32" fill="none">
-      <circle cx="16" cy="16" r="16" fill="#627EEA"/>
-      <path d="M16.498 4v8.87l7.497 3.35L16.498 4z" fill="white" fillOpacity="0.6"/>
-      <path d="M16.498 4L9 16.22l7.498-3.35V4z" fill="white"/>
-      <path d="M16.498 21.968v6.027L24 17.616l-7.502 4.352z" fill="white" fillOpacity="0.6"/>
-      <path d="M16.498 27.995v-6.028L9 17.616l7.498 10.379z" fill="white"/>
-      <path d="M16.498 20.573l7.497-4.353-7.497-3.348v7.701z" fill="white" fillOpacity="0.2"/>
-      <path d="M9 16.22l7.498 4.353v-7.701L9 16.22z" fill="white" fillOpacity="0.6"/>
+      <circle cx="16" cy="16" r="16" fill="#627EEA" />
+      <path d="M16.498 4v8.87l7.497 3.35L16.498 4z" fill="white" fillOpacity="0.6" />
+      <path d="M16.498 4L9 16.22l7.498-3.35V4z" fill="white" />
+      <path d="M16.498 21.968v6.027L24 17.616l-7.502 4.352z" fill="white" fillOpacity="0.6" />
+      <path d="M16.498 27.995v-6.028L9 17.616l7.498 10.379z" fill="white" />
+      <path d="M16.498 20.573l7.497-4.353-7.497-3.348v7.701z" fill="white" fillOpacity="0.2" />
+      <path d="M9 16.22l7.498 4.353v-7.701L9 16.22z" fill="white" fillOpacity="0.6" />
     </svg>
   );
 }
@@ -60,8 +60,8 @@ function EthIcon({ className }: { className?: string }) {
 function UsmtPlusIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 32 32" fill="none">
-      <circle cx="16" cy="16" r="16" fill="#1a1a1a"/>
-      <circle cx="16" cy="16" r="14.5" stroke="#c8ff00" strokeWidth="1"/>
+      <circle cx="16" cy="16" r="16" fill="#1a1a1a" />
+      <circle cx="16" cy="16" r="14.5" stroke="#c8ff00" strokeWidth="1" />
       <text x="16" y="18" textAnchor="middle" fill="#c8ff00" fontSize="9" fontWeight="700" fontFamily="Inter, system-ui, sans-serif">U+</text>
     </svg>
   );
@@ -87,9 +87,9 @@ const TOKEN_OPTIONS: TokenOption[] = [
 function LockShieldIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-      <rect x="9" y="11" width="6" height="5" rx="1"/>
-      <path d="M10.5 11V9a1.5 1.5 0 0 1 3 0v2"/>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <rect x="9" y="11" width="6" height="5" rx="1" />
+      <path d="M10.5 11V9a1.5 1.5 0 0 1 3 0v2" />
     </svg>
   );
 }
@@ -97,9 +97,9 @@ function LockShieldIcon({ className }: { className?: string }) {
 function WithdrawIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3v12"/>
-      <path d="m8 11 4 4 4-4"/>
-      <rect x="4" y="19" width="16" height="2" rx="1"/>
+      <path d="M12 3v12" />
+      <path d="m8 11 4 4 4-4" />
+      <rect x="4" y="19" width="16" height="2" rx="1" />
     </svg>
   );
 }
@@ -107,10 +107,10 @@ function WithdrawIcon({ className }: { className?: string }) {
 function WalletIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="6" width="20" height="14" rx="3"/>
-      <path d="M2 10h20"/>
-      <path d="M16 14h.01"/>
-      <path d="M6 6V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"/>
+      <rect x="2" y="6" width="20" height="14" rx="3" />
+      <path d="M2 10h20" />
+      <path d="M16 14h.01" />
+      <path d="M6 6V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2" />
     </svg>
   );
 }
@@ -118,9 +118,9 @@ function WalletIcon({ className }: { className?: string }) {
 function ZkProofIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-      <path d="M2 17l10 5 10-5"/>
-      <path d="M2 12l10 5 10-5"/>
+      <path d="M12 2L2 7l10 5 10-5-10-5z" />
+      <path d="M2 17l10 5 10-5" />
+      <path d="M2 12l10 5 10-5" />
     </svg>
   );
 }
@@ -149,73 +149,70 @@ function ProofDetailsPanel({ proof, onClose }: { proof: SnarkProofData; onClose:
   }, null, 2);
 
   return (
-    <div className="space-y-3 animate-in slide-in-from-top-2 duration-200">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <ZkProofIcon className="h-4 w-4 text-[#7cb518]" />
-          <span className="text-[13px] font-bold text-[#1a1a1a] dark:text-white">SNARK Proof</span>
+    <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-200">
+      <div className="flex items-center justify-between pb-0.5">
+        <span className="text-[9px] font-bold text-[#888] uppercase tracking-wider">Zero-Knowledge Witness</span>
+        <button
+          onClick={() => copyToClipboard('full', fullProofJson)}
+          className="flex items-center gap-1.5 px-1.5 py-1 rounded text-[9px] font-bold text-[#666] dark:text-[#888] hover:bg-[#f0f0f0] dark:hover:bg-[#222] transition-colors border border-transparent hover:border-[#e0e0e0] dark:hover:border-[#333]"
+        >
+          {copied === 'full' ? <Check className="h-2.5 w-2.5 text-[#22c55e]" /> : <Copy className="h-2.5 w-2.5" />}
+          {copied === 'full' ? 'Copied' : 'Copy JSON'}
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-1.5">
+        <div className="flex items-center justify-between px-2 py-1.5 rounded bg-white dark:bg-[#1a1a1a] border border-[#e8e8e8] dark:border-[#2a2a2a]">
+          <span className="text-[9px] font-bold text-[#999] uppercase tracking-wider">Protocol</span>
+          <span className="text-[10px] font-bold text-[#1a1a1a] dark:text-white">Groth16</span>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => copyToClipboard('full', fullProofJson)}
-            className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold text-[#666] dark:text-[#888] hover:bg-[#f0f0f0] dark:hover:bg-[#222] transition-colors"
-          >
-            {copied === 'full' ? <Check className="h-3 w-3 text-[#22c55e]" /> : <Copy className="h-3 w-3" />}
-            {copied === 'full' ? 'Copied' : 'Copy All'}
-          </button>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-md hover:bg-[#f0f0f0] dark:hover:bg-[#222] transition-colors"
-          >
-            <ChevronUp className="h-3.5 w-3.5 text-[#888]" />
-          </button>
+        <div className="flex items-center justify-between px-2 py-1.5 rounded bg-white dark:bg-[#1a1a1a] border border-[#e8e8e8] dark:border-[#2a2a2a]">
+          <span className="text-[9px] font-bold text-[#999] uppercase tracking-wider">Curve</span>
+          <span className="text-[10px] font-bold text-[#1a1a1a] dark:text-white">BN128</span>
+        </div>
+        <div className="flex items-center justify-between px-2 py-1.5 rounded bg-white dark:bg-[#1a1a1a] border border-[#e8e8e8] dark:border-[#2a2a2a]">
+          <span className="text-[9px] font-bold text-[#999] uppercase tracking-wider">Circuit</span>
+          <span className="text-[10px] font-bold text-[#1a1a1a] dark:text-white truncate max-w-[50px]">{proof.circuit}</span>
+        </div>
+        <div className="flex items-center justify-between px-2 py-1.5 rounded bg-white dark:bg-[#1a1a1a] border border-[#e8e8e8] dark:border-[#2a2a2a]">
+          <span className="text-[9px] font-bold text-[#999] uppercase tracking-wider">Time</span>
+          <span className="text-[10px] font-bold text-[#1a1a1a] dark:text-white">{(proof.proofTime / 1000).toFixed(1)}s</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <div className="px-2.5 py-2 rounded-lg bg-white dark:bg-[#1a1a1a] border border-[#e8e8e8] dark:border-[#2a2a2a]">
-          <span className="block text-[9px] font-bold text-[#999] uppercase tracking-wider">Protocol</span>
-          <span className="block text-[11px] font-bold text-[#1a1a1a] dark:text-white mt-0.5">Groth16</span>
-        </div>
-        <div className="px-2.5 py-2 rounded-lg bg-white dark:bg-[#1a1a1a] border border-[#e8e8e8] dark:border-[#2a2a2a]">
-          <span className="block text-[9px] font-bold text-[#999] uppercase tracking-wider">Curve</span>
-          <span className="block text-[11px] font-bold text-[#1a1a1a] dark:text-white mt-0.5">BN128</span>
-        </div>
-        <div className="px-2.5 py-2 rounded-lg bg-white dark:bg-[#1a1a1a] border border-[#e8e8e8] dark:border-[#2a2a2a]">
-          <span className="block text-[9px] font-bold text-[#999] uppercase tracking-wider">Circuit</span>
-          <span className="block text-[11px] font-bold text-[#1a1a1a] dark:text-white mt-0.5">{proof.circuit}</span>
-        </div>
-        <div className="px-2.5 py-2 rounded-lg bg-white dark:bg-[#1a1a1a] border border-[#e8e8e8] dark:border-[#2a2a2a]">
-          <span className="block text-[9px] font-bold text-[#999] uppercase tracking-wider">Prove time</span>
-          <span className="block text-[11px] font-bold text-[#1a1a1a] dark:text-white mt-0.5">{(proof.proofTime / 1000).toFixed(1)}s</span>
-        </div>
-      </div>
-
-      {[
-        { label: '\u03C0_A (G1)', value: proof.pi_a.slice(0, 2).map(v => truncateHash(v)).join(', '), raw: proof.pi_a.join('\n') },
-        { label: '\u03C0_B (G2)', value: proof.pi_b.flat().slice(0, 2).map(v => truncateHash(v)).join(', '), raw: proof.pi_b.flat().join('\n') },
-        { label: '\u03C0_C (G1)', value: proof.pi_c.slice(0, 2).map(v => truncateHash(v)).join(', '), raw: proof.pi_c.join('\n') },
-      ].map(({ label, value, raw }) => (
-        <div key={label} className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white dark:bg-[#1a1a1a] border border-[#e8e8e8] dark:border-[#2a2a2a]">
-          <div className="flex-1 min-w-0">
-            <span className="block text-[9px] font-bold text-[#999] uppercase tracking-wider">{label}</span>
-            <span className="block text-[10px] font-mono text-[#555] dark:text-[#aaa] mt-0.5 truncate">{value}</span>
+      <div className="space-y-1.5">
+        {[
+          { label: 'π_A (G1)', value: proof.pi_a.slice(0, 2).map(v => truncateHash(v)).join(', '), raw: proof.pi_a.join('\n') },
+          { label: 'π_B (G2)', value: proof.pi_b.flat().slice(0, 2).map(v => truncateHash(v)).join(', '), raw: proof.pi_b.flat().join('\n') },
+          { label: 'π_C (G1)', value: proof.pi_c.slice(0, 2).map(v => truncateHash(v)).join(', '), raw: proof.pi_c.join('\n') },
+        ].map(({ label, value, raw }) => (
+          <div key={label} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded bg-white dark:bg-[#1a1a1a] border border-[#e8e8e8] dark:border-[#2a2a2a]">
+            <div className="flex items-center flex-1 gap-2 min-w-0">
+              <span className="text-[9px] font-bold text-[#999] uppercase tracking-wider shrink-0">{label}</span>
+              <span className="text-[9px] font-mono text-[#555] dark:text-[#aaa] truncate">{value}</span>
+            </div>
+            <button
+              onClick={() => copyToClipboard(label, raw)}
+              className="p-1 rounded hover:bg-[#f5f5f5] dark:hover:bg-[#222] transition-colors flex-shrink-0"
+            >
+              {copied === label ? <Check className="h-3 w-3 text-[#22c55e]" /> : <Copy className="h-3 w-3 text-[#bbb]" />}
+            </button>
           </div>
-          <button
-            onClick={() => copyToClipboard(label, raw)}
-            className="p-1 rounded hover:bg-[#f5f5f5] dark:hover:bg-[#222] transition-colors flex-shrink-0"
-          >
-            {copied === label ? <Check className="h-3 w-3 text-[#22c55e]" /> : <Copy className="h-3 w-3 text-[#bbb]" />}
-          </button>
-        </div>
-      ))}
+        ))}
+      </div>
 
-      <div className="px-2.5 py-2 rounded-lg bg-white dark:bg-[#1a1a1a] border border-[#e8e8e8] dark:border-[#2a2a2a]">
-        <span className="block text-[9px] font-bold text-[#999] uppercase tracking-wider">Public Signals ({proof.publicSignals.length})</span>
-        <div className="mt-1 space-y-0.5">
-          {proof.publicSignals.map((sig, i) => (
-            <span key={i} className="block text-[10px] font-mono text-[#555] dark:text-[#aaa] truncate">{truncateHash(sig, 12, 8)}</span>
-          ))}
+      <div className="px-2 py-1.5 rounded bg-white dark:bg-[#1a1a1a] border border-[#e8e8e8] dark:border-[#2a2a2a] flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[9px] font-bold text-[#999] uppercase tracking-wider">Public Signals</span>
+          <span className="px-1 py-0.5 rounded bg-[#f0f0f0] dark:bg-[#333] text-[8px] font-bold text-[#1a1a1a] dark:text-white">{proof.publicSignals.length} INPUTS</span>
+        </div>
+        <div className="flex gap-2 items-center min-w-0">
+          {proof.publicSignals.length > 0 && (
+            <span className="text-[9px] font-mono text-[#555] dark:text-[#aaa] truncate">{truncateHash(proof.publicSignals[0], 6, 6)}</span>
+          )}
+          {proof.publicSignals.length > 1 && (
+            <span className="text-[9px] font-mono text-[#999]">+{proof.publicSignals.length - 1}</span>
+          )}
         </div>
       </div>
     </div>
@@ -281,7 +278,7 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
 
     const parsedAmt = parseFloat(amount) || 0;
     if (parsedAmt <= 0) return;
-      if (parsedAmt > currentSpendable) {
+    if (parsedAmt > currentSpendable) {
       if (isPending) {
         toast.error('Funds are still pending', {
           description: `${currentBalance.toFixed(2)} ${selectedToken.symbol} shielded, but only ${currentSpendable.toFixed(2)} is spendable. Wait a few minutes for POI validation.`,
@@ -371,9 +368,9 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
       const publicClient = createPublicClient({
         chain: arbitrum,
         transport: fallback([
-          http('https://1rpc.io/arb'),
-          http('https://rpc.ankr.com/arbitrum'),
           http('https://arbitrum.drpc.org'),
+          http('https://arb-pokt.nodies.app'),
+          http('https://rpc.ankr.com/arbitrum'),
         ]),
       });
       try {
@@ -460,104 +457,118 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) resetDialog(); onOpenChange(v); }}>
-      <DialogContent className="sm:max-w-[440px] p-0 overflow-hidden border border-[#2a2a2a] dark:border-[#2a2a2a] rounded-[24px] bg-white dark:bg-[#111111] shadow-[0px_32px_64px_-16px_rgba(0,0,0,0.35)]">
+      <DialogContent className="w-[calc(100vw-32px)] sm:w-full sm:max-w-[440px] p-0 overflow-hidden border border-[#2a2a2a] dark:border-[#2a2a2a] rounded-[24px] bg-white dark:bg-[#111111] shadow-[0px_32px_64px_-16px_rgba(0,0,0,0.35)]">
 
         {step === 'done' ? (
-          <div className="p-8 text-center space-y-5">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-[#ddf9e4] flex items-center justify-center">
-              <CheckCircle2 className="h-8 w-8 text-[#22c55e]" />
+          <div className="p-5 text-center space-y-4">
+            <div className="w-12 h-12 mx-auto rounded-xl bg-gradient-to-br from-[#c8ff00] to-[#b8ef00] flex items-center justify-center shadow-[0_4px_12px_rgba(200,255,0,0.3)]">
+              <CheckCircle2 className="h-6 w-6 text-[#1a1a1a]" />
             </div>
-            <div>
-              <h3 className="text-xl font-semibold text-[#1a1a1a] dark:text-white">
-                {isSendingToOther ? 'Private Payment Sent!' : 'Funds Unshielded!'}
-              </h3>
-              <p className="text-sm text-[#888] mt-2">
-                {isSendingToOther
-                  ? <>{amount} {selectedToken.symbol} sent privately to<br/><span className="font-mono text-[12px] text-[#555] dark:text-[#aaa]">{customRecipient.slice(0, 10)}...{customRecipient.slice(-8)}</span></>
-                  : <>{amount} {selectedToken.symbol} is back in your public wallet.</>
-                }
-              </p>
+
+            <div className="bg-[#fafafa] dark:bg-[#151515] border border-[#e0e0e0] dark:border-[#2a2a2a] rounded-[16px] overflow-hidden shadow-sm">
+              <div className="p-4">
+                <h3 className="text-[16px] font-bold text-[#1a1a1a] dark:text-white pb-2 border-b border-[#e0e0e0] dark:border-[#2a2a2a]">
+                  {isSendingToOther ? 'Private Payment Sent' : 'Funds Unshielded'}
+                </h3>
+                <div className="pt-3 pb-0">
+                  <div className="text-[24px] font-bold text-[#1a1a1a] dark:text-white tracking-tight leading-none text-center flex justify-center items-baseline gap-1.5">
+                    {amount} <span className="text-[#c8ff00] text-[16px]">{selectedToken.symbol}</span>
+                  </div>
+                  <p className="text-[12px] text-[#888] mt-1.5">
+                    {isSendingToOther
+                      ? <>sent securely to <span className="font-mono text-[#1a1a1a] dark:text-[#ccc]">{customRecipient.slice(0, 6)}...{customRecipient.slice(-4)}</span></>
+                      : <>withdrawn safely to public wallet</>
+                    }
+                  </p>
+                </div>
+              </div>
+
+              {proofData && (
+                <div className="border-t border-[#e0e0e0] dark:border-[#2a2a2a] bg-white dark:bg-[#111]">
+                  <button
+                    onClick={() => setShowProofDetails(!showProofDetails)}
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#fafafa] dark:hover:bg-[#1a1a1a] transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <ZkProofIcon className={`h-3.5 w-3.5 ${showProofDetails ? 'text-[#c8ff00]' : 'text-[#888] dark:text-[#666]'}`} />
+                      <span className={`text-[12px] font-bold ${showProofDetails ? 'text-[#1a1a1a] dark:text-white' : 'text-[#666] dark:text-[#aaa]'}`}>View SNARK Proof</span>
+                    </div>
+                    {showProofDetails ? <ChevronUp className="h-3.5 w-3.5 text-[#1a1a1a] dark:text-white" /> : <ChevronDown className="h-3.5 w-3.5 text-[#888]" />}
+                  </button>
+                  {showProofDetails && (
+                    <div className="px-3 pb-3 text-left border-t border-[#e0e0e0] dark:border-[#2a2a2a] pt-3">
+                      <ProofDetailsPanel proof={proofData} onClose={() => setShowProofDetails(false)} />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2.5 pt-0.5">
               {txHash && (
                 <a
                   href={`https://arbiscan.io/tx/${txHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-block mt-2 text-xs font-medium text-[#7cb518] hover:underline"
+                  className="inline-flex items-center gap-1 text-[12px] font-bold text-[#c8ff00] hover:underline"
                 >
-                  View on Arbiscan &rarr;
+                  View on Arbiscan <span className="text-[14px]">&rarr;</span>
                 </a>
               )}
+
+              <button
+                onClick={() => { resetDialog(); onOpenChange(false); }}
+                className="w-full py-3 rounded-xl bg-[#c8ff00] hover:bg-[#b8ef00] text-[#1a1a1a] font-bold text-[14px] shadow-[0_4px_12px_rgba(200,255,0,0.15)] transition-all"
+              >
+                Done
+              </button>
             </div>
-
-            {proofData && (
-              <div className="rounded-xl border border-[#e0e0e0] dark:border-[#2a2a2a] bg-[#fafafa] dark:bg-[#151515] p-3">
-                <button
-                  onClick={() => setShowProofDetails(!showProofDetails)}
-                  className="w-full flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-2">
-                    <ZkProofIcon className="h-4 w-4 text-[#7cb518]" />
-                    <span className="text-[12px] font-bold text-[#555] dark:text-[#aaa]">View SNARK Proof</span>
-                  </div>
-                  {showProofDetails ? <ChevronUp className="h-3.5 w-3.5 text-[#888]" /> : <ChevronDown className="h-3.5 w-3.5 text-[#888]" />}
-                </button>
-                {showProofDetails && (
-                  <div className="mt-3">
-                    <ProofDetailsPanel proof={proofData} onClose={() => setShowProofDetails(false)} />
-                  </div>
-                )}
-              </div>
-            )}
-
-            <button
-              onClick={() => { resetDialog(); onOpenChange(false); }}
-              className="w-full py-3.5 rounded-xl bg-[#c8ff00] hover:bg-[#b8ef00] text-[#1a1a1a] font-semibold text-sm transition-colors"
-            >
-              Done
-            </button>
           </div>
         ) : (
           <>
             {/* Header */}
-            <div className="px-6 pt-6 pb-3 border-b border-[#1a1a1a]/10 dark:border-white/10">
+            <div className="px-4 pt-5 pb-3 border-b border-[#1a1a1a]/10 dark:border-white/10 shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-[14px] bg-gradient-to-br from-[#c8ff00] to-[#a8df00] flex items-center justify-center shadow-[0_2px_8px_rgba(200,255,0,0.3)]">
-                  <WithdrawIcon className="h-5 w-5 text-[#1a1a1a]" />
+                <div className="w-9 h-9 text-white rounded-[12px] bg-gradient-to-br from-[#1a1a1a] to-[#333] flex items-center justify-center shadow-sm">
+                  <WithdrawIcon className="h-4 w-4" />
                 </div>
                 <div>
-                  <h2 className="text-[17px] font-bold text-[#1a1a1a] dark:text-white tracking-tight">Send {selectedToken.symbol}</h2>
-                  <p className="text-[12px] text-[#999]">Transfer to any wallet address</p>
+                  <h2 className="text-[16px] font-bold text-[#1a1a1a] dark:text-white tracking-tight">Send {selectedToken.symbol}</h2>
+                  <p className="text-[11px] text-[#999]">Transfer to any wallet address</p>
                 </div>
               </div>
             </div>
 
-            <div className="px-6 pb-6 pt-5 space-y-5">
+            <div className="px-4 pb-4 pt-4 space-y-4 overflow-y-auto max-h-[80vh] sm:max-h-[calc(85vh-76px)]">
               {/* Empty / pending balance notice */}
               {currentSpendable === 0 && step === 'input' && (
-                <div className="flex flex-col items-center py-4 px-3 rounded-2xl border-2 border-dashed border-[#e0e0e0] dark:border-[#333] bg-[#fafafa] dark:bg-[#151515]">
-                  <div className="w-12 h-12 rounded-xl bg-[#c8ff00]/15 flex items-center justify-center mb-3">
-                    <LockShieldIcon className="h-6 w-6 text-[#7cb518]" />
+                <div className="flex items-start gap-3 py-3 px-3 rounded-2xl border-2 border-dashed border-[#e0e0e0] dark:border-[#333] bg-[#fafafa] dark:bg-[#151515]">
+                  <div className="w-10 h-10 shrink-0 rounded-xl bg-[#c8ff00]/15 flex items-center justify-center">
+                    <LockShieldIcon className="h-5 w-5 text-[#7cb518]" />
                   </div>
-                  {isPending ? (
-                    <>
-                      <p className="text-sm font-semibold text-[#1a1a1a] dark:text-white">Funds pending validation</p>
-                      <p className="text-xs text-[#888] mt-1 text-center">
-                        {currentBalance.toFixed(2)} {selectedToken.symbol} shielded but awaiting Proof of Innocence validation.
-                        This usually takes 2-5 minutes.
-                      </p>
-                      <button
-                        onClick={() => refreshBalances()}
-                        className="mt-3 px-4 py-1.5 rounded-lg border border-[#c8ff00]/40 text-xs font-semibold text-[#7cb518] hover:bg-[#c8ff00]/10 transition-colors"
-                      >
-                        Check again
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-sm font-semibold text-[#1a1a1a] dark:text-white">No shielded balance</p>
-                      <p className="text-xs text-[#888] mt-1 text-center">Shield tokens first, then you can withdraw here.</p>
-                    </>
-                  )}
+                  <div className="flex-1 min-w-0 flex flex-col items-start text-left">
+                    {isPending ? (
+                      <>
+                        <div className="flex items-center justify-between w-full">
+                          <p className="text-[13px] font-bold text-[#1a1a1a] dark:text-white">Funds pending</p>
+                          <button
+                            onClick={() => refreshBalances()}
+                            className="px-2 py-1 rounded bg-[#c8ff00]/10 text-[10px] font-bold text-[#7cb518] hover:bg-[#c8ff00]/20 transition-colors"
+                          >
+                            Refresh
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-[#888] mt-1 leading-relaxed pr-2">
+                          {currentBalance.toFixed(2)} shielded but awaiting POI scan (~2m).
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-[13px] font-bold text-[#1a1a1a] dark:text-white mt-0.5">No shielded balance</p>
+                        <p className="text-[11px] text-[#888] mt-0.5">Shield tokens first to withdraw.</p>
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -614,13 +625,12 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
                                   setAmount('');
                                   setShowTokenDropdown(false);
                                 }}
-                                className={`w-full flex items-center justify-between px-4 py-3 transition-colors ${
-                                  !tk.enabled
-                                    ? 'opacity-50 cursor-not-allowed'
-                                    : isSelected
+                                className={`w-full flex items-center justify-between px-4 py-3 transition-colors ${!tk.enabled
+                                  ? 'opacity-50 cursor-not-allowed'
+                                  : isSelected
                                     ? 'bg-[#c8ff00]/10'
                                     : 'hover:bg-[#f5f5f5] dark:hover:bg-[#1a1a1a]'
-                                }`}
+                                  }`}
                               >
                                 <div className="flex items-center gap-3">
                                   <div className="w-9 h-9 rounded-full bg-white dark:bg-[#1a1a1a] border border-[#e8e8e8] dark:border-[#333] flex items-center justify-center">
@@ -690,24 +700,22 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
                       <div className="flex gap-2">
                         <button
                           onClick={() => { setRecipientMode('self'); setCustomRecipient(''); }}
-                          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-[12px] font-bold transition-all ${
-                            recipientMode === 'self'
-                              ? 'border-[#c8ff00] bg-[#c8ff00]/10 text-[#1a1a1a] dark:text-white'
-                              : 'border-[#1a1a1a]/8 dark:border-[#333] bg-white dark:bg-[#1a1a1a] text-[#888] hover:border-[#1a1a1a]/20 dark:hover:border-[#555]'
-                          }`}
+                          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-[12px] font-bold transition-all ${recipientMode === 'self'
+                            ? 'border-[#c8ff00] bg-[#c8ff00]/10 text-[#1a1a1a] dark:text-white'
+                            : 'border-[#1a1a1a]/8 dark:border-[#333] bg-white dark:bg-[#1a1a1a] text-[#888] hover:border-[#1a1a1a]/20 dark:hover:border-[#555]'
+                            }`}
                         >
                           <WalletIcon className="h-3.5 w-3.5" />
                           My Wallet
                         </button>
                         <button
                           onClick={() => setRecipientMode('other')}
-                          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-[12px] font-bold transition-all ${
-                            recipientMode === 'other'
-                              ? 'border-[#c8ff00] bg-[#c8ff00]/10 text-[#1a1a1a] dark:text-white'
-                              : 'border-[#1a1a1a]/8 dark:border-[#333] bg-white dark:bg-[#1a1a1a] text-[#888] hover:border-[#1a1a1a]/20 dark:hover:border-[#555]'
-                          }`}
+                          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-[12px] font-bold transition-all ${recipientMode === 'other'
+                            ? 'border-[#c8ff00] bg-[#c8ff00]/10 text-[#1a1a1a] dark:text-white'
+                            : 'border-[#1a1a1a]/8 dark:border-[#333] bg-white dark:bg-[#1a1a1a] text-[#888] hover:border-[#1a1a1a]/20 dark:hover:border-[#555]'
+                            }`}
                         >
-                          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" /></svg>
                           Other Address
                         </button>
                       </div>
@@ -728,13 +736,12 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
                             placeholder="0x..."
                             value={customRecipient}
                             onChange={(e) => setCustomRecipient(e.target.value.trim())}
-                            className={`w-full bg-white dark:bg-[#1a1a1a] border-2 rounded-xl px-3.5 py-3 text-[13px] font-mono text-[#1a1a1a] dark:text-white placeholder:text-[#ccc] dark:placeholder:text-[#444] outline-none transition-colors ${
-                              customRecipient.length > 0 && !isValidCustomAddress
-                                ? 'border-red-400 focus:border-red-500'
-                                : isValidCustomAddress
+                            className={`w-full bg-white dark:bg-[#1a1a1a] border-2 rounded-xl px-3.5 py-3 text-[13px] font-mono text-[#1a1a1a] dark:text-white placeholder:text-[#ccc] dark:placeholder:text-[#444] outline-none transition-colors ${customRecipient.length > 0 && !isValidCustomAddress
+                              ? 'border-red-400 focus:border-red-500'
+                              : isValidCustomAddress
                                 ? 'border-[#22c55e]/50 focus:border-[#22c55e]'
                                 : 'border-[#1a1a1a]/10 dark:border-[#333] focus:border-[#c8ff00]'
-                            }`}
+                              }`}
                           />
                           {isValidCustomAddress && (
                             <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -758,100 +765,132 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
                   </div>
 
                   {/* Flow indicator */}
-                  <div className="flex items-center justify-center gap-3 py-1">
-                    <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#c8ff00]/40 bg-[#c8ff00]/8">
-                      <LockShieldIcon className="h-4 w-4 text-[#7cb518]" />
-                      <span className="text-[12px] font-semibold text-[#7cb518]">Private</span>
+                  <div className="flex items-center justify-center gap-2 py-0.5">
+                    <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#c8ff00]/40 bg-[#c8ff00]/8">
+                      <LockShieldIcon className="h-3.5 w-3.5 text-[#7cb518]" />
+                      <span className="text-[11px] font-semibold text-[#7cb518]">Private</span>
                     </div>
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#c8ff00] shadow-[0_2px_8px_rgba(200,255,0,0.3)]">
-                      <svg className="w-4 h-4 text-[#1a1a1a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-[#c8ff00] shadow-[0_2px_8px_rgba(200,255,0,0.3)] shrink-0">
+                      <svg className="w-3.5 h-3.5 text-[#1a1a1a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
                     </div>
-                    <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#e0e0e0] dark:border-[#2a2a2a] bg-white dark:bg-[#1a1a1a]">
+                    <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#e0e0e0] dark:border-[#2a2a2a] bg-white dark:bg-[#1a1a1a] min-w-0">
                       {isSendingToOther ? (
                         <>
-                          <svg className="h-4 w-4 text-[#999]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                          <span className="text-[12px] font-semibold text-[#666] dark:text-[#888]">
+                          <svg className="h-3.5 w-3.5 text-[#999] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
+                          <span className="text-[11px] font-semibold text-[#666] dark:text-[#888] truncate">
                             {isValidCustomAddress ? `${customRecipient.slice(0, 6)}...` : 'Recipient'}
                           </span>
                         </>
                       ) : (
                         <>
-                          <WalletIcon className="h-4 w-4 text-[#999]" />
-                          <span className="text-[12px] font-semibold text-[#666] dark:text-[#888]">My Wallet</span>
+                          <WalletIcon className="h-3.5 w-3.5 text-[#999] shrink-0" />
+                          <span className="text-[11px] font-semibold text-[#666] dark:text-[#888]">My Wallet</span>
                         </>
                       )}
                     </div>
                   </div>
 
                   {/* Info */}
-                  <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-xl border border-[#e0e0e0] dark:border-[#2a2a2a] bg-[#fafafa] dark:bg-[#151515]">
-                    <svg className="h-4 w-4 text-[#999] mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-                    <p className="text-[11px] text-[#888] leading-relaxed">
+                  <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl border border-[#e0e0e0] dark:border-[#2a2a2a] bg-[#fafafa] dark:bg-[#151515]">
+                    <svg className="h-4 w-4 text-[#999] mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>
+                    <p className="text-[10px] text-[#888] leading-relaxed">
                       {isSendingToOther
-                        ? 'Funds are sent from the RAILGUN privacy pool. The recipient sees the amount but not who sent it.'
-                        : 'Unshielding generates a SNARK proof to withdraw privately. The amount and recipient become visible on-chain.'}
+                        ? 'Funds are sent from the privacy pool. The recipient sees the amount but not the sender.'
+                        : 'Unshielding generates a SNARK proof to withdraw privately. Amount becomes visible on-chain.'}
                     </p>
                   </div>
                 </>
               )}
 
               {/* SNARK Proof Generation Progress */}
+              {/* SNARK Proof Generation Progress */}
               {(step === 'proving' || step === 'verifying' || step === 'sending') && (
-                <div className="space-y-4 py-2">
-                  <div className="text-center space-y-2 pb-2">
-                    <div className="w-14 h-14 mx-auto rounded-2xl bg-[#c8ff00]/15 flex items-center justify-center">
-                      <ZkProofIcon className="h-7 w-7 text-[#7cb518]" />
-                    </div>
-                    <p className="text-[15px] font-bold text-[#1a1a1a] dark:text-white">
-                      {step === 'proving' ? 'Generating SNARK Proof' : step === 'verifying' ? 'Verifying Proof' : 'Broadcasting'}
+                <div className="py-2 space-y-8 animate-in fade-in zoom-in-95 duration-500">
+                  <div className="text-center space-y-2">
+                    <p className="text-[16px] font-bold text-[#1a1a1a] dark:text-white">
+                      {step === 'proving' ? 'Generating SNARK Proof' : step === 'verifying' ? 'Verifying Proof On-Chain' : 'Broadcasting Transaction'}
                     </p>
-                    <p className="text-[11px] text-[#888]">
+                    <p className="text-[12px] text-[#888]">
                       {isSendingToOther
-                        ? <>Sending {amount} {selectedToken.symbol} to <span className="font-mono">{customRecipient.slice(0, 6)}...{customRecipient.slice(-4)}</span></>
+                        ? <>Sending {amount} {selectedToken.symbol} privately to <span className="font-mono">{customRecipient.slice(0, 6)}...{customRecipient.slice(-4)}</span></>
                         : <>Withdrawing {amount} {selectedToken.symbol} to public wallet</>}
                     </p>
                   </div>
 
-                  <div className="space-y-1">
+                  {/* Enhanced 3D ZK Proof Visual */}
+                  <div className="relative w-48 h-48 mx-auto my-6" style={{ perspective: '1200px' }}>
+                    {/* Background Ambient Glow */}
+                    <div className="absolute inset-0 bg-[#c8ff00]/10 blur-3xl rounded-full mix-blend-screen animate-pulse" />
+
+                    {/* Outer Orbiting Data Ring */}
+                    <div className="absolute inset-0 rounded-full border border-[rgba(200,255,0,0.15)] animate-[spin_10s_linear_infinite]" style={{ transformStyle: 'preserve-3d', transform: 'rotateX(70deg) rotateY(15deg)' }}>
+                      <div className="absolute top-0 left-1/2 w-2 h-2 -ml-1 bg-[#c8ff00] rounded-full shadow-[0_0_12px_#c8ff00] animate-[ping_2s_ease-in-out_infinite]" />
+                      <div className="absolute bottom-0 right-1/4 w-1.5 h-1.5 -mb-0.5 bg-[#c8ff00] rounded-full shadow-[0_0_8px_#c8ff00]" />
+                    </div>
+
+                    {/* Middle Processing Ring */}
+                    <div className="absolute inset-3 rounded-full border-[2.5px] border-dashed border-[#c8ff00]/30 animate-[spin_6s_linear_infinite_reverse]" style={{ transformStyle: 'preserve-3d', transform: 'rotateX(60deg) rotateY(-15deg) translateZ(15px)' }} />
+
+                    {/* Inner Geometry Ring */}
+                    <div className="absolute inset-7 rounded-full border-[2px] border-[#c8ff00]/50 animate-[spin_4s_linear_infinite]" style={{ transformStyle: 'preserve-3d', transform: 'rotateX(45deg) rotateY(10deg) translateZ(25px)' }}>
+                      <div className="absolute bottom-0 left-1/2 w-4 h-[2.5px] -ml-2 bg-[#c8ff00] shadow-[0_0_10px_#c8ff00]" />
+                    </div>
+
+                    {/* Floating ZK Core Layer */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ transformStyle: 'preserve-3d', transform: 'translateZ(50px)' }}>
+                      <div className="relative w-[72px] h-[72px] animate-[bounce_4s_ease-in-out_infinite]">
+                        {/* 3D Glass Block */}
+                        <div className="absolute inset-0 rounded-[1.2rem] bg-[#111] shadow-[inset_1px_1px_3px_rgba(255,255,255,0.1),0_12px_30px_-5px_rgba(200,255,0,0.3)] flex items-center justify-center transform -rotate-12 hover:rotate-0 hover:scale-105 transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] border border-[#c8ff00]/40">
+                          {step === 'sending' ? (
+                            <Loader2 className="h-9 w-9 text-[#c8ff00] drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)] animate-[spin_6s_linear_infinite]" />
+                          ) : (
+                            <ZkProofIcon className="h-9 w-9 text-[#c8ff00] rotate-12 drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)] transition-transform duration-700 hover:rotate-0" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Floating Tech Particles */}
+                    <div className="absolute top-1/4 left-1/4 w-1.5 h-1.5 rounded-full bg-[#c8ff00] animate-[ping_3s_ease-in-out_infinite] opacity-80" />
+                    <div className="absolute bottom-1/4 right-[20%] w-2 h-2 rounded-full bg-[#c8ff00] animate-[pulse_2s_ease-in-out_infinite] shadow-[0_0_8px_#c8ff00]" style={{ animationDelay: '1s' }} />
+                  </div>
+
+                  <div className="space-y-1.5 px-2">
                     {provingSteps.map((ps, i) => {
                       const stepOrder = ['proving', 'verifying', 'sending'];
                       const currentIdx = stepOrder.indexOf(step);
                       const psIdx = stepOrder.indexOf(ps.id);
                       const isActive = ps.id === step;
                       const isDone = psIdx < currentIdx;
-                      const isPending = psIdx > currentIdx;
 
                       return (
                         <div
                           key={ps.id}
-                          className={`flex items-start gap-3 px-3.5 py-3 rounded-xl transition-all duration-300 ${
-                            isActive
-                              ? 'bg-[#c8ff00]/10 border border-[#c8ff00]/30'
-                              : isDone
-                              ? 'bg-[#f0fdf4] dark:bg-[#22c55e]/5 border border-[#22c55e]/20'
+                          className={`flex items-start gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${isActive
+                            ? 'bg-[#c8ff00]/10 border border-[#c8ff00]/30'
+                            : isDone
+                              ? 'bg-[#c8ff00]/5 border border-[#c8ff00]/20'
                               : 'bg-transparent border border-transparent opacity-40'
-                          }`}
+                            }`}
                         >
                           <div className="mt-0.5 flex-shrink-0">
                             {isDone ? (
-                              <div className="w-5 h-5 rounded-full bg-[#22c55e] flex items-center justify-center">
-                                <Check className="h-3 w-3 text-white" strokeWidth={3} />
+                              <div className="w-5 h-5 rounded-full bg-[#c8ff00] flex items-center justify-center shadow-sm">
+                                <svg className="w-3.5 h-3.5 text-[#1a1a1a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
                               </div>
                             ) : isActive ? (
-                              <div className="w-5 h-5 rounded-full border-2 border-[#c8ff00] border-t-transparent animate-spin" />
+                              <div className="w-5 h-5 rounded-full border-2 border-[#c8ff00] border-t-[#c8ff00]/20 animate-spin" />
                             ) : (
                               <div className="w-5 h-5 rounded-full border-2 border-[#d1d1d1] dark:border-[#444]" />
                             )}
                           </div>
                           <div className="min-w-0">
-                            <span className={`block text-[12px] font-bold ${
-                              isActive ? 'text-[#1a1a1a] dark:text-white' :
-                              isDone ? 'text-[#22c55e]' :
-                              'text-[#999]'
-                            }`}>{ps.label}</span>
-                            <span className={`block text-[10px] mt-0.5 ${
-                              isActive ? 'text-[#888]' : isDone ? 'text-[#22c55e]/60' : 'text-[#ccc] dark:text-[#555]'
-                            }`}>{ps.sublabel}</span>
+                            <span className={`block text-[13px] font-bold ${isActive ? 'text-[#1a1a1a] dark:text-white' :
+                              isDone ? 'text-[#1a1a1a] dark:text-white' :
+                                'text-[#999]'
+                              }`}>{ps.label}</span>
+                            <span className={`block text-[11px] mt-0.5 ${isActive ? 'text-[#888]' : isDone ? 'text-[#666] dark:text-[#aaa]' : 'text-[#ccc] dark:text-[#555]'
+                              }`}>{ps.sublabel}</span>
                           </div>
                         </div>
                       );
@@ -873,9 +912,11 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
                   )}
                 </div>
               )}
+            </div>
 
-              {/* Action button */}
-              {step === 'input' && (
+            {/* Action button - Pinned at bottom outside scroll area */}
+            {step === 'input' && (
+              <div className="px-4 pb-4 pt-1 shrink-0 bg-white dark:bg-[#0a0a0a]">
                 <button
                   onClick={handleUnshield}
                   disabled={isDisabled}
@@ -893,8 +934,8 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
                     </>
                   )}
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </>
         )}
       </DialogContent>

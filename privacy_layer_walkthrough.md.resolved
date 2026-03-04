@@ -1,0 +1,629 @@
+# Monaris Privacy Layer — Complete Technical Walkthrough
+
+> How your private payment system works, end-to-end, from wallet creation to Groth16 proof generation and on-chain settlement.
+
+---
+
+## Table of Contents
+1. [The Big Picture — What RAILGUN Does](#1-the-big-picture)
+2. [The UTXO Model — How Funds Are Hidden](#2-the-utxo-model)
+3. [What Groth16 SNARK Proofs Actually Do](#3-what-groth16-snark-proofs-actually-do)
+4. [Engine Initialization — Two-Phase Boot](#4-engine-initialization)
+5. [Wallet Creation — Deterministic from Privy](#5-wallet-creation)
+6. [Shield Flow — Public → Private](#6-shield-flow)
+7. [Unshield Flow — Private → Public](#7-unshield-flow)
+8. [Private Transfer Flow — Private → Private](#8-private-transfer-flow)
+9. [Private Invoice Payment — Full Lifecycle](#9-private-invoice-payment)
+10. [Proof of Innocence (POI)](#10-proof-of-innocence)
+11. [Balance Buckets — Why "Total ≠ Spendable"](#11-balance-buckets)
+12. [Complete Architecture Diagram](#12-complete-architecture)
+
+---
+
+## 1. The Big Picture
+
+RAILGUN is an on-chain privacy system that lets users hold and transact ERC-20 tokens **without revealing sender, receiver, or amount** on the public blockchain.
+
+Think of it like this:
+
+```
+NORMAL (public):
+  Alice (0xABC...) → sends 100 USDC → Bob (0xDEF...)
+  → Anyone on Arbiscan sees: who sent, who received, how much
+
+RAILGUN (private):
+  Alice (0xABC...) → shields 100 USDC → RAILGUN contract (0xFA7...)
+  RAILGUN contract → private transfer → RAILGUN contract
+  RAILGUN contract → Bob unshields → Bob (0xDEF...) gets 100 USDC
+  → Arbiscan sees: Alice deposited into RAILGUN. Bob withdrew from RAILGUN.
+  → Nobody can link Alice's deposit to Bob's withdrawal.
+```
+
+The magic that makes the unlinking possible is **zero-knowledge proofs** — specifically **Groth16 SNARK proofs**.
+
+---
+
+## 2. The UTXO Model
+
+RAILGUN uses a **UTXO model** (like Bitcoin), not an account model (like normal Ethereum). This is fundamental to understanding the privacy layer.
+
+```mermaid
+graph TB
+    subgraph "Account Model (Normal ERC-20)"
+        ACC["Account: 0xABC...<br/>Balance: 500 USDC<br/>(everyone can see)"]
+    end
+
+    subgraph "UTXO Model (RAILGUN)"
+        U1["UTXO #1<br/>200 USDC<br/>(encrypted, owner unknown)"]
+        U2["UTXO #2<br/>150 USDC<br/>(encrypted, owner unknown)"]
+        U3["UTXO #3<br/>150 USDC<br/>(encrypted, owner unknown)"]
+        MT["Poseidon Merkle Tree<br/>Root: 0x8f3a..."]
+        U1 --> MT
+        U2 --> MT
+        U3 --> MT
+    end
+```
+
+### How UTXOs work in RAILGUN:
+
+1. **When you shield 500 USDC**: Your public tokens are transferred to the RAILGUN contract, and the contract creates encrypted UTXOs in a **Poseidon Merkle tree**. Only your **viewing key** (derived from your mnemonic) can read these UTXOs.
+
+2. **When you transfer privately**: The old UTXOs are "consumed" (nullified) and new UTXOs are created for the recipient. The Merkle tree root changes, but nobody can tell which UTXOs were consumed or created.
+
+3. **When you unshield**: A UTXO is consumed (privately), and the RAILGUN contract sends public tokens to your specified address.
+
+### The Poseidon Merkle Tree
+
+All shielded UTXOs are stored in a **Poseidon Merkle tree** on-chain. Poseidon is a hash function specifically designed for ZK circuits — it's much more efficient inside SNARK proofs than Keccak256.
+
+```
+                    Root (0x8f3a...)
+                   /                \
+              Hash                   Hash
+             /    \                 /    \
+         Hash      Hash        Hash      Hash
+        /   \     /   \       /   \     /   \
+      UTXO  UTXO  UTXO  UTXO  UTXO  UTXO  UTXO  UTXO
+       #1    #2    #3    #4    #5    #6    #7    #8
+```
+
+Your wallet **downloads this tree** (via "quicksync") and scans it locally to find which UTXOs belong to you. This is why engine initialization takes a few seconds — it's downloading and processing the Merkle tree state.
+
+---
+
+## 3. What Groth16 SNARK Proofs Actually Do
+
+### The problem
+
+When you want to unshield or transfer privately, you need to prove:
+
+> "I own UTXO #3 (which contains 150 USDC), and I want to consume it to send 100 USDC to Alice and keep 50 USDC as change."
+
+But you need to prove this **without revealing**:
+- Which UTXO is yours (UTXO #3 could be any of the UTXOs in the tree)
+- How much is in the UTXO
+- Who you're sending to
+
+### The solution: Groth16 zkSNARK
+
+A **Groth16 proof** is a mathematical proof that says:
+
+> "I know a secret (my private key + UTXO data) that satisfies a specific computation (the RAILGUN circuit), and here is a 128-byte proof that you can verify in O(1) time."
+
+```mermaid
+flowchart LR
+    subgraph "Inputs (private — only you know)"
+        PK["Your Private Key"]
+        UTXO["UTXO Data<br/>(amount, token, position)"]
+        PATH["Merkle Path<br/>(proof UTXO is in tree)"]
+    end
+
+    subgraph "Inputs (public — everyone sees)"
+        ROOT["Merkle Root<br/>(current tree state)"]
+        NULL["Nullifier<br/>(marks UTXO as spent)"]
+        COMM["New Commitments<br/>(encrypted new UTXOs)"]
+    end
+
+    subgraph "Circuit (RAILGUN's ZK circuit)"
+        CIR["Groth16 Circuit<br/>~65,000 constraints<br/>Proves: I own a UTXO in this tree,<br/>I'm spending the right amount,<br/>the change is correct"]
+    end
+
+    subgraph "Output"
+        PROOF["Proof (128 bytes)<br/>(verifiable by smart contract)"]
+    end
+
+    PK --> CIR
+    UTXO --> CIR
+    PATH --> CIR
+    ROOT --> CIR
+    NULL --> CIR
+    COMM --> CIR
+    CIR --> PROOF
+```
+
+### What happens inside the Groth16 proof generation
+
+This is what your code does when it calls `generateUnshieldProof()`:
+
+```
+Step 1: Load circuit artifacts (proving key + WASM circuit)
+   Source: IPFS → cached in IndexedDB (ARTIFACT_DB_VERSION = 4)
+   Files:  circuit.wasm (~8MB), circuit_final.zkey (~7MB)
+   
+Step 2: Prepare witness (private inputs)
+   - Your RAILGUN private key (from mnemonic)
+   - The UTXO(s) you're spending
+   - The Merkle path (proof each UTXO is in the current tree)
+   - The recipient's shielded address (for transfers)
+   - The output amounts (send amount + change)
+   
+Step 3: Execute circuit via snarkjs
+   - snarkjs.groth16.fullProve(inputs, circuit.wasm, proving_key.zkey)
+   - This runs the WASM circuit with your private inputs
+   - Produces: proof (π) + public signals
+   - Time: 5-30 seconds depending on device
+   
+Step 4: Generate public outputs
+   - Nullifiers (one per consumed UTXO — marks them as spent)
+   - New commitments (encrypted new UTXOs for recipient + change)
+   - Root (the Merkle root you proved against)
+   
+Step 5: Package into transaction
+   - proof + nullifiers + commitments → ABI-encoded calldata
+   - This becomes the data field of an Ethereum transaction
+   - Target: RAILGUN proxy contract (0xFA7...on Arbitrum)
+```
+
+### Why Groth16 and not another proof system?
+
+| System | Proof Size | Verification Gas | Proof Time | Trusted Setup |
+|---|---|---|---|---|
+| **Groth16** (RAILGUN uses this) | 128 bytes | ~230K gas | 5-30s | Yes (one-time ceremony) |
+| PLONK | ~500 bytes | ~300K gas | 10-60s | Universal (no per-circuit) |
+| STARK | 50-200 KB | ~1M gas | 30-120s | None needed |
+
+Groth16 wins on **proof size** (smallest = cheapest on-chain verification) and **verification gas** (critical for L2 cost-efficiency).
+
+---
+
+## 4. Engine Initialization
+
+Your code uses a **two-phase architecture** for the RAILGUN engine. Here's exactly what happens:
+
+```mermaid
+sequenceDiagram
+    participant UI as React App
+    participant Hook as usePrivateWallet
+    participant Engine as engine.ts
+    participant WASM as RAILGUN WASM
+    participant IDB as IndexedDB
+    participant RPC as Arbitrum RPC
+    participant Supabase as Supabase
+
+    Note over UI,Supabase: Phase 1: Engine Boot (no network)
+    Hook->>Engine: ensureEngineStarted()
+    Engine->>Engine: Dynamic import @railgun-community/wallet
+    Engine->>Engine: Dynamic import @railgun-community/shared-models
+    Engine->>WASM: Load WASM binary
+    Engine->>IDB: Open 'monaris-railgun-artifacts' DB (v4)
+    Engine->>Engine: Create artifact store (get/store/exists callbacks)
+    Engine->>WASM: startRailgunEngine(walletSource, db, config)
+    Note over Engine: Status: 'initializing' → 'loading-artifacts'
+    Engine-->>Hook: Engine booted (~2-4 seconds)
+
+    Note over UI,Supabase: Phase 2: Wallet import (must happen BEFORE provider)
+    Hook->>Hook: Sign "Monaris Private Wallet Derivation v1"
+    Hook->>Hook: keccak256(signature) → entropy → BIP39 mnemonic
+    Hook->>Engine: createRailgunWallet(password, mnemonic, {})
+    Engine->>WASM: Import wallet with viewing key
+    Engine-->>Hook: { walletId, railgunAddress: "0zk..." }
+    Hook->>Supabase: Persist encrypted blob (AES-GCM) [fire and forget]
+
+    Note over UI,Supabase: Phase 3: Load provider + quicksync
+    Hook->>Engine: loadProviderAndSync()
+    Engine->>RPC: Connect to Arbitrum RPC (with retries)
+    Engine->>WASM: loadProvider(chain, [rpcUrl])
+    Note over WASM: Quicksync: download Merkle tree updates
+    WASM->>RPC: Scan for UTXOs matching this wallet's viewing key
+    Note over Engine: Status: 'syncing' → 'ready'
+
+    Note over UI,Supabase: Phase 4: POI refresh
+    Hook->>Engine: refreshPOIsForWallet(walletId)
+    Engine->>WASM: Generate POI proofs for ShieldPending UTXOs
+    WASM->>RPC: Submit POI proofs to aggregator
+    Note over Engine: ShieldPending funds → Spendable
+```
+
+### Key code paths:
+
+| Phase | File | Function | What it does |
+|---|---|---|---|
+| 1a | [engine.ts](file:///Users/adityakumar/Library/Mobile%20Documents/com~apple~CloudDocs/monaris-app/src/lib/privacy/engine.ts#L211-L357) | [doEngineStart()](file:///Users/adityakumar/Library/Mobile%20Documents/com~apple~CloudDocs/monaris-app/src/lib/privacy/engine.ts#211-358) | Boots WASM, opens IndexedDB, creates artifact store |
+| 1b | [engine.ts](file:///Users/adityakumar/Library/Mobile%20Documents/com~apple~CloudDocs/monaris-app/src/lib/privacy/engine.ts#L82-L176) | [ensureProverInitialized()](file:///Users/adityakumar/Library/Mobile%20Documents/com~apple~CloudDocs/monaris-app/src/lib/privacy/engine.ts#82-177) | Loads snarkjs + patches [fullProve](file:///Users/adityakumar/Library/Mobile%20Documents/com~apple~CloudDocs/monaris-app/src/lib/privacy/engine.ts#114-126) for RAILGUN compatibility |
+| 2 | [usePrivateWallet.ts](file:///Users/adityakumar/Library/Mobile%20Documents/com~apple~CloudDocs/monaris-app/src/hooks/usePrivateWallet.ts#L123-L206) | [doInit()](file:///Users/adityakumar/Library/Mobile%20Documents/com~apple~CloudDocs/monaris-app/src/hooks/usePrivateWallet.ts#122-207) | Signs seed message, derives mnemonic, imports wallet |
+| 3 | [engine.ts](file:///Users/adityakumar/Library/Mobile%20Documents/com~apple~CloudDocs/monaris-app/src/lib/privacy/engine.ts#L364-L446) | [doLoadProvider()](file:///Users/adityakumar/Library/Mobile%20Documents/com~apple~CloudDocs/monaris-app/src/lib/privacy/engine.ts#380-447) | Connects RPC, triggers quicksync with retries |
+| 4 | [engine.ts](file:///Users/adityakumar/Library/Mobile%20Documents/com~apple~CloudDocs/monaris-app/src/lib/privacy/engine.ts#L482-L525) | [refreshPOIsForWallet()](file:///Users/adityakumar/Library/Mobile%20Documents/com~apple~CloudDocs/monaris-app/src/lib/privacy/engine.ts#482-526) | Generates POI proofs for pending UTXOs |
+
+---
+
+## 5. Wallet Creation
+
+Your RAILGUN wallet is derived **deterministically** from your Privy embedded wallet. Here's the exact chain:
+
+```mermaid
+flowchart TD
+    A["Privy Embedded Wallet<br/>(0xABC... your EOA)"] -->|"personal_sign('Monaris Private Wallet Derivation v1')"| B["Signature<br/>(0x7f2a3b...)"]
+    B -->|"keccak256(signature)"| C["32-byte Hash<br/>(entropy)"]
+    C -->|"first 16 bytes → BIP39"| D["12-word Mnemonic<br/>'apple banana cherry ...'"]
+    D -->|"createRailgunWallet(password, mnemonic)"| E["RAILGUN Wallet<br/>ID: 'rw_abc123...'<br/>Address: '0zk1q9...'"]
+    E -->|"AES-GCM encrypt(mnemonic)"| F["Encrypted Blob<br/>(stored in Supabase)"]
+```
+
+### Why this is secure and deterministic:
+
+1. **Same Privy wallet** → same signature → same mnemonic → **same RAILGUN wallet every time**
+2. If the Supabase blob is lost: no problem — re-derive from signature
+3. If browser localStorage is cleared: re-derive from signature
+4. The mnemonic **never leaves the browser unencrypted** — it's encrypted with AES-GCM before being stored in Supabase
+
+### The encryption scheme:
+
+```
+Password derivation:
+  SHA-256("monaris-pw-{address}-v1") → 32-byte hex → encryption key
+
+Encryption (Web Crypto API):
+  1. Generate random 16-byte salt
+  2. Generate random 12-byte IV
+  3. PBKDF2(password, salt, 100_000 iterations, SHA-256) → AES-256 key
+  4. AES-GCM(key, IV, mnemonic) → ciphertext
+  5. Concatenate: salt || IV || ciphertext → Base64 → stored in Supabase
+```
+
+---
+
+## 6. Shield Flow — Public → Private
+
+**Shield** = move tokens from your public wallet (0x address) into the RAILGUN system (encrypted UTXOs).
+
+```mermaid
+sequenceDiagram
+    participant User as User
+    participant UI as ShieldDialog.tsx
+    participant TX as transactions.ts
+    participant Engine as RAILGUN Engine
+    participant ARB as Arbitrum
+
+    User->>UI: Click "Shield 100 USDC"
+    UI->>TX: buildShieldTransaction({ tokenAddress, amount, fromAddress })
+    TX->>Engine: ensureEngineReady()
+    TX->>Engine: populateShield(V2_PoseidonMerkle, "Arbitrum", shieldKey, recipients, [])
+
+    Note over Engine: What happens inside populateShield:
+    Note over Engine: 1. Generate random shieldPrivateKey (32 bytes)
+    Note over Engine: 2. Compute commitment = Poseidon(amount, token, recipientPubKey, random)
+    Note over Engine: 3. Build transaction to RAILGUN proxy contract
+    Note over Engine: NO PROOF NEEDED for shield (it's a public → private deposit)
+
+    Engine-->>TX: { to: "0xFA7...", data: "0x...", value: 0 }
+    TX-->>UI: Raw transaction
+    UI->>User: "Approve USDC + Confirm Shield"
+
+    User->>ARB: Step 1: USDC.approve(RAILGUN_PROXY, 100e6)
+    User->>ARB: Step 2: Submit shield transaction
+
+    Note over ARB: RAILGUN contract:
+    Note over ARB: 1. Pulls 100 USDC from user
+    Note over ARB: 2. Creates encrypted UTXO commitment
+    Note over ARB: 3. Inserts commitment into Poseidon Merkle tree
+    Note over ARB: 4. Emits Shield event (encrypted — only recipient can decode)
+```
+
+### Why shielding does NOT require a Groth16 proof:
+
+Shielding is a **public** operation — the blockchain can see "100 USDC was deposited into RAILGUN by 0xABC". No privacy needs to be proven at this stage. The privacy starts when those shielded funds are spent.
+
+> [!NOTE]
+> After shielding, funds are in **"ShieldPending"** status on Arbitrum. They move to **"Spendable"** only after POI (Proof of Innocence) validation completes — usually a few minutes. See [Section 10](#10-proof-of-innocence).
+
+---
+
+## 7. Unshield Flow — Private → Public
+
+**Unshield** = move tokens from RAILGUN (encrypted UTXOs) back to a public wallet. **This is where the Groth16 proof is critical.**
+
+```mermaid
+sequenceDiagram
+    participant User as User
+    participant UI as UnshieldDialog.tsx
+    participant TX as transactions.ts
+    participant Prover as snarkjs Prover
+    participant Engine as RAILGUN Engine
+    participant ARB as Arbitrum
+
+    User->>UI: Click "Unshield 50 USDC to 0xDEF..."
+    UI->>TX: buildUnshieldTransaction(req, walletId, encKey, "Arbitrum")
+    TX->>Engine: ensureEngineReady()
+    TX->>TX: triggerBalanceScan(walletId, 42161)
+    Note over TX: Refresh Merkle tree so proof uses latest state
+
+    TX->>Engine: ensureProverInitialized()
+    Note over Engine: Load snarkjs WASM + patch fullProve()
+
+    TX->>TX: clearArtifactMemoryCache()
+    Note over TX: Force fresh artifact load from IndexedDB
+
+    TX->>TX: Acquire unshieldMutex (prevent concurrent proofs)
+
+    TX->>Engine: gasEstimateForUnprovenUnshield(...)
+    Engine-->>TX: gasEstimate: 800_000n
+
+    Note over TX,Prover: === PROOF GENERATION STARTS ===
+
+    TX->>Engine: generateUnshieldProof(V2_PoseidonMerkle, "Arbitrum", walletId, ...)
+
+    Note over Engine,Prover: Inside generateUnshieldProof:
+    Note over Engine: 1. Find UTXO(s) with enough balance
+    Note over Engine: 2. Compute Merkle path for each UTXO
+    Note over Engine: 3. Compute nullifiers (mark UTXOs as spent)
+    Note over Engine: 4. Compute output commitments (change UTXO, if any)
+    Note over Prover: 5. snarkjs.groth16.fullProve(witness, circuit.wasm, proving_key.zkey)
+    Note over Prover: ↑ This is the expensive step: 5-30 seconds
+    Note over Prover: 6. Output: proof π (A, B, C points on BN128 curve)
+    Note over Engine: 7. Verify proof locally (optional sanity check)
+
+    Engine-->>TX: Proof generated ✅
+
+    Note over TX,Prover: === PROOF GENERATION ENDS ===
+
+    TX->>Engine: populateProvedUnshield(V2_PoseidonMerkle, "Arbitrum", ...)
+    Note over Engine: ABI-encode: proof + nullifiers + commitments + recipient
+    Engine-->>TX: { to: "0xFA7...", data: "0x(proof+nullifiers+commitments)", value: 0 }
+
+    TX->>TX: Release unshieldMutex
+    TX-->>UI: { success: true, transaction: { to, data, value, gasEstimate } }
+
+    User->>ARB: Submit transaction (via Privy sendTransaction)
+
+    Note over ARB: RAILGUN contract verifies:
+    Note over ARB: 1. Groth16 proof is valid (pairing check, ~230K gas)
+    Note over ARB: 2. Merkle root is current (not stale)
+    Note over ARB: 3. Nullifiers haven't been used (no double-spend)
+    Note over ARB: 4. If valid: transfer 50 USDC to 0xDEF...
+    Note over ARB: 5. Record nullifiers as spent
+```
+
+### The mutex — why it exists
+
+```typescript
+// transactions.ts line 57
+let unshieldMutex: Promise<void> = Promise.resolve();
+```
+
+The RAILGUN SDK uses a **single global proof cache**. If two proof generations run concurrently, they overwrite each other's state, producing invalid proofs. The mutex serializes all unshield operations.
+
+---
+
+## 8. Private Transfer Flow — Private → Private
+
+**Private transfer** = send shielded funds to another user's RAILGUN address **without either party revealing their identity**.
+
+```mermaid
+sequenceDiagram
+    participant Alice as Alice's Browser
+    participant TX as transactions.ts
+    participant Prover as snarkjs Prover
+    participant ARB as Arbitrum
+
+    Alice->>TX: buildPrivateTransfer({ token, amount, recipientRailgunAddress: "0zk1q..." })
+    TX->>TX: ensureEngineReady() + ensureProverInitialized()
+
+    TX->>Prover: gasEstimateForUnprovenTransfer(...)
+    Prover-->>TX: gasEstimate
+
+    TX->>Prover: generateTransferProof(V2, "Arbitrum", walletId, encKey, ...)
+    Note over Prover: Same Groth16 proof as unshield, but:
+    Note over Prover: - Output commitments encrypted for RECIPIENT's viewing key
+    Note over Prover: - No public address revealed
+    Note over Prover: - Memo encrypted inside the commitment
+
+    Prover-->>TX: Proof ready
+
+    TX->>Prover: populateProvedTransfer(...)
+    Prover-->>TX: { to: "0xFA7...", data: "0x..." }
+
+    Alice->>ARB: Submit transaction
+
+    Note over ARB: RAILGUN contract:
+    Note over ARB: 1. Verify Groth16 proof ✅
+    Note over ARB: 2. Record nullifiers (Alice's UTXOs consumed)
+    Note over ARB: 3. Insert new commitments (encrypted for Bob)
+    Note over ARB: 4. Bob's wallet will find these UTXOs during next scan
+```
+
+### What Bob sees:
+
+Bob's RAILGUN wallet periodically scans the Merkle tree. When it finds new commitments that can be decrypted with Bob's viewing key, they appear in Bob's balance. Bob never knows which transaction created them (unless the memo tells him).
+
+---
+
+## 9. Private Invoice Payment — Full Lifecycle
+
+This is the complete flow when someone pays a Monaris invoice privately. It's orchestrated by [usePrivatePayment.ts](file:///Users/adityakumar/Library/Mobile%20Documents/com~apple~CloudDocs/monaris-app/src/hooks/usePrivatePayment.ts):
+
+```mermaid
+sequenceDiagram
+    participant Buyer as Buyer's Browser
+    participant Hook as usePrivatePayment
+    participant Wallet as usePrivateWallet
+    participant Balance as usePrivateBalance
+    participant TX as transactions.ts
+    participant Privy as Privy SDK
+    participant ARB as Arbitrum
+    participant SB as Supabase
+
+    Note over Buyer,SB: Step 1: Initialize
+    Hook->>Wallet: Ensure private wallet exists
+    Wallet-->>Hook: { walletId, railgunAddress, encryptionKey }
+
+    Note over Buyer,SB: Step 2: Check Balance
+    Hook->>Balance: Check privateUsdcBalance >= invoice amount
+    alt Insufficient balance
+        Hook-->>Buyer: ❌ "Shield more USDC first"
+    end
+
+    Note over Buyer,SB: Step 3: Resolve Recipient
+    Hook->>SB: resolvePrivateAddress(sellerAddress, chainId)
+    Note over SB: Look up seller's encrypted wallet blob
+    Note over SB: If seller has RAILGUN wallet → return 0zk address
+    Note over SB: If not → use buyer's own 0zk as escrow
+    SB-->>Hook: recipientRailgunAddress: "0zk1q9..."
+
+    Note over Buyer,SB: Step 4: Generate Proof (5-30 seconds)
+    Hook->>TX: buildPrivateTransfer({ token, amount, recipient, memo })
+    TX->>TX: Groth16 proof generation (see Section 8)
+    TX-->>Hook: { success: true, transaction: { to, data } }
+
+    Note over Buyer,SB: Step 5: Send Transaction
+    Hook->>Privy: sendTransaction({ to, data, chainId })
+    Privy->>ARB: Submit to Arbitrum
+    ARB-->>Privy: txHash
+    Privy-->>Hook: { hash: "0xabc..." }
+
+    Note over Buyer,SB: Step 6: Record Receipt
+    par Update Supabase (in parallel)
+        Hook->>SB: INSERT private_receipts (payer, receiver, amount, tx_ref)
+        Hook->>SB: UPDATE invoices SET payment_mode='PRIVATE', tx_ref=...
+        Hook->>SB: INSERT notifications (seller, "Invoice Paid Privately")
+    end
+
+    Hook-->>Buyer: ✅ "Payment complete!"
+    Hook->>Balance: refreshBalances()
+```
+
+### The 7 steps in code (annotated):
+
+| Step | Status in UI | Code Reference | What happens |
+|---|---|---|---|
+| 1 | `initializing` | [usePrivatePayment.ts:69-74](file:///Users/adityakumar/Library/Mobile%20Documents/com~apple~CloudDocs/monaris-app/src/hooks/usePrivatePayment.ts#L69-L74) | Ensure RAILGUN wallet exists |
+| 2 | `initializing` | [usePrivatePayment.ts:77-81](file:///Users/adityakumar/Library/Mobile%20Documents/com~apple~CloudDocs/monaris-app/src/hooks/usePrivatePayment.ts#L77-L81) | Check shielded USDC balance |
+| 3 | `resolving` | [usePrivatePayment.ts:84-95](file:///Users/adityakumar/Library/Mobile%20Documents/com~apple~CloudDocs/monaris-app/src/hooks/usePrivatePayment.ts#L84-L95) | Look up seller's 0zk address from Supabase |
+| 4 | `proving` | [usePrivatePayment.ts:98-114](file:///Users/adityakumar/Library/Mobile%20Documents/com~apple~CloudDocs/monaris-app/src/hooks/usePrivatePayment.ts#L98-L114) | **Groth16 proof generation** (the slow step) |
+| 5 | `sending` | [usePrivatePayment.ts:119-133](file:///Users/adityakumar/Library/Mobile%20Documents/com~apple~CloudDocs/monaris-app/src/hooks/usePrivatePayment.ts#L119-L133) | Submit tx to Arbitrum via Privy |
+| 6 | `recording` | [usePrivatePayment.ts:139-166](file:///Users/adityakumar/Library/Mobile%20Documents/com~apple~CloudDocs/monaris-app/src/hooks/usePrivatePayment.ts#L139-L166) | Record receipt + update invoice + notify seller |
+| 7 | `done` | [usePrivatePayment.ts:169-171](file:///Users/adityakumar/Library/Mobile%20Documents/com~apple~CloudDocs/monaris-app/src/hooks/usePrivatePayment.ts#L169-L171) | Refresh balances, show success |
+
+---
+
+## 10. Proof of Innocence (POI)
+
+On Arbitrum (and Ethereum mainnet), RAILGUN requires **Proof of Innocence** — a mechanism to prevent sanctioned wallets from using the privacy system.
+
+```mermaid
+flowchart TD
+    SHIELD["User Shields 100 USDC"] --> PENDING["Funds in ShieldPending bucket"]
+    PENDING --> POI["POI Proof Generation"]
+    POI --> SUBMIT["Submit POI to aggregator"]
+    SUBMIT --> VERIFY["Aggregator verifies:<br/>- User is not on OFAC list<br/>- Funds are not from sanctioned source"]
+    VERIFY -->|pass| SPEND["Funds move to Spendable bucket"]
+    VERIFY -->|fail| STUCK["Funds stuck in MissingExternalPOI"]
+```
+
+### What happens in your code:
+
+1. After shielding, funds land in **`ShieldPending`** bucket
+2. [usePrivateWallet.ts:198-204](file:///Users/adityakumar/Library/Mobile%20Documents/com~apple~CloudDocs/monaris-app/src/hooks/usePrivateWallet.ts#L198-L204) calls [refreshPOIsForWallet()](file:///Users/adityakumar/Library/Mobile%20Documents/com~apple~CloudDocs/monaris-app/src/lib/privacy/engine.ts#482-526) during init
+3. [usePrivateBalance.ts:169-203](file:///Users/adityakumar/Library/Mobile%20Documents/com~apple~CloudDocs/monaris-app/src/hooks/usePrivateBalance.ts#L169-L203) aggressively retries POI refresh every 15 seconds while `hasPendingFunds` is true
+4. Once POI passes, funds move from `ShieldPending` → [Spendable](file:///Users/adityakumar/Library/Mobile%20Documents/com~apple~CloudDocs/monaris-app/src/lib/privacy/transactions.ts#467-535)
+
+---
+
+## 11. Balance Buckets
+
+On POI-required networks (Arbitrum), shielded balances live in **buckets**:
+
+```mermaid
+graph LR
+    subgraph "Balance Buckets"
+        SP["Spendable<br/>Ready to use ✅"]
+        SHP["ShieldPending<br/>Awaiting POI ⏳"]
+        MIP["MissingInternalPOI<br/>Needs local proof ⚠️"]
+        MEP["MissingExternalPOI<br/>Stuck — sanctioned? ❌"]
+        SPENT["Spent<br/>Already consumed"]
+    end
+```
+
+| Bucket | What it means | Can spend? |
+|---|---|---|
+| **Spendable** | POI passed, funds ready | ✅ Yes |
+| **ShieldPending** | Just shielded, waiting for POI validation | ❌ No |
+| **MissingInternalPOI** | Wallet needs to generate/submit POI proof | ❌ No (temporary) |
+| **MissingExternalPOI** | External POI aggregator rejected or unreachable | ❌ No (contact support) |
+| **Spent** | UTXO was consumed in a previous transaction | ❌ N/A |
+
+Your code handles this in [usePrivateBalance.ts](file:///Users/adityakumar/Library/Mobile%20Documents/com~apple~CloudDocs/monaris-app/src/hooks/usePrivateBalance.ts):
+- **`totalPrivateBalance`** = sum of ALL buckets except Spent
+- **`totalSpendableBalance`** = only the Spendable bucket
+- **`hasPendingFunds`** = `totalPrivateBalance > 0 && totalSpendableBalance < totalPrivateBalance`
+
+---
+
+## 12. Complete Architecture
+
+```mermaid
+graph TB
+    subgraph "User's Browser"
+        UI["React UI<br/>PrivatePayments.tsx<br/>ShieldDialog / UnshieldDialog"]
+        HOOKS["React Hooks<br/>usePrivateWallet<br/>usePrivateBalance<br/>usePrivatePayment"]
+        STORE["Zustand Store<br/>+ localStorage cache"]
+        ENGINE["RAILGUN Engine<br/>(WASM binary)"]
+        SNARK["snarkjs Prover<br/>(Groth16)"]
+        IDB["IndexedDB<br/>- Merkle tree data<br/>- ZK circuit artifacts<br/>- WASM cache"]
+    end
+
+    subgraph "Supabase"
+        WALLETS["user_private_wallets<br/>(encrypted blobs)"]
+        RECEIPTS["private_receipts<br/>(payment records)"]
+        INVOICES["invoices<br/>(payment_mode, tx_ref)"]
+    end
+
+    subgraph "Arbitrum"
+        PROXY["RAILGUN Proxy<br/>0xFA709..."]
+        MERKLE["Poseidon Merkle Tree<br/>(on-chain UTXOs)"]
+        USDC["USDC Contract<br/>0xaf88d..."]
+    end
+
+    subgraph "External"
+        IPFS["IPFS / HTTP<br/>ZK Circuit Artifacts<br/>(proving key, WASM)"]
+        POI_AGG["POI Aggregator<br/>(Proof of Innocence)"]
+        RPC["RPC Endpoints<br/>Ankr / dRPC / Alchemy"]
+    end
+
+    UI --> HOOKS
+    HOOKS --> STORE
+    HOOKS --> ENGINE
+    ENGINE --> SNARK
+    ENGINE --> IDB
+    HOOKS --> WALLETS
+    HOOKS --> RECEIPTS
+    HOOKS --> INVOICES
+    ENGINE --> RPC
+    ENGINE --> MERKLE
+    SNARK --> IPFS
+    ENGINE --> POI_AGG
+    PROXY --> MERKLE
+    USDC --> PROXY
+```
+
+### Data flow summary:
+
+| Data | Where it lives | Encrypted? |
+|---|---|---|
+| RAILGUN mnemonic | Supabase (encrypted blob) + derived on-the-fly from Privy signature | ✅ AES-256-GCM |
+| RAILGUN wallet ID | Zustand store + localStorage | No (not sensitive) |
+| RAILGUN 0zk address | Zustand store + localStorage | No (public equivalent) |
+| Shielded balances | localStorage (cached) + live from Merkle tree | Cached values: no. On-chain: yes |
+| Merkle tree data | IndexedDB + on-chain | On-chain: encrypted per-UTXO |
+| ZK circuit artifacts | IndexedDB (cached from IPFS) | No (public circuits) |
+| Proof of Innocence | Generated locally, submitted to aggregator | Proof is zero-knowledge |
+| Private payment receipts | Supabase `private_receipts` table | Partial (encrypted_memo optional) |

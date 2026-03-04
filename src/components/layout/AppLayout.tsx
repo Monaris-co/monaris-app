@@ -2,12 +2,21 @@ import { Outlet } from "react-router-dom"
 import { Sidebar } from "./Sidebar"
 import { Topbar } from "./Topbar"
 import { useState } from "react"
+import { usePrivateWallet } from "@/hooks/usePrivateWallet"
+
+function PrivateWalletAutoInit() {
+  // Calling the hook ensures the RAILGUN wallet is created and persisted
+  // to Supabase on /app login, so buyers can resolve the seller's 0zk address.
+  usePrivateWallet();
+  return null;
+}
 
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <PrivateWalletAutoInit />
       <Sidebar open={sidebarOpen} onOpenChange={setSidebarOpen} />
       <div className="md:pl-64 transition-all duration-300">
         <Topbar onMenuClick={() => setSidebarOpen(true)} />

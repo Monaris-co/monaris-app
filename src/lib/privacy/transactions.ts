@@ -29,7 +29,7 @@ export async function buildShieldTransaction(
     {
       tokenAddress: req.tokenAddress,
       amount: req.amount,
-      recipientAddress: req.fromAddress,
+      recipientAddress: req.recipientRailgunAddress ?? req.fromAddress,
     },
   ];
 

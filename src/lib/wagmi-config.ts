@@ -1,5 +1,5 @@
 import { createConfig } from '@privy-io/wagmi';
-import { http, fallback } from 'viem';
+import { http, fallback, webSocket } from 'viem';
 import { arbitrum } from 'viem/chains';
 
 export const supportedChains = [arbitrum] as const;
@@ -10,6 +10,8 @@ const useEnvRpc = envRpc && !KNOWN_BAD_RPCS.some(bad => envRpc.includes(bad));
 
 const arbitrumTransport = fallback(
   [
+    webSocket('wss://arb-mainnet.g.alchemy.com/v2/lA12jxcK7XSr4_xdTRtMG'),
+    http('https://arb-mainnet.g.alchemy.com/v2/lA12jxcK7XSr4_xdTRtMG'),
     ...(useEnvRpc ? [http(envRpc)] : []),
     http('https://rpc.ankr.com/arbitrum'),
     http('https://arbitrum.drpc.org'),

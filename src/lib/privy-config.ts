@@ -8,7 +8,7 @@ function getChainRpcUrl(chainId: number): string {
   if (envValue && !KNOWN_BAD_RPCS.some(bad => envValue.includes(bad))) return envValue;
 
   const defaults: Record<number, string> = {
-    42161: 'https://rpc.ankr.com/arbitrum',
+    42161: 'https://arb-mainnet.g.alchemy.com/v2/lA12jxcK7XSr4_xdTRtMG',
     1: 'https://rpc.ankr.com/eth',
   };
   return defaults[chainId] || '';

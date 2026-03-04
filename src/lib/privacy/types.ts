@@ -25,7 +25,8 @@ export interface PrivateBalance {
 export interface ShieldRequest {
   tokenAddress: string;
   amount: bigint;
-  fromAddress: string; // RAILGUN 0zk address (shield recipient)
+  fromAddress: string; // RAILGUN 0zk address (shield recipient when no explicit recipient)
+  recipientRailgunAddress?: string; // if set, shield directly to this 0zk address instead of fromAddress
 }
 
 export interface UnshieldRequest {

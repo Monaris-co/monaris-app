@@ -1,29 +1,27 @@
 /**
- * Private Pay Button – the primary CTA for paying an invoice privately.
+ * Private Pay Button – shields buyer's public USDC directly into
+ * the seller's RAILGUN 0zk address, preserving seller privacy.
  *
  * Flow:
- *   1. Ensure private wallet exists (create if needed)
- *   2. Check private balance is sufficient
- *   3. Resolve seller's RAILGUN address
- *   4. Generate ZK proof + build private transfer
- *   5. Send via public wallet (gas-sponsored)
- *   6. Record receipt in Supabase
+ *   1. Resolve seller's RAILGUN 0zk address from Supabase
+ *   2. Approve USDC for RAILGUN proxy contract
+ *   3. Build + send shield transaction to seller's 0zk
+ *   4. Record receipt in Supabase
+ *
+ * Gas is sponsored via Privy AA for embedded wallet users.
  */
 
 import { useState, useCallback } from 'react';
 import { Loader2, Shield, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
-import { parseUnits, formatUnits } from 'viem';
-import { useChainId } from 'wagmi';
+import { formatUnits, encodeFunctionData, getAddress, createPublicClient, http, fallback } from 'viem';
+import { arbitrum } from 'viem/chains';
 import { useSendTransaction, useWallets } from '@privy-io/react-auth';
 import { usePrivyAccount } from '@/hooks/usePrivyAccount';
-import { usePrivateWallet } from '@/hooks/usePrivateWallet';
-import { usePrivateBalance } from '@/hooks/usePrivateBalance';
-import { usePrivacyStore } from '@/lib/privacy/store';
-import { buildPrivateTransfer } from '@/lib/privacy/transactions';
-import { resolvePrivateAddress } from '@/lib/privacy/wallet';
+import { buildShieldTransaction } from '@/lib/privacy/transactions';
+import { resolvePrivateAddress, deriveWalletPassword } from '@/lib/privacy/wallet';
+import { ensureEngineReady, getWalletModule, getSharedModels } from '@/lib/privacy/engine';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 interface PrivatePayButtonProps {
@@ -47,16 +45,12 @@ export function PrivatePayButton({
   onInsufficientBalance,
   disabled,
 }: PrivatePayButtonProps) {
-  const chainId = useChainId();
   const { address } = usePrivyAccount();
-  const { wallet, initializeWallet, isCreatingWallet } = usePrivateWallet();
-  const { privateUsdcBalance } = usePrivateBalance();
-  const { proofProgress, proofStage } = usePrivacyStore();
   const { sendTransaction } = useSendTransaction();
   const { wallets } = useWallets();
 
   const [isPaying, setIsPaying] = useState(false);
-  const [payStep, setPayStep] = useState<'idle' | 'init' | 'resolve' | 'proof' | 'send' | 'record'>('idle');
+  const [payStep, setPayStep] = useState<'idle' | 'resolve' | 'approve' | 'shield' | 'send' | 'record'>('idle');
 
   const embeddedWallet = wallets.find((w) => {
     const ct = w.connectorType?.toLowerCase() || '';
@@ -65,6 +59,10 @@ export function PrivatePayButton({
   }) || wallets[0];
 
   const amountFormatted = parseFloat(formatUnits(amount, 6));
+  const isGasSponsored = invoiceChainId === 421614 || invoiceChainId === 42161;
+  const isEmbedded = embeddedWallet?.connectorType?.toLowerCase() === 'embedded' ||
+                     embeddedWallet?.walletClientType?.toLowerCase() === 'privy';
+  const canSponsor = isGasSponsored && isEmbedded;
 
   const handlePrivatePay = useCallback(async () => {
     if (!address) {
@@ -72,131 +70,135 @@ export function PrivatePayButton({
       return;
     }
 
-    // Check balance
-    if (privateUsdcBalance < amountFormatted) {
-      onInsufficientBalance();
-      return;
-    }
-
     setIsPaying(true);
+    const senderAddr = embeddedWallet?.address || address;
 
     try {
-      // 1. Ensure private wallet
-      setPayStep('init');
-      let currentWallet = wallet;
-      if (!currentWallet) {
-        currentWallet = await initializeWallet();
-      }
-      if (!currentWallet) throw new Error('Failed to initialize private wallet');
-
-      // 2. Resolve seller's RAILGUN address
+      // 1. Resolve seller's RAILGUN 0zk address
       setPayStep('resolve');
-      const password = `monaris-pw-${sellerAddress.toLowerCase()}-v1`;
-      let sellerRailgunAddress = await resolvePrivateAddress(
+      const sellerPassword = await deriveWalletPassword(sellerAddress);
+      const sellerRailgunAddress = await resolvePrivateAddress(
         sellerAddress,
-        chainId,
-        password,
+        invoiceChainId,
+        sellerPassword,
       );
 
       if (!sellerRailgunAddress) {
-        // Seller hasn't set up private wallet yet.
-        // For MVP, we fall back: create a "pending" receipt and the seller
-        // claims it when they set up their wallet.
-        toast.info(
-          'Seller has not set up private receiving. Payment will be held in escrow.',
-          { duration: 5000 },
-        );
-        sellerRailgunAddress = currentWallet.railgunAddress; // self-transfer as escrow
+        toast.error('Seller has not set up private receiving yet. Please try again later or pay publicly.');
+        return;
       }
 
-      // 3. Generate proof + build transaction
-      setPayStep('proof');
-      toast.info('Generating privacy proof... This takes about 20-30 seconds.', {
-        duration: 30000,
-        id: 'proof-generating',
+      // 2. Init RAILGUN engine (needed for populateShield + contract addresses)
+      await ensureEngineReady();
+      const walletModule = await getWalletModule();
+      const sharedModels = await getSharedModels();
+
+      const proxyAddress = walletModule.getRailgunSmartWalletContractAddress(
+        sharedModels.TXIDVersion.V2_PoseidonMerkle,
+        invoiceChainId,
+      );
+      if (!proxyAddress) throw new Error('RAILGUN proxy contract not found for this chain');
+
+      const tokenAddr = getAddress(tokenAddress);
+
+      // 3. Approve USDC for RAILGUN proxy
+      setPayStep('approve');
+      toast.info('Approving USDC for private payment...', { id: 'private-pay-progress' });
+
+      const approveData = encodeFunctionData({
+        abi: [{
+          name: 'approve', type: 'function',
+          inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'uint256' }],
+          outputs: [{ name: '', type: 'bool' }],
+        }],
+        functionName: 'approve',
+        args: [proxyAddress as `0x${string}`, amount],
       });
 
-      const networkName = chainId === 42161 ? 'Arbitrum' : 'Arbitrum';
-      const result = await buildPrivateTransfer(
-        {
-          tokenAddress,
-          amount,
-          recipientRailgunAddress: sellerRailgunAddress,
-          memo: `Monaris Invoice #${invoiceId}`,
-        },
-        currentWallet.id,
-        currentWallet.encryptionKey,
-        networkName,
-        (progress, stage) => {
-          usePrivacyStore.getState().setProofProgress(progress, stage);
-        },
+      const approveResult = await sendTransaction(
+        { to: tokenAddr, data: approveData, value: 0n, chainId: invoiceChainId, gas: 100000n },
+        { address: senderAddr, sponsor: canSponsor, uiOptions: { showWalletUIs: false } } as any,
       );
 
-      toast.dismiss('proof-generating');
+      // Wait for approve confirmation
+      const publicClient = createPublicClient({
+        chain: arbitrum,
+        transport: fallback([
+          http('https://rpc.ankr.com/arbitrum'),
+          http('https://arbitrum.drpc.org'),
+        ]),
+      });
+      await publicClient.waitForTransactionReceipt({
+        hash: approveResult.hash as `0x${string}`,
+        confirmations: 1,
+      });
 
-      if (!result.success) {
-        throw new Error(result.error);
-      }
+      // 4. Build + send shield transaction to seller's 0zk
+      setPayStep('shield');
+      toast.info('Shielding funds to seller\'s private wallet...', { id: 'private-pay-progress' });
 
-      // 4. Send the transaction
+      const shieldTx = await buildShieldTransaction(
+        {
+          tokenAddress: tokenAddr,
+          amount,
+          fromAddress: sellerRailgunAddress,
+          recipientRailgunAddress: sellerRailgunAddress,
+        },
+        'Arbitrum',
+      );
+
       setPayStep('send');
-      const isGasSponsored = chainId === 421614 || chainId === 42161;
       const txResult = await sendTransaction(
         {
-          to: result.txHash as `0x${string}`,
-          data: '0x' as `0x${string}`,
-          value: 0n,
-          chainId,
+          to: shieldTx.to as `0x${string}`,
+          data: shieldTx.data as `0x${string}`,
+          value: shieldTx.value,
+          chainId: invoiceChainId,
+          gas: 500000n,
         },
-        {
-          address: embeddedWallet?.address || address,
-          sponsor: isGasSponsored,
-          uiOptions: { showWalletUIs: false },
-        } as any,
+        { address: senderAddr, sponsor: canSponsor, uiOptions: { showWalletUIs: false } } as any,
       );
 
-      // 5. Record receipt
+      toast.dismiss('private-pay-progress');
+
+      // 5. Record receipt in Supabase
       setPayStep('record');
       if (isSupabaseConfigured()) {
         await supabase.from('private_receipts').insert({
-          invoice_id: null, // will link via chain_invoice_id
+          invoice_id: null,
           payer_address: address.toLowerCase(),
           receiver_address: sellerAddress.toLowerCase(),
-          chain_id: chainId,
+          chain_id: invoiceChainId,
           token_address: tokenAddress,
           amount: amountFormatted,
           private_tx_ref: txResult.hash,
         });
 
-        // Update invoice payment mode
         await supabase
           .from('invoices')
-          .update({
-            payment_mode: 'PRIVATE',
-            private_payment_tx_ref: txResult.hash,
-          })
+          .update({ payment_mode: 'PRIVATE', private_payment_tx_ref: txResult.hash })
           .eq('chain_invoice_id', Number(invoiceId))
-          .eq('chain_id', chainId);
+          .eq('chain_id', invoiceChainId);
 
-        // Notify seller
         await supabase.from('notifications').insert({
           recipient_address: sellerAddress.toLowerCase(),
           type: 'invoice_paid_private',
           title: 'Invoice Paid (Private)',
           message: `Invoice #${invoiceId} was paid privately for $${amountFormatted.toFixed(2)}`,
           chain_invoice_id: Number(invoiceId),
-          chain_id: chainId,
+          chain_id: invoiceChainId,
         });
       }
 
       toast.success('Invoice paid privately!', {
-        description: `$${amountFormatted.toFixed(2)} sent via private transfer.`,
+        description: `$${amountFormatted.toFixed(2)} shielded to seller's private wallet.`,
       });
 
       onSuccess(txResult.hash);
 
     } catch (err: any) {
       console.error('[PrivatePay] Error:', err);
+      toast.dismiss('private-pay-progress');
       if (err.message?.includes('rejected')) {
         toast.error('Transaction rejected');
       } else {
@@ -206,14 +208,13 @@ export function PrivatePayButton({
       setIsPaying(false);
       setPayStep('idle');
     }
-  }, [address, wallet, privateUsdcBalance, amountFormatted, sellerAddress, invoiceId, chainId, tokenAddress, amount]);
+  }, [address, sellerAddress, invoiceId, invoiceChainId, tokenAddress, amount, amountFormatted, canSponsor]);
 
   const getButtonLabel = () => {
-    if (isCreatingWallet) return 'Setting up private wallet...';
     switch (payStep) {
-      case 'init': return 'Initializing...';
       case 'resolve': return 'Resolving recipient...';
-      case 'proof': return 'Generating proof...';
+      case 'approve': return 'Approving USDC...';
+      case 'shield': return 'Shielding to seller...';
       case 'send': return 'Sending transaction...';
       case 'record': return 'Recording receipt...';
       default: return `Pay $${amountFormatted.toLocaleString(undefined, { minimumFractionDigits: 2 })} Privately`;
@@ -224,11 +225,11 @@ export function PrivatePayButton({
     <div className="space-y-2">
       <Button
         onClick={handlePrivatePay}
-        disabled={disabled || isPaying || isCreatingWallet || !address}
+        disabled={disabled || isPaying || !address}
         className="w-full"
         variant="hero"
       >
-        {isPaying || isCreatingWallet ? (
+        {isPaying ? (
           <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{getButtonLabel()}</>
         ) : (
           <>
@@ -238,18 +239,15 @@ export function PrivatePayButton({
         )}
       </Button>
 
-      {payStep === 'proof' && (
-        <div className="space-y-1">
-          <Progress value={proofProgress * 100} className="h-1.5" />
-          <p className="text-[10px] text-muted-foreground text-center">
-            {proofStage || 'Generating zero-knowledge proof...'}
-          </p>
-        </div>
+      {!isEmbedded && (
+        <p className="text-[10px] text-center text-amber-500/80">
+          Use an embedded wallet (email/Google login) for gas-free transactions
+        </p>
       )}
 
       <p className="text-[10px] text-center text-muted-foreground flex items-center justify-center gap-1">
         <Shield className="h-3 w-3" />
-        Sender, receiver, and amount are hidden from on-chain observers
+        Seller receives funds privately — hidden from on-chain observers
       </p>
     </div>
   );

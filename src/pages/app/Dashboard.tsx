@@ -1,9 +1,9 @@
 import { motion } from "framer-motion"
 import { useMemo, useEffect, useState, useRef } from "react"
-import { 
-  FileText, 
-  Plus, 
-  TrendingUp, 
+import {
+  FileText,
+  Plus,
+  TrendingUp,
   ArrowUpRight,
   ArrowRight,
   Clock,
@@ -119,11 +119,11 @@ export default function Dashboard() {
   const hasAddress = !!address
   const hasUSDCAddress = !!addresses?.DemoUSDC
   const hasUSMTAddress = !!addresses?.USMTPlus
-  
+
   // Only consider loading if we have the prerequisites and the query is actually loading
-  const isLoadingAllBalances = (hasAddress && hasUSDCAddress && isLoadingBalance) || 
-                                (hasAddress && hasUSMTAddress && isLoadingUSMT) || 
-                                (hasAddress && isLoadingNative)
+  const isLoadingAllBalances = (hasAddress && hasUSDCAddress && isLoadingBalance) ||
+    (hasAddress && hasUSMTAddress && isLoadingUSMT) ||
+    (hasAddress && isLoadingNative)
   const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false)
   const [receiveFundsDialogOpen, setReceiveFundsDialogOpen] = useState(false)
   const [hoveredSegment, setHoveredSegment] = useState<'balance' | 'cleared' | 'outstanding' | null>(null)
@@ -138,7 +138,7 @@ export default function Dashboard() {
     if (!invoices) return []
     return invoices.filter(inv => inv.status === 3)
   }, [invoices])
-  
+
   // Calculate score from cleared invoices count (more accurate than on-chain if reputation wasn't updated)
   // Formula: 450 (base) + (clearedCount × 20 points per invoice)
   const displayScore = useMemo(() => {
@@ -146,7 +146,7 @@ export default function Dashboard() {
     const calculatedScoreFromInvoices = 450 + (clearedCount * 20)
     const hookScore = score > 0 ? score : 510
     const calculated = Math.max(hookScore, calculatedScoreFromInvoices)
-    
+
     console.log('📊 Dashboard displayScore calculation:', {
       clearedCount,
       calculatedScoreFromInvoices,
@@ -155,17 +155,17 @@ export default function Dashboard() {
       invoiceCount: invoices?.length,
       clearedInvoicesCount: clearedInvoices.length
     })
-    
+
     return calculated
   }, [clearedInvoices, score, invoices?.length])
-  
+
   // Calculate tier from score (score 510 should be Tier B)
   const displayTier = useMemo(() => {
     if (displayScore < 500) return 'C'
     if (displayScore < 850) return 'B'
     return 'A'
   }, [displayScore])
-  
+
   // Use calculated tier for display (score 510 = Tier B)
   const effectiveTierLabel = displayTier
 
@@ -173,17 +173,17 @@ export default function Dashboard() {
   useEffect(() => {
     if (invoiceError) console.error('Dashboard: Invoice fetch error:', invoiceError)
     if (balanceError) console.error('Dashboard: Balance fetch error:', balanceError)
-    console.log('Dashboard: Loading state', { 
-      isLoadingInvoices, 
-      isLoadingReputation, 
+    console.log('Dashboard: Loading state', {
+      isLoadingInvoices,
+      isLoadingReputation,
       isLoadingBalance,
       isLoadingUSMT,
       isLoadingNative,
       isLoadingAllBalances,
     })
-    console.log('Dashboard: Data state', { 
-      invoiceCount: invoices?.length, 
-      score, 
+    console.log('Dashboard: Data state', {
+      invoiceCount: invoices?.length,
+      score,
       usdcBalance,
       usmtBalance,
       nativeBalanceFormatted,
@@ -246,11 +246,11 @@ export default function Dashboard() {
   // Get recent invoices (10 most recent)
   const recentInvoices = useMemo(() => {
     if (!invoices || invoices.length === 0) return []
-    
+
     return invoices.slice(0, 10).map(invoice => {
       const invoiceDate = new Date(Number(invoice.createdAt) * 1000)
       const amount = parseFloat(formatUnits(invoice.amount, 6))
-      
+
       return {
         id: `INV-${invoice.invoiceId.toString().padStart(6, '0')}`,
         invoiceId: invoice.invoiceId,
@@ -261,16 +261,16 @@ export default function Dashboard() {
       }
     })
   }, [invoices])
-  
+
   // Calculate progress to next tier (Tier A for Tier B users)
   const progressToNextTier = useMemo(() => {
     const tierThresholds = { C: 450, B: 500, A: 850 }
     const currentThreshold = tierThresholds[effectiveTierLabel as keyof typeof tierThresholds] || 500
     const nextTier = effectiveTierLabel === 'C' ? 'B' : effectiveTierLabel === 'B' ? 'A' : null
     const nextThreshold = nextTier ? tierThresholds[nextTier as keyof typeof tierThresholds] : 1000
-    
+
     if (!nextTier) return 100
-    
+
     const progress = ((displayScore - currentThreshold) / (nextThreshold - currentThreshold)) * 100
     return Math.max(0, Math.min(100, progress))
   }, [displayScore, effectiveTierLabel])
@@ -280,9 +280,9 @@ export default function Dashboard() {
     const currentThreshold = tierThresholds[effectiveTierLabel as keyof typeof tierThresholds] || 500
     const nextTier = effectiveTierLabel === 'C' ? 'B' : effectiveTierLabel === 'B' ? 'A' : null
     const nextThreshold = nextTier ? tierThresholds[nextTier as keyof typeof tierThresholds] : 1000
-    
+
     if (!nextTier) return 0
-    
+
     const needed = nextThreshold - displayScore
     return Math.max(0, needed)
   }, [displayScore, effectiveTierLabel])
@@ -303,7 +303,7 @@ export default function Dashboard() {
       className="space-y-6"
     >
       {/* Main Dashboard Container - Figma Style */}
-      <motion.div 
+      <motion.div
         variants={item}
         className="bg-white dark:bg-[#1a1a2e] rounded-[20px] sm:rounded-[32px] shadow-[0px_24px_32px_0px_rgba(0,0,0,0.04),0px_16px_24px_0px_rgba(0,0,0,0.04),0px_4px_8px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-3 sm:p-8 mx-1 sm:mx-0"
       >
@@ -315,7 +315,7 @@ export default function Dashboard() {
               Get summary Cashflow Graph, Policy Router, Self-repaying Credit here
             </p>
           </div>
-          
+
           {/* User Profile & Actions */}
           <div className="flex items-center gap-4">
             <DropdownMenu>
@@ -366,15 +366,15 @@ export default function Dashboard() {
           <div className="lg:col-span-5">
             <div className="bg-white dark:bg-gray-800 rounded-[16px] sm:rounded-[28px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-2.5 sm:p-6 h-full">
               <div className="flex items-center justify-between mb-6">
-<h2 className="text-xl font-bold text-[#1a1a1a] dark:text-white">Balance Overview</h2>
+                <h2 className="text-xl font-bold text-[#1a1a1a] dark:text-white">Balance Overview</h2>
                 <div className="flex gap-2">
-                  <button 
+                  <button
                     onClick={() => setReceiveFundsDialogOpen(true)}
                     className="p-2 rounded-lg bg-[#f0f7ff] dark:bg-blue-900/30 hover:bg-[#e0efff] transition-colors"
                   >
                     <QrCode className="h-4 w-4 text-[#197bbd]" />
                   </button>
-                  <button 
+                  <button
                     onClick={() => setWithdrawDialogOpen(true)}
                     className="p-2 rounded-lg bg-[#f0f7ff] dark:bg-blue-900/30 hover:bg-[#e0efff] transition-colors"
                   >
@@ -382,7 +382,7 @@ export default function Dashboard() {
                   </button>
                 </div>
               </div>
-              
+
               {/* Balance Data with Circle Chart - Side by Side */}
               <div className="flex items-start gap-6 mb-6">
                 {/* Left Side - Balance Data */}
@@ -394,7 +394,7 @@ export default function Dashboard() {
                       <span className="text-lg">$</span> {isLoadingAllBalances ? "..." : unifiedBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
-                  
+
                   {/* Cleared Volume */}
                   <div className="mb-4">
                     <p className="text-sm font-medium text-[#aeaeae] mb-1">Cleared Volume</p>
@@ -402,7 +402,7 @@ export default function Dashboard() {
                       <span className="text-base">$</span> {isLoading ? "..." : statsData.clearedVolume.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
-                  
+
                   {/* Outstanding */}
                   <div>
                     <p className="text-sm font-medium text-[#aeaeae] mb-1">Outstanding</p>
@@ -419,11 +419,11 @@ export default function Dashboard() {
                     const clearedVal = isLoading ? 0 : statsData.clearedVolume;
                     const outstandingVal = isLoading ? 0 : statsData.outstanding;
                     const total = balanceVal + clearedVal + outstandingVal;
-                    
+
                     const balancePercent = total > 0 ? (balanceVal / total) * 100 : 0;
                     const clearedPercent = total > 0 ? (clearedVal / total) * 100 : 0;
                     const outstandingPercent = total > 0 ? (outstandingVal / total) * 100 : 0;
-                    
+
                     return (
                       <div className="relative w-[140px] h-[140px]">
                         {/* SVG Radial Progress */}
@@ -442,7 +442,7 @@ export default function Dashboard() {
                               <stop offset="100%" stopColor="#d97706" />
                             </linearGradient>
                           </defs>
-                          
+
                           {/* Background Track */}
                           <circle
                             cx="50"
@@ -453,7 +453,7 @@ export default function Dashboard() {
                             strokeWidth="8"
                             className="dark:stroke-gray-700"
                           />
-                          
+
                           {/* Balance Ring (Outer) */}
                           <circle
                             cx="50"
@@ -469,7 +469,7 @@ export default function Dashboard() {
                             onMouseEnter={() => setHoveredSegment('balance')}
                             onMouseLeave={() => setHoveredSegment(null)}
                           />
-                          
+
                           {/* Cleared Ring (Middle) */}
                           <circle
                             cx="50"
@@ -485,7 +485,7 @@ export default function Dashboard() {
                             onMouseEnter={() => setHoveredSegment('cleared')}
                             onMouseLeave={() => setHoveredSegment(null)}
                           />
-                          
+
                           {/* Outstanding Ring (Inner) */}
                           <circle
                             cx="50"
@@ -502,7 +502,7 @@ export default function Dashboard() {
                             onMouseLeave={() => setHoveredSegment(null)}
                           />
                         </svg>
-                        
+
                         {/* Center Content */}
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
                           {hoveredSegment === null ? (
@@ -517,14 +517,13 @@ export default function Dashboard() {
                             </>
                           ) : (
                             <>
-                              <span className={`text-lg font-bold ${
-                                hoveredSegment === 'balance' ? 'text-blue-500' :
+                              <span className={`text-lg font-bold ${hoveredSegment === 'balance' ? 'text-blue-500' :
                                 hoveredSegment === 'cleared' ? 'text-emerald-500' :
-                                'text-amber-500'
-                              }`}>
+                                  'text-amber-500'
+                                }`}>
                                 {hoveredSegment === 'balance' ? `${balancePercent.toFixed(0)}%` :
-                                 hoveredSegment === 'cleared' ? `${clearedPercent.toFixed(0)}%` :
-                                 `${outstandingPercent.toFixed(0)}%`}
+                                  hoveredSegment === 'cleared' ? `${clearedPercent.toFixed(0)}%` :
+                                    `${outstandingPercent.toFixed(0)}%`}
                               </span>
                               <span className="text-[10px] text-[#696969] capitalize">{hoveredSegment}</span>
                             </>
@@ -533,30 +532,28 @@ export default function Dashboard() {
 
                         {/* Tooltip */}
                         {hoveredSegment && (
-                          <div className={`absolute -top-1 left-1/2 -translate-x-1/2 -translate-y-full px-3 py-1.5 rounded-lg shadow-xl z-30 whitespace-nowrap ${
-                            hoveredSegment === 'balance' ? 'bg-gradient-to-r from-blue-500 to-blue-600' :
+                          <div className={`absolute -top-1 left-1/2 -translate-x-1/2 -translate-y-full px-3 py-1.5 rounded-lg shadow-xl z-30 whitespace-nowrap ${hoveredSegment === 'balance' ? 'bg-gradient-to-r from-blue-500 to-blue-600' :
                             hoveredSegment === 'cleared' ? 'bg-gradient-to-r from-emerald-500 to-emerald-600' :
-                            'bg-gradient-to-r from-amber-500 to-amber-600'
-                          }`}>
+                              'bg-gradient-to-r from-amber-500 to-amber-600'
+                            }`}>
                             <p className="text-white text-xs font-medium">
                               ${hoveredSegment === 'balance' ? balanceVal.toLocaleString(undefined, { minimumFractionDigits: 2 }) :
                                 hoveredSegment === 'cleared' ? clearedVal.toLocaleString(undefined, { minimumFractionDigits: 2 }) :
-                                outstandingVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                  outstandingVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                             </p>
-                            <div className={`absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-r-[5px] border-t-[5px] border-transparent ${
-                              hoveredSegment === 'balance' ? 'border-t-blue-600' :
+                            <div className={`absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-r-[5px] border-t-[5px] border-transparent ${hoveredSegment === 'balance' ? 'border-t-blue-600' :
                               hoveredSegment === 'cleared' ? 'border-t-emerald-600' :
-                              'border-t-amber-600'
-                            }`} />
+                                'border-t-amber-600'
+                              }`} />
                           </div>
                         )}
                       </div>
                     );
                   })()}
-                  
+
                   {/* Legend */}
                   <div className="flex items-center gap-4 mt-3">
-                    <button 
+                    <button
                       className={`flex items-center gap-1.5 transition-all ${hoveredSegment === 'balance' ? 'scale-105' : ''}`}
                       onMouseEnter={() => setHoveredSegment('balance')}
                       onMouseLeave={() => setHoveredSegment(null)}
@@ -564,7 +561,7 @@ export default function Dashboard() {
                       <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-blue-500 to-blue-600" />
                       <span className="text-[10px] text-[#696969] dark:text-gray-400">Balance</span>
                     </button>
-                    <button 
+                    <button
                       className={`flex items-center gap-1.5 transition-all ${hoveredSegment === 'cleared' ? 'scale-105' : ''}`}
                       onMouseEnter={() => setHoveredSegment('cleared')}
                       onMouseLeave={() => setHoveredSegment(null)}
@@ -572,7 +569,7 @@ export default function Dashboard() {
                       <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600" />
                       <span className="text-[10px] text-[#696969] dark:text-gray-400">Cleared</span>
                     </button>
-                    <button 
+                    <button
                       className={`flex items-center gap-1.5 transition-all ${hoveredSegment === 'outstanding' ? 'scale-105' : ''}`}
                       onMouseEnter={() => setHoveredSegment('outstanding')}
                       onMouseLeave={() => setHoveredSegment(null)}
@@ -592,25 +589,23 @@ export default function Dashboard() {
                     <p className="text-xs text-[#aeaeae]">Earn yield on idle balance</p>
                   </div>
                   <button
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      autoEarnEnabled 
-                        ? 'bg-[#c8ff00]' 
-                        : 'bg-gray-300 dark:bg-gray-600'
-                    }`}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${autoEarnEnabled
+                      ? 'bg-[#c8ff00]'
+                      : 'bg-gray-300 dark:bg-gray-600'
+                      }`}
                     onClick={() => {
                       const newValue = !autoEarnEnabled
                       setAutoEarnEnabled(newValue)
                       localStorage.setItem('autoEarnEnabled', JSON.stringify(newValue))
                       toast.success(newValue ? 'Auto-Earn enabled' : 'Auto-Earn disabled', {
-                        description: newValue 
-                          ? 'Your idle balance will now earn yield automatically' 
+                        description: newValue
+                          ? 'Your idle balance will now earn yield automatically'
                           : 'Auto-Earn has been turned off'
                       })
                     }}
                   >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${
-                      autoEarnEnabled ? 'translate-x-6' : 'translate-x-1'
-                    }`} />
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${autoEarnEnabled ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
                   </button>
                 </div>
               </div>
@@ -618,7 +613,7 @@ export default function Dashboard() {
               {/* Quick Send Section */}
               <div className="pt-5 mt-5 border-t border-[#f1f1f1] dark:border-gray-700">
                 <h3 className="text-lg font-semibold text-[#1a1a1a] dark:text-white mb-4">Quick Send</h3>
-                
+
                 {/* Recent Contacts */}
                 <div className="flex items-center gap-4 mb-5 overflow-x-auto pb-2">
                   {/* Sample contacts - these would be dynamic in real app */}
@@ -633,8 +628,8 @@ export default function Dashboard() {
                       className="flex flex-col items-center gap-1.5 group flex-shrink-0"
                     >
                       <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-transparent group-hover:ring-[#c8ff00] transition-all">
-                        <img 
-                          src={contact.image} 
+                        <img
+                          src={contact.image}
                           alt={contact.name}
                           className="w-full h-full object-cover"
                         />
@@ -642,7 +637,7 @@ export default function Dashboard() {
                       <span className="text-xs text-[#696969] dark:text-gray-400 group-hover:text-[#1a1a1a] dark:group-hover:text-white transition-colors">{contact.name}</span>
                     </button>
                   ))}
-                  
+
                   {/* Add New Button */}
                   <button className="flex flex-col items-center gap-1.5 group flex-shrink-0">
                     <div className="w-12 h-12 rounded-full border-2 border-dashed border-[#c8ff00] flex items-center justify-center group-hover:bg-[#c8ff00]/10 transition-colors">
@@ -655,7 +650,7 @@ export default function Dashboard() {
                 {/* Amount Input & Send Button */}
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                   <div className="flex-1 relative">
-                    <input 
+                    <input
                       type="number"
                       placeholder="0"
                       className="w-full h-12 pl-4 pr-10 rounded-xl border-2 border-[#e8e8e8] dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1a1a1a] dark:text-white text-lg font-medium focus:border-[#c8ff00] focus:outline-none transition-colors"
@@ -675,7 +670,7 @@ export default function Dashboard() {
           <div className="lg:col-span-7">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-[#1a1a1a] dark:text-white">Invoice Stats</h2>
-              <Link 
+              <Link
                 to="/app/invoices/new"
                 className="flex items-center gap-1.5 text-sm font-medium text-[#197bbd] hover:text-[#1565a0] transition-colors"
               >
@@ -683,7 +678,7 @@ export default function Dashboard() {
                 New Invoice
               </Link>
             </div>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
               {/* Outstanding Card */}
               <div className="bg-white dark:bg-gray-800 rounded-[16px] sm:rounded-[28px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-2.5 sm:p-5">
@@ -721,7 +716,7 @@ export default function Dashboard() {
                 <p className="text-base font-medium text-[#404040] dark:text-white mt-3">Reputation</p>
               </div>
             </div>
-            
+
             {/* Your Card Section */}
             <div className="mt-5">
               {/* Header with title and add button */}
@@ -731,10 +726,10 @@ export default function Dashboard() {
                   <Plus className="h-4 w-4 text-[#197bbd]" />
                 </button>
               </div>
-              
+
               {/* Credit Card - Monaris Split Design with Flip Animation */}
               <div className="flex flex-col items-center w-full">
-                <div 
+                <div
                   className="w-full max-w-[460px] relative group cursor-pointer select-none"
                   style={{ perspective: '1000px' }}
                   onMouseEnter={() => setIsCardFlipped(true)}
@@ -744,17 +739,17 @@ export default function Dashboard() {
                   {/* Glow effect for pop-up - White/neutral */}
                   <div className="absolute -inset-3 bg-gradient-to-r from-white/30 via-white/15 to-white/30 rounded-[32px] blur-2xl opacity-60 group-hover:opacity-90 transition-opacity duration-300" />
                   <div className="absolute -inset-1 bg-gradient-to-br from-white/20 to-transparent rounded-[24px] blur-md" />
-                  
+
                   {/* Card Flip Container */}
-                  <div 
+                  <div
                     className="relative w-full transition-transform duration-700 ease-in-out"
-                    style={{ 
+                    style={{
                       transformStyle: 'preserve-3d',
                       transform: isCardFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
                     }}
                   >
                     {/* FRONT SIDE */}
-                    <div 
+                    <div
                       className="relative rounded-[20px] overflow-hidden shadow-[0_40px_80px_-20px_rgba(255,255,255,0.15),0_20px_40px_-10px_rgba(255,255,255,0.1)]"
                       style={{ backfaceVisibility: 'hidden' }}
                     >
@@ -765,16 +760,16 @@ export default function Dashboard() {
                           {/* Wave patterns */}
                           <div className="absolute inset-0">
                             {/* Wave 1 - Lightest */}
-                            <div className="absolute left-0 top-0 bottom-0 w-[35%] bg-gradient-to-r from-[#e8ffb3]/70 to-transparent" 
+                            <div className="absolute left-0 top-0 bottom-0 w-[35%] bg-gradient-to-r from-[#e8ffb3]/70 to-transparent"
                               style={{ clipPath: 'ellipse(100% 80% at 0% 50%)' }} />
                             {/* Wave 2 - Medium */}
-                            <div className="absolute left-[15%] top-0 bottom-0 w-[40%] bg-gradient-to-r from-[#dcff85]/50 to-transparent" 
+                            <div className="absolute left-[15%] top-0 bottom-0 w-[40%] bg-gradient-to-r from-[#dcff85]/50 to-transparent"
                               style={{ clipPath: 'ellipse(80% 90% at 20% 50%)' }} />
                             {/* Wave 3 - Subtle */}
-                            <div className="absolute left-[30%] top-0 bottom-0 w-[35%] bg-gradient-to-r from-[#c8ff00]/40 to-transparent" 
+                            <div className="absolute left-[30%] top-0 bottom-0 w-[35%] bg-gradient-to-r from-[#c8ff00]/40 to-transparent"
                               style={{ clipPath: 'ellipse(70% 100% at 30% 50%)' }} />
                           </div>
-                          
+
                           {/* Card Content - Left Side */}
                           <div className="relative z-10 p-6 flex flex-col justify-between h-full">
                             {/* Top - Account Info */}
@@ -784,7 +779,7 @@ export default function Dashboard() {
                                 {address ? `${address.slice(0, 6)}…${address.slice(-4)}` : '0x0000…0000'}
                               </p>
                             </div>
-                            
+
                             {/* Middle - Credit Limit */}
                             <div className="my-4">
                               <p className="text-[#1a1a1a]/50 text-[10px] font-semibold uppercase tracking-wider mb-1">Credit Limit</p>
@@ -792,7 +787,7 @@ export default function Dashboard() {
                                 ${isLoading ? "..." : statsData.outstanding.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                               </p>
                             </div>
-                            
+
                             {/* Bottom Info */}
                             <div className="flex items-end gap-6">
                               <div>
@@ -808,21 +803,21 @@ export default function Dashboard() {
                             </div>
                           </div>
                         </div>
-                        
+
                         {/* Right Side - Dark with noise texture */}
                         <div className="w-[35%] bg-[#0f0f14] relative overflow-hidden">
                           {/* Subtle noise texture */}
                           <div className="absolute inset-0 opacity-30" style={{
                             backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
                           }} />
-                          
+
                           {/* Content - Right Side */}
                           <div className="relative z-10 p-5 flex flex-col h-full">
                             {/* Top - Monaris Logo */}
                             <div className="mb-auto">
                               <p className="text-white font-bold text-2xl italic tracking-tight">Monaris</p>
                             </div>
-                            
+
                             {/* Available Now */}
                             <div className="mb-2">
                               <p className="text-white/40 text-[10px] font-semibold uppercase tracking-wider mb-1">Available Now</p>
@@ -830,7 +825,7 @@ export default function Dashboard() {
                                 ${isLoading ? "..." : statsData.advanceEligible.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                               </p>
                             </div>
-                            
+
                             {/* Reserved */}
                             <div className="mb-4">
                               <p className="text-white/30 text-[9px] font-medium uppercase tracking-wider">Reserved</p>
@@ -838,7 +833,7 @@ export default function Dashboard() {
                                 ${isLoading ? "..." : Math.max(0, statsData.outstanding - statsData.advanceEligible).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                               </p>
                             </div>
-                            
+
                             {/* Bottom - Badge */}
                             <div className="flex items-end justify-end">
                               <span className="text-[#c8ff00]/70 text-[9px] font-medium">Verified</span>
@@ -847,11 +842,11 @@ export default function Dashboard() {
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* BACK SIDE - Credit Card Style */}
-                    <div 
+                    <div
                       className="absolute inset-0 rounded-[20px] overflow-hidden shadow-[0_40px_80px_-20px_rgba(255,255,255,0.15),0_20px_40px_-10px_rgba(255,255,255,0.1)]"
-                      style={{ 
+                      style={{
                         backfaceVisibility: 'hidden',
                         transform: 'rotateY(180deg)'
                       }}
@@ -860,12 +855,12 @@ export default function Dashboard() {
                       <div className="min-h-[260px] relative overflow-hidden">
                         {/* Solid Background - Monaris Lime Green (matches logo) */}
                         <div className="absolute inset-0 bg-[#c8ff00]" />
-                        
+
                         {/* Subtle pattern overlay */}
                         <div className="absolute inset-0 opacity-20" style={{
                           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
                         }} />
-                        
+
                         {/* Content */}
                         <div className="relative z-10 p-6 flex flex-col h-full min-h-[165px]">
                           {/* Top - Cashflow-Backed left, Monaris Logo right */}
@@ -874,7 +869,7 @@ export default function Dashboard() {
                             <img src="/monar.png" alt="Monaris" className="w-12 h-12 rounded-xl shadow-lg" />
                           </div>
                         </div>
-                        
+
                         {/* Bottom Dark Section */}
                         <div className="absolute bottom-0 left-0 right-0 bg-[#1a1a1a] p-5">
                           <div className="flex items-end justify-between">
@@ -884,7 +879,7 @@ export default function Dashboard() {
                               <p className="text-white font-semibold text-base tracking-wide">MONARIS LLC</p>
                               <p className="text-white/40 text-[10px] mt-2">Card connected by <span className="text-[#c8ff00]">avici</span> ending •••• 8009</p>
                             </div>
-                            
+
                             {/* Right - Chip Icon */}
                             <div className="w-12 h-10 rounded border-2 border-white/30 grid grid-cols-3 grid-rows-2 gap-0.5 p-1">
                               <div className="bg-white/20 rounded-sm" />
@@ -900,7 +895,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Carousel dots */}
                 <div className="flex items-center justify-center gap-2 mt-5">
                   <div className={`w-2.5 h-2.5 rounded-full transition-colors ${!isCardFlipped ? 'bg-[#c8ff00]' : 'bg-gray-300'}`} />
@@ -920,14 +915,14 @@ export default function Dashboard() {
             <div className="bg-white dark:bg-gray-800 rounded-[16px] sm:rounded-[19px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-2.5 sm:p-6">
               <div className="flex items-center justify-between mb-5">
                 <h2 className="text-xl font-bold text-[#1a1a1a] dark:text-white">Transaction history</h2>
-                <Link 
-                  to="/app/invoices" 
+                <Link
+                  to="/app/invoices"
                   className="text-sm font-medium text-[#197bbd] hover:text-[#1565a0]"
                 >
                   View All →
                 </Link>
               </div>
-              
+
               {/* Table Header */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-3 px-2">
                 <p className="text-sm text-[#aeaeae]">Receiver</p>
@@ -935,7 +930,7 @@ export default function Dashboard() {
                 <p className="text-sm text-[#aeaeae] hidden sm:block">Date</p>
                 <p className="text-sm text-[#aeaeae] text-right">Amount</p>
               </div>
-              
+
               {/* Table Body */}
               <div className="space-y-0">
                 {isLoadingInvoices ? (
@@ -948,7 +943,7 @@ export default function Dashboard() {
                       <FileText className="h-5 w-5 text-[#aeaeae]" />
                     </div>
                     <p className="text-[#aeaeae] text-sm mb-4">No transactions yet</p>
-                    <Link 
+                    <Link
                       to="/app/invoices/new"
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#c8ff00] hover:bg-[#b8ef00] text-[#1a1a1a] text-sm font-semibold transition-colors"
                     >
@@ -958,7 +953,7 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   recentInvoices.map((invoice, index) => (
-                    <Link 
+                    <Link
                       key={invoice.id}
                       to={`/app/invoices/${invoice.invoiceId}`}
                       className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 items-center px-2 py-3 hover:bg-[#f8f8f8] dark:hover:bg-gray-700/50 rounded-lg transition-colors border-b border-[#f1f1f1] dark:border-gray-700 last:border-0"
@@ -988,7 +983,7 @@ export default function Dashboard() {
             {/* Outcome Statistics */}
             <div className="bg-white dark:bg-gray-800 rounded-[16px] sm:rounded-[19px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-2.5 sm:p-5">
               <h2 className="text-xl font-bold text-[#1a1a1a] dark:text-white mb-4">Reputation Breakdown</h2>
-              
+
               {/* Progress Item: Invoices Cleared */}
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-10 h-10 rounded bg-[#ffeada] flex items-center justify-center flex-shrink-0">
@@ -997,7 +992,7 @@ export default function Dashboard() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1.5">
                     <div className="flex-1 h-2 rounded-full bg-[#f1f1f1] dark:bg-gray-700 overflow-hidden">
-                      <div 
+                      <div
                         className="h-full rounded-full bg-gradient-to-r from-[#f59e0b] to-[#fbbf24]"
                         style={{ width: `${Math.min((clearedInvoices.length / 10) * 100, 100)}%` }}
                       />
@@ -1018,7 +1013,7 @@ export default function Dashboard() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1.5">
                     <div className="flex-1 h-2 rounded-full bg-[#f1f1f1] dark:bg-gray-700 overflow-hidden">
-                      <div 
+                      <div
                         className="h-full rounded-full bg-gradient-to-r from-[#209d43] to-[#2bc255]"
                         style={{ width: `${progressToNextTier}%` }}
                       />
@@ -1039,7 +1034,7 @@ export default function Dashboard() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1.5">
                     <div className="flex-1 h-2 rounded-full bg-[#f1f1f1] dark:bg-gray-700 overflow-hidden">
-                      <div 
+                      <div
                         className="h-full rounded-full bg-[#70a6e8]"
                         style={{ width: `${(displayScore / 1000) * 100}%` }}
                       />
@@ -1058,11 +1053,11 @@ export default function Dashboard() {
               {/* Decorative elements */}
               <div className="absolute top-0 left-0 w-16 h-16 bg-black/5 rounded-full -translate-x-1/2 -translate-y-1/2" />
               <div className="absolute bottom-0 right-0 w-20 h-20 bg-black/5 rounded-full translate-x-1/3 translate-y-1/3" />
-              
+
               <div className="relative">
                 <h3 className="text-xl font-semibold mb-1">Get great</h3>
                 <h3 className="text-xl font-semibold mb-4">advance!</h3>
-                
+
                 <div className="bg-black/10 rounded-xl p-4 mb-4">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-black/60">Available</span>
@@ -1075,8 +1070,8 @@ export default function Dashboard() {
                     <span className="font-medium">{effectiveTierLabel === 'A' ? '6%' : effectiveTierLabel === 'B' ? '8%' : '18%'}</span>
                   </div>
                 </div>
-                
-                <Link 
+
+                <Link
                   to="/app/financing"
                   className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#1a1a1a] hover:bg-[#2a2a2a] text-white text-sm font-semibold transition-colors"
                 >
@@ -1127,20 +1122,20 @@ const SEND_TOKEN_OPTIONS: SendTokenOption[] = [
 
 function UsdcTokenIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 2000 2000" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="1000" cy="1000" r="1000" fill="#2775CA"/><path d="M1275 1158.33c0-145.83-87.5-195.83-262.5-216.66-125-16.67-150-50-150-108.34 0-58.33 41.67-95.83 125-95.83 75 0 116.67 25 137.5 87.5 4.17 12.5 16.67 20.83 29.17 20.83h66.66c16.67 0 29.17-12.5 29.17-29.16v-4.17c-20.83-91.67-95.83-162.5-191.67-175V533.33c0-16.66-12.5-29.16-33.33-33.33h-62.5c-16.67 0-29.17 12.5-33.33 33.33v100c-129.17 16.67-212.5 100-212.5 204.17 0 137.5 83.33 191.66 258.33 212.5 116.67 20.83 154.17 45.83 154.17 112.5 0 66.66-58.34 112.5-137.5 112.5-108.34 0-145.84-45.84-158.34-108.34-4.16-16.66-16.66-25-29.16-25h-70.84c-16.66 0-29.16 12.5-29.16 29.17v4.17c25 100 87.5 158.33 229.16 179.16V1462.5c0 16.67 12.5 29.17 33.34 33.33h62.5c16.66 0 29.16-12.5 33.33-33.33v-104.17c129.17-20.83 216.67-108.33 216.67-216.66z" fill="white"/><path d="M787.5 1595.83c-325-116.66-491.67-479.16-379.17-800 66.67-195.83 220.84-345.83 379.17-408.33 16.67-8.34 25-20.84 25-41.67v-58.33c0-16.67-8.33-29.17-25-33.34-4.17 0-12.5 0-16.67 4.17-395.83 125-612.5 545.83-487.5 941.67 75 237.5 262.5 420.83 487.5 495.83 16.67 8.33 33.34 0 37.5-16.67 4.17-4.16 4.17-12.5 4.17-16.66v-58.34c0-12.5-12.5-25-25-8.33zM1229.17 258.33c-16.67-8.33-33.34 0-37.5 16.67-4.17 4.17-4.17 12.5-4.17 16.67v58.33c0 16.67 12.5 29.17 25 41.67 325 116.67 491.67 479.17 379.17 800-66.67 195.83-220.84 345.83-379.17 408.33-16.67 8.34-25 20.84-25 41.67v58.33c0 16.67 8.33 29.17 25 33.34 4.17 0 12.5 0 16.67-4.17 395.83-125 612.5-545.83 487.5-941.67-75-241.66-266.67-425-487.5-529.17z" fill="white"/></svg>
+    <svg className={className} viewBox="0 0 2000 2000" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="1000" cy="1000" r="1000" fill="#2775CA" /><path d="M1275 1158.33c0-145.83-87.5-195.83-262.5-216.66-125-16.67-150-50-150-108.34 0-58.33 41.67-95.83 125-95.83 75 0 116.67 25 137.5 87.5 4.17 12.5 16.67 20.83 29.17 20.83h66.66c16.67 0 29.17-12.5 29.17-29.16v-4.17c-20.83-91.67-95.83-162.5-191.67-175V533.33c0-16.66-12.5-29.16-33.33-33.33h-62.5c-16.67 0-29.17 12.5-33.33 33.33v100c-129.17 16.67-212.5 100-212.5 204.17 0 137.5 83.33 191.66 258.33 212.5 116.67 20.83 154.17 45.83 154.17 112.5 0 66.66-58.34 112.5-137.5 112.5-108.34 0-145.84-45.84-158.34-108.34-4.16-16.66-16.66-25-29.16-25h-70.84c-16.66 0-29.16 12.5-29.16 29.17v4.17c25 100 87.5 158.33 229.16 179.16V1462.5c0 16.67 12.5 29.17 33.34 33.33h62.5c16.66 0 29.16-12.5 33.33-33.33v-104.17c129.17-20.83 216.67-108.33 216.67-216.66z" fill="white" /><path d="M787.5 1595.83c-325-116.66-491.67-479.16-379.17-800 66.67-195.83 220.84-345.83 379.17-408.33 16.67-8.34 25-20.84 25-41.67v-58.33c0-16.67-8.33-29.17-25-33.34-4.17 0-12.5 0-16.67 4.17-395.83 125-612.5 545.83-487.5 941.67 75 237.5 262.5 420.83 487.5 495.83 16.67 8.33 33.34 0 37.5-16.67 4.17-4.16 4.17-12.5 4.17-16.66v-58.34c0-12.5-12.5-25-25-8.33zM1229.17 258.33c-16.67-8.33-33.34 0-37.5 16.67-4.17 4.17-4.17 12.5-4.17 16.67v58.33c0 16.67 12.5 29.17 25 41.67 325 116.67 491.67 479.17 379.17 800-66.67 195.83-220.84 345.83-379.17 408.33-16.67 8.34-25 20.84-25 41.67v58.33c0 16.67 8.33 29.17 25 33.34 4.17 0 12.5 0 16.67-4.17 395.83-125 612.5-545.83 487.5-941.67-75-241.66-266.67-425-487.5-529.17z" fill="white" /></svg>
   )
 }
 
 function EthTokenIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 32 32" fill="none">
-      <circle cx="16" cy="16" r="16" fill="#627EEA"/>
-      <path d="M16.498 4v8.87l7.497 3.35L16.498 4z" fill="white" fillOpacity="0.6"/>
-      <path d="M16.498 4L9 16.22l7.498-3.35V4z" fill="white"/>
-      <path d="M16.498 21.968v6.027L24 17.616l-7.502 4.352z" fill="white" fillOpacity="0.6"/>
-      <path d="M16.498 27.995v-6.028L9 17.616l7.498 10.379z" fill="white"/>
-      <path d="M16.498 20.573l7.497-4.353-7.497-3.348v7.701z" fill="white" fillOpacity="0.2"/>
-      <path d="M9 16.22l7.498 4.353v-7.701L9 16.22z" fill="white" fillOpacity="0.6"/>
+      <circle cx="16" cy="16" r="16" fill="#627EEA" />
+      <path d="M16.498 4v8.87l7.497 3.35L16.498 4z" fill="white" fillOpacity="0.6" />
+      <path d="M16.498 4L9 16.22l7.498-3.35V4z" fill="white" />
+      <path d="M16.498 21.968v6.027L24 17.616l-7.502 4.352z" fill="white" fillOpacity="0.6" />
+      <path d="M16.498 27.995v-6.028L9 17.616l7.498 10.379z" fill="white" />
+      <path d="M16.498 20.573l7.497-4.353-7.497-3.348v7.701z" fill="white" fillOpacity="0.2" />
+      <path d="M9 16.22l7.498 4.353v-7.701L9 16.22z" fill="white" fillOpacity="0.6" />
     </svg>
   )
 }
@@ -1148,8 +1143,8 @@ function EthTokenIcon({ className }: { className?: string }) {
 function UsmtPlusTokenIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 32 32" fill="none">
-      <circle cx="16" cy="16" r="16" fill="#1a1a1a"/>
-      <circle cx="16" cy="16" r="14.5" stroke="#c8ff00" strokeWidth="1"/>
+      <circle cx="16" cy="16" r="16" fill="#1a1a1a" />
+      <circle cx="16" cy="16" r="14.5" stroke="#c8ff00" strokeWidth="1" />
       <text x="16" y="18" textAnchor="middle" fill="#c8ff00" fontSize="9" fontWeight="700" fontFamily="Inter, system-ui, sans-serif">U+</text>
     </svg>
   )
@@ -1229,7 +1224,7 @@ function WithdrawDialog({
       try {
         await scannerRef.current.stop()
         scannerRef.current.clear()
-      } catch {}
+      } catch { }
       scannerRef.current = null
     }
     setShowScanner(false)
@@ -1256,7 +1251,7 @@ function WithdrawDialog({
             }
             stopScanner()
           },
-          () => {}
+          () => { }
         )
       } catch (err) {
         console.error('QR scanner error:', err)
@@ -1389,23 +1384,25 @@ function WithdrawDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) resetDialog(); onOpenChange(v); }}>
-      <DialogContent className="sm:max-w-[440px] p-0 overflow-visible border border-[#2a2a2a] dark:border-[#2a2a2a] rounded-[24px] bg-white dark:bg-[#111111] shadow-[0px_32px_64px_-16px_rgba(0,0,0,0.35)]">
+      <DialogContent className="w-[calc(100vw-32px)] sm:w-full sm:max-w-[440px] p-0 overflow-visible border border-[#2a2a2a] dark:border-[#2a2a2a] rounded-[24px] bg-white dark:bg-[#111111] shadow-[0px_32px_64px_-16px_rgba(0,0,0,0.35)]">
 
         {step === 'done' ? (
-          <div className="px-6 py-8 text-center space-y-4">
-            <div className="w-14 h-14 mx-auto rounded-2xl bg-[#ddf9e4] flex items-center justify-center">
-              <CheckCircle2 className="h-7 w-7 text-[#22c55e]" />
+          <div className="px-5 py-8 flex flex-col items-center text-center space-y-5 w-full max-w-full min-w-0 overflow-hidden">
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-[#c8ff00] to-[#a8df00] shadow-[0_2px_12px_rgba(200,255,0,0.3)] flex items-center justify-center shrink-0">
+              <CheckCircle2 className="h-7 w-7 text-[#1a1a1a]" strokeWidth={2.5} />
             </div>
-            <div>
-              <h3 className="text-lg font-semibold text-[#1a1a1a] dark:text-white">Sent Successfully</h3>
+            <div className="w-full shrink-0">
+              <h3 className="text-lg font-bold text-[#1a1a1a] dark:text-white tracking-tight">Sent Successfully</h3>
               <p className="text-[13px] text-[#888] mt-1.5">
                 {withdrawAmount} {selectedToken.symbol} sent to {toAddress.slice(0, 6)}...{toAddress.slice(-4)}
               </p>
             </div>
             {hash && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-[#fafafa] dark:bg-[#151515] border border-[#222] dark:border-[#333]">
-                  <span className="flex-1 text-[11px] font-mono text-[#888] truncate">{hash}</span>
+              <div className="space-y-2 w-full max-w-full overflow-hidden shrink-0">
+                <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-[#fafafa] dark:bg-[#151515] border border-[#222] dark:border-[#333] w-full max-w-full overflow-hidden">
+                  <div className="flex-1 min-w-0 overflow-hidden text-left">
+                    <span className="text-[11px] font-mono text-[#888] truncate block w-full">{hash}</span>
+                  </div>
                   <button
                     onClick={() => { navigator.clipboard.writeText(hash); toast.success("Copied!"); }}
                     className="p-1.5 rounded-lg hover:bg-[#e0e0e0] dark:hover:bg-[#222] transition-colors flex-shrink-0"
@@ -1417,36 +1414,38 @@ function WithdrawDialog({
                   href={getExplorerUrl(chainId, hash)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-[#222] dark:border-[#333] text-[12px] font-medium text-[#1a1a1a] dark:text-[#aaa] hover:bg-[#fafafa] dark:hover:bg-[#151515] transition-colors"
+                  className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-[#222] dark:border-[#333] text-[12px] font-semibold text-[#1a1a1a] dark:text-[#aaa] hover:bg-[#fafafa] dark:hover:bg-[#151515] transition-colors"
                 >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  View on Explorer
+                  <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate max-w-[80%]">View on Explorer</span>
                 </a>
               </div>
             )}
-            <button
-              onClick={() => { resetDialog(); onOpenChange(false); }}
-              className="w-full py-3.5 rounded-xl bg-[#c8ff00] hover:bg-[#bbee00] text-[#1a1a1a] font-bold text-[14px] transition-colors"
-            >
-              Done
-            </button>
+            <div className="pt-2 w-full shrink-0">
+              <button
+                onClick={() => { resetDialog(); onOpenChange(false); }}
+                className="w-full py-3.5 rounded-xl bg-[#c8ff00] hover:bg-[#bbee00] text-[#1a1a1a] font-bold text-[14px] transition-all shadow-[0_4px_16px_rgba(200,255,0,0.2)] shrink-0"
+              >
+                Done
+              </button>
+            </div>
           </div>
         ) : (
           <>
             {/* Header */}
-            <div className="px-6 pt-6 pb-4 border-b border-[#222]/15 dark:border-[#333]">
+            <div className="px-5 pt-5 pb-3 border-b border-[#222]/15 dark:border-[#333] shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-[14px] bg-[#c8ff00] flex items-center justify-center">
-                  <svg className="h-5 w-5 text-[#1a1a1a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg>
+                <div className="w-9 h-9 rounded-[12px] bg-gradient-to-br from-[#c8ff00] to-[#a8df00] shadow-[0_2px_8px_rgba(200,255,0,0.3)] flex items-center justify-center">
+                  <svg className="h-4 w-4 text-[#1a1a1a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17l9.2-9.2M17 17V7H7" /></svg>
                 </div>
                 <div>
-                  <h2 className="text-[18px] font-bold text-[#1a1a1a] dark:text-white tracking-tight" style={{ fontFamily: "'Inter', 'SF Pro Display', system-ui, sans-serif" }}>Send {selectedToken.symbol}</h2>
-                  <p className="text-[12px] text-[#aeaeae] mt-0.5">Transfer to any wallet address</p>
+                  <h2 className="text-[17px] font-bold text-[#1a1a1a] dark:text-white tracking-tight" style={{ fontFamily: "'Inter', 'SF Pro Display', system-ui, sans-serif" }}>Send {selectedToken.symbol}</h2>
+                  <p className="text-[11px] text-[#aeaeae]">Transfer to any wallet address</p>
                 </div>
               </div>
             </div>
 
-            <div className="px-6 pb-6 pt-5 space-y-5">
+            <div className="px-5 pb-4 pt-4 space-y-4 overflow-y-auto max-h-[80vh] sm:max-h-[calc(85vh-76px)]">
               {/* Token selector card */}
               <div className="rounded-2xl border-2 border-[#1a1a1a]/10 dark:border-[#333] bg-[#fafafa] dark:bg-[#151515] overflow-visible relative" ref={dropdownRef}>
                 <button
@@ -1487,13 +1486,12 @@ function WithdrawDialog({
                             setWithdrawAmount('')
                             setShowTokenDropdown(false)
                           }}
-                          className={`w-full flex items-center justify-between px-4 py-3 transition-colors ${
-                            !tk.enabled
-                              ? 'opacity-45 cursor-not-allowed'
-                              : isSelected
+                          className={`w-full flex items-center justify-between px-4 py-3 transition-colors ${!tk.enabled
+                            ? 'opacity-45 cursor-not-allowed'
+                            : isSelected
                               ? 'bg-[#c8ff00]/10'
                               : 'hover:bg-[#f5f5f5] dark:hover:bg-[#1a1a1a]'
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center gap-3">
                             <TkIcon className="w-8 h-8" />
@@ -1540,7 +1538,7 @@ function WithdrawDialog({
                     className="w-12 h-12 flex items-center justify-center rounded-xl border-2 border-[#1a1a1a]/15 dark:border-[#333] bg-white dark:bg-[#1a1a1a] hover:border-[#1a1a1a] dark:hover:border-[#c8ff00] transition-colors disabled:opacity-50"
                   >
                     {showScanner ? <X className="h-4 w-4 text-[#666]" /> : (
-                      <svg className="h-[18px] w-[18px] text-[#666]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+                      <svg className="h-[18px] w-[18px] text-[#666]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" /><path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" /><rect x="7" y="7" width="10" height="10" rx="1" /></svg>
                     )}
                   </button>
                 </div>
@@ -1613,27 +1611,25 @@ function WithdrawDialog({
               {/* Processing */}
               {(step === 'sending' || step === 'confirming') && (
                 <div className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-[#c8ff00]/30 bg-[#c8ff00]/8">
-                  <div className="w-5 h-5 rounded-full border-2 border-[#c8ff00] border-t-transparent animate-spin" />
-                  <span className="text-[13px] font-semibold text-[#7cb518]">{step === 'sending' ? "Sending transaction..." : "Confirming on-chain..."}</span>
+                  <div className="w-5 h-5 rounded-full border-2 border-[#c8ff00] border-t-[#c8ff00]/20 animate-spin" />
+                  <span className="text-[13px] font-bold text-[#1a1a1a] dark:text-white">{step === 'sending' ? "Sending transaction..." : "Confirming on-chain..."}</span>
                 </div>
               )}
-
-              {/* Action button */}
-              <button
-                onClick={handleWithdraw}
-                disabled={isDisabled}
-                className="w-full flex items-center justify-center gap-2.5 h-[52px] rounded-xl bg-[#c8ff00] hover:bg-[#bbee00] text-[#1a1a1a] font-bold text-[14px] transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_4px_16px_rgba(200,255,0,0.25)] hover:shadow-[0_4px_24px_rgba(200,255,0,0.4)]" style={{ fontFamily: "'Inter', 'SF Pro Display', system-ui, sans-serif" }}
-              >
-                {isPending || isConfirming ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" /> {step === 'sending' ? "Sending..." : "Confirming..."}</>
-                ) : (
-                  <>
-                    <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg>
-                    Send {withdrawAmount || "0"} {selectedToken.symbol}
-                  </>
-                )}
-              </button>
             </div>
+
+            {/* Action button - Pinned outside scroll block */}
+            {!(step === 'sending' || step === 'confirming') && (
+              <div className="px-4 pb-4 pt-1 shrink-0 bg-white dark:bg-[#0a0a0a]">
+                <button
+                  onClick={handleWithdraw}
+                  disabled={isDisabled}
+                  className="w-full flex items-center justify-center gap-2.5 py-4 rounded-xl bg-[#c8ff00] hover:bg-[#bbee00] text-[#1a1a1a] font-bold text-[14px] transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_4px_16px_rgba(200,255,0,0.25)] hover:shadow-[0_4px_24px_rgba(200,255,0,0.4)]" style={{ fontFamily: "'Inter', 'SF Pro Display', system-ui, sans-serif" }}
+                >
+                  <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17l9.2-9.2M17 17V7H7" /></svg>
+                  Send {parsedWithdrawAmount > 0 ? withdrawAmount : "0"} {selectedToken.symbol}
+                </button>
+              </div>
+            )}
           </>
         )}
       </DialogContent>
@@ -1700,13 +1696,13 @@ function ReceiveFundsDialog({
           const logoSize = size * 0.15 // 15% of QR code size (reduced from 20%)
           const logoX = (size - logoSize) / 2
           const logoY = (size - logoSize) / 2
-          
+
           // Draw white background circle for logo
           ctx.fillStyle = '#ffffff'
           ctx.beginPath()
           ctx.arc(size / 2, size / 2, logoSize / 2 + 6, 0, 2 * Math.PI)
           ctx.fill()
-          
+
           // Draw the logo
           ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize)
 
@@ -1756,13 +1752,13 @@ function ReceiveFundsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[440px] p-0 overflow-hidden border border-[#2a2a2a] dark:border-[#2a2a2a] rounded-[24px] bg-white dark:bg-[#111111] shadow-[0px_32px_64px_-16px_rgba(0,0,0,0.35)]">
+      <DialogContent className="w-[calc(100vw-32px)] sm:w-full sm:max-w-[440px] p-0 overflow-hidden border border-[#2a2a2a] dark:border-[#2a2a2a] rounded-[24px] bg-white dark:bg-[#111111] shadow-[0px_32px_64px_-16px_rgba(0,0,0,0.35)]">
 
         {/* Header */}
         <div className="px-6 pt-6 pb-4 border-b border-[#222]/15 dark:border-[#333]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-[14px] bg-[#c8ff00] flex items-center justify-center">
-              <svg className="h-5 w-5 text-[#1a1a1a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <svg className="h-5 w-5 text-[#1a1a1a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
             </div>
             <div>
               <h2 className="text-[18px] font-bold text-[#1a1a1a] dark:text-white tracking-tight" style={{ fontFamily: "'Inter', 'SF Pro Display', system-ui, sans-serif" }}>Receive Funds</h2>
@@ -1830,7 +1826,7 @@ function ReceiveFundsDialog({
 
           {/* Footer */}
           <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-xl border-2 border-[#1a1a1a]/10 dark:border-[#333] bg-[#fafafa] dark:bg-[#151515]">
-            <svg className="h-4 w-4 text-[#aeaeae] mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            <svg className="h-4 w-4 text-[#aeaeae] mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>
             <p className="text-[11px] text-[#888] leading-relaxed">
               Share QR code or address to receive funds on any supported chain
             </p>
