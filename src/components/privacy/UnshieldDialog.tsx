@@ -539,7 +539,7 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
               </div>
             </div>
 
-            <div className="px-4 pb-4 pt-4 space-y-4 overflow-y-auto max-h-[80vh] sm:max-h-[calc(85vh-76px)]">
+            <div className="px-4 pb-4 pt-3 space-y-3 overflow-y-auto max-h-[80vh] sm:max-h-[calc(85vh-76px)]">
               {/* Empty / pending balance notice */}
               {currentSpendable === 0 && step === 'input' && (
                 <div className="flex items-start gap-3 py-3 px-3 rounded-2xl border-2 border-dashed border-[#e0e0e0] dark:border-[#333] bg-[#fafafa] dark:bg-[#151515]">
@@ -581,25 +581,25 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
                       <button
                         type="button"
                         onClick={() => setShowTokenDropdown(!showTokenDropdown)}
-                        className="w-full flex items-center justify-between px-4 pt-4 pb-3 hover:bg-[#f5f5f5] dark:hover:bg-[#1a1a1a] transition-colors"
+                        className="w-full flex items-center justify-between px-3 pt-3 pb-2.5 hover:bg-[#f5f5f5] dark:hover:bg-[#1a1a1a] transition-colors"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-11 h-11 rounded-full bg-white dark:bg-[#1a1a1a] border-2 border-[#1a1a1a]/8 dark:border-[#333] flex items-center justify-center shadow-sm">
-                            <TokenIcon className="w-7 h-7" />
+                          <div className="w-9 h-9 rounded-full bg-white dark:bg-[#1a1a1a] border border-[#1a1a1a]/8 dark:border-[#333] flex items-center justify-center shadow-sm">
+                            <TokenIcon className="w-5 h-5" />
                           </div>
                           <div className="text-left">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-[15px] font-bold text-[#1a1a1a] dark:text-white" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>{selectedToken.symbol}</span>
-                              <ChevronDown className={`h-3.5 w-3.5 text-[#999] transition-transform duration-200 ${showTokenDropdown ? 'rotate-180' : ''}`} />
+                              <span className="text-[14px] font-bold text-[#1a1a1a] dark:text-white" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>{selectedToken.symbol}</span>
+                              <ChevronDown className={`h-3 w-3 text-[#999] transition-transform duration-200 ${showTokenDropdown ? 'rotate-180' : ''}`} />
                             </div>
-                            <span className="block text-[11px] text-[#999] font-medium">{selectedToken.name} · {selectedToken.network}</span>
+                            <span className="block text-[10px] text-[#999] font-medium">{selectedToken.name} · {selectedToken.network}</span>
                           </div>
                         </div>
                         <div className="text-right">
-                          <span className="block text-[15px] font-bold text-[#1a1a1a] dark:text-white" style={{ fontFamily: "'SF Mono', 'Fira Code', monospace" }}>{currentSpendable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                          <span className="block text-[11px] text-[#999] font-medium">Available</span>
+                          <span className="block text-[14px] font-bold text-[#1a1a1a] dark:text-white" style={{ fontFamily: "'SF Mono', 'Fira Code', monospace" }}>{currentSpendable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          <span className="block text-[10px] text-[#999] font-medium">Available</span>
                           {isPending && (
-                            <span className="block text-[10px] text-[#7cb518] font-medium mt-0.5">
+                            <span className="block text-[9px] text-[#7cb518] font-medium mt-0.5">
                               +{(currentBalance - currentSpendable).toFixed(2)} pending
                             </span>
                           )}
@@ -662,7 +662,7 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
                     <div className="mx-4 h-px bg-[#1a1a1a]/8 dark:bg-[#333]" />
 
                     {/* Amount input */}
-                    <div className="p-4 space-y-3">
+                    <div className="p-3 space-y-2.5">
                       <div className="relative">
                         <input
                           type="number"
@@ -670,21 +670,21 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
                           value={amount}
                           onChange={(e) => setAmount(e.target.value)}
                           disabled={isProcessing}
-                          className="w-full bg-white dark:bg-[#1a1a1a] border-2 border-[#1a1a1a]/10 dark:border-[#333] focus:border-[#1a1a1a] dark:focus:border-[#c8ff00] rounded-xl px-4 py-4 text-2xl font-bold text-[#1a1a1a] dark:text-white placeholder:text-[#d1d1d1] dark:placeholder:text-[#444] outline-none transition-colors disabled:opacity-50" style={{ fontFamily: "'SF Mono', 'Fira Code', monospace" }}
+                          className="w-full bg-white dark:bg-[#1a1a1a] border border-[#1a1a1a]/10 dark:border-[#333] focus:border-[#1a1a1a] dark:focus:border-[#c8ff00] rounded-[10px] px-3.5 py-3 text-xl font-bold text-[#1a1a1a] dark:text-white placeholder:text-[#d1d1d1] dark:placeholder:text-[#444] outline-none transition-colors disabled:opacity-50" style={{ fontFamily: "'SF Mono', 'Fira Code', monospace" }}
                         />
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 bg-[#f0f0f0] dark:bg-[#222] px-2.5 py-1.5 rounded-lg">
-                          <TokenIcon className="w-4 h-4" />
-                          <span className="text-xs font-bold text-[#555] dark:text-[#aaa]">{selectedToken.symbol}</span>
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 bg-[#f0f0f0] dark:bg-[#222] px-2 py-1 rounded-md">
+                          <TokenIcon className="w-3.5 h-3.5" />
+                          <span className="text-[11px] font-bold text-[#555] dark:text-[#aaa]">{selectedToken.symbol}</span>
                         </div>
                       </div>
 
-                      <div className="flex gap-2">
+                      <div className="flex gap-1.5">
                         {[0.25, 0.5, 0.75, 1].map((pct) => (
                           <button
                             key={pct}
                             onClick={() => setAmount((currentSpendable * pct).toFixed(selectedTokenId === 'ETH' ? 6 : 2))}
                             disabled={currentSpendable === 0}
-                            className="flex-1 py-2 rounded-lg border-2 border-[#1a1a1a]/8 dark:border-[#333] bg-white dark:bg-[#1a1a1a] text-[11px] font-bold text-[#666] dark:text-[#888] hover:border-[#1a1a1a] dark:hover:border-[#c8ff00] hover:text-[#1a1a1a] dark:hover:text-[#c8ff00] transition-all disabled:opacity-30"
+                            className="flex-1 py-1.5 rounded-md border border-[#1a1a1a]/8 dark:border-[#333] bg-white dark:bg-[#1a1a1a] text-[10px] font-bold text-[#666] dark:text-[#888] hover:border-[#1a1a1a] dark:hover:border-[#c8ff00] hover:text-[#1a1a1a] dark:hover:text-[#c8ff00] transition-all disabled:opacity-30"
                           >
                             {pct === 1 ? 'MAX' : `${pct * 100}%`}
                           </button>
@@ -694,28 +694,28 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
                   </div>
 
                   {/* Recipient selector */}
-                  <div className="rounded-2xl border-2 border-[#1a1a1a]/10 dark:border-[#333] bg-[#fafafa] dark:bg-[#151515] overflow-hidden">
-                    <div className="px-4 pt-3.5 pb-3">
-                      <span className="block text-[11px] font-bold text-[#999] uppercase tracking-wider mb-2.5">Send to</span>
-                      <div className="flex gap-2">
+                  <div className="rounded-xl border border-[#1a1a1a]/10 dark:border-[#333] bg-[#fafafa] dark:bg-[#151515] overflow-hidden">
+                    <div className="px-3 pt-3 pb-2.5">
+                      <span className="block text-[10px] font-bold text-[#999] uppercase tracking-wider mb-2">Send to</span>
+                      <div className="flex gap-1.5">
                         <button
                           onClick={() => { setRecipientMode('self'); setCustomRecipient(''); }}
-                          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-[12px] font-bold transition-all ${recipientMode === 'self'
+                          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-[10px] border text-[11px] font-bold transition-all ${recipientMode === 'self'
                             ? 'border-[#c8ff00] bg-[#c8ff00]/10 text-[#1a1a1a] dark:text-white'
                             : 'border-[#1a1a1a]/8 dark:border-[#333] bg-white dark:bg-[#1a1a1a] text-[#888] hover:border-[#1a1a1a]/20 dark:hover:border-[#555]'
                             }`}
                         >
-                          <WalletIcon className="h-3.5 w-3.5" />
+                          <WalletIcon className="h-3 w-3" />
                           My Wallet
                         </button>
                         <button
                           onClick={() => setRecipientMode('other')}
-                          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-[12px] font-bold transition-all ${recipientMode === 'other'
+                          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-[10px] border text-[11px] font-bold transition-all ${recipientMode === 'other'
                             ? 'border-[#c8ff00] bg-[#c8ff00]/10 text-[#1a1a1a] dark:text-white'
                             : 'border-[#1a1a1a]/8 dark:border-[#333] bg-white dark:bg-[#1a1a1a] text-[#888] hover:border-[#1a1a1a]/20 dark:hover:border-[#555]'
                             }`}
                         >
-                          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" /></svg>
+                          <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" /></svg>
                           Other Address
                         </button>
                       </div>
@@ -729,14 +729,14 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
                     )}
 
                     {recipientMode === 'other' && (
-                      <div className="mx-4 mb-3.5 space-y-2">
+                      <div className="mx-3 mb-3 space-y-1.5">
                         <div className="relative">
                           <input
                             type="text"
                             placeholder="0x..."
                             value={customRecipient}
                             onChange={(e) => setCustomRecipient(e.target.value.trim())}
-                            className={`w-full bg-white dark:bg-[#1a1a1a] border-2 rounded-xl px-3.5 py-3 text-[13px] font-mono text-[#1a1a1a] dark:text-white placeholder:text-[#ccc] dark:placeholder:text-[#444] outline-none transition-colors ${customRecipient.length > 0 && !isValidCustomAddress
+                            className={`w-full bg-white dark:bg-[#1a1a1a] border rounded-[10px] px-3 py-2 text-[12px] font-mono text-[#1a1a1a] dark:text-white placeholder:text-[#ccc] dark:placeholder:text-[#444] outline-none transition-colors ${customRecipient.length > 0 && !isValidCustomAddress
                               ? 'border-red-400 focus:border-red-500'
                               : isValidCustomAddress
                                 ? 'border-[#22c55e]/50 focus:border-[#22c55e]'
@@ -765,35 +765,35 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
                   </div>
 
                   {/* Flow indicator */}
-                  <div className="flex items-center justify-center gap-2 py-0.5">
-                    <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#c8ff00]/40 bg-[#c8ff00]/8">
-                      <LockShieldIcon className="h-3.5 w-3.5 text-[#7cb518]" />
-                      <span className="text-[11px] font-semibold text-[#7cb518]">Private</span>
+                  <div className="flex items-center justify-center gap-1.5 py-0">
+                    <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[#c8ff00]/40 bg-[#c8ff00]/8">
+                      <LockShieldIcon className="h-3 w-3 text-[#7cb518]" />
+                      <span className="text-[10px] font-semibold text-[#7cb518]">Private</span>
                     </div>
-                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-[#c8ff00] shadow-[0_2px_8px_rgba(200,255,0,0.3)] shrink-0">
-                      <svg className="w-3.5 h-3.5 text-[#1a1a1a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
+                    <div className="flex items-center justify-center w-5 h-5 rounded-full bg-[#c8ff00] shadow-[0_2px_8px_rgba(200,255,0,0.3)] shrink-0">
+                      <svg className="w-3 h-3 text-[#1a1a1a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
                     </div>
-                    <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#e0e0e0] dark:border-[#2a2a2a] bg-white dark:bg-[#1a1a1a] min-w-0">
+                    <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#e0e0e0] dark:border-[#2a2a2a] bg-white dark:bg-[#1a1a1a] min-w-0">
                       {isSendingToOther ? (
                         <>
-                          <svg className="h-3.5 w-3.5 text-[#999] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
-                          <span className="text-[11px] font-semibold text-[#666] dark:text-[#888] truncate">
+                          <svg className="h-3 w-3 text-[#999] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
+                          <span className="text-[10px] font-semibold text-[#666] dark:text-[#888] truncate">
                             {isValidCustomAddress ? `${customRecipient.slice(0, 6)}...` : 'Recipient'}
                           </span>
                         </>
                       ) : (
                         <>
-                          <WalletIcon className="h-3.5 w-3.5 text-[#999] shrink-0" />
-                          <span className="text-[11px] font-semibold text-[#666] dark:text-[#888]">My Wallet</span>
+                          <WalletIcon className="h-3 w-3 text-[#999] shrink-0" />
+                          <span className="text-[10px] font-semibold text-[#666] dark:text-[#888]">My Wallet</span>
                         </>
                       )}
                     </div>
                   </div>
 
                   {/* Info */}
-                  <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl border border-[#e0e0e0] dark:border-[#2a2a2a] bg-[#fafafa] dark:bg-[#151515]">
-                    <svg className="h-4 w-4 text-[#999] mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>
-                    <p className="text-[10px] text-[#888] leading-relaxed">
+                  <div className="flex items-start gap-2 px-2.5 py-2 rounded-lg border border-[#e0e0e0] dark:border-[#2a2a2a] bg-[#fafafa] dark:bg-[#151515]">
+                    <svg className="h-3w-3 text-[#999] mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>
+                    <p className="text-[9px] text-[#888] leading-relaxed">
                       {isSendingToOther
                         ? 'Funds are sent from the privacy pool. The recipient sees the amount but not the sender.'
                         : 'Unshielding generates a SNARK proof to withdraw privately. Amount becomes visible on-chain.'}
@@ -916,11 +916,11 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
 
             {/* Action button - Pinned at bottom outside scroll area */}
             {step === 'input' && (
-              <div className="px-4 pb-4 pt-1 shrink-0 bg-white dark:bg-[#0a0a0a]">
+              <div className="px-4 pb-3 pt-0 shrink-0 bg-white dark:bg-[#0a0a0a]">
                 <button
                   onClick={handleUnshield}
                   disabled={isDisabled}
-                  className="w-full flex items-center justify-center gap-2.5 py-4 rounded-xl bg-[#c8ff00] hover:bg-[#bbee00] text-[#1a1a1a] font-bold text-[14px] transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_4px_16px_rgba(200,255,0,0.25)] hover:shadow-[0_4px_24px_rgba(200,255,0,0.4)]"
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#c8ff00] hover:bg-[#bbee00] text-[#1a1a1a] font-bold text-[13px] transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_4px_12px_rgba(200,255,0,0.2)] hover:shadow-[0_4px_20px_rgba(200,255,0,0.4)]"
                 >
                   {isSendingToOther ? (
                     <>
