@@ -390,12 +390,11 @@ async function doLoadProvider(): Promise<void> {
     const networkName =
       chainId === 42161 ? NetworkName.Arbitrum : NetworkName.Arbitrum;
 
-    // These RPCs must NOT overlap with Wagmi's (1rpc, ankr, drpc)
-    // to avoid shared rate limits in production.
+    // Use entirely separate public RPCs for Railgun to avoid consuming Alchemy/Infura primary quotas
     const RAILGUN_RPCS = [
-      'https://arbitrum.drpc.org',
-      'https://arb-pokt.nodies.app',
       'https://rpc.ankr.com/arbitrum',
+      'https://1rpc.io/arb',
+      'https://arb-pokt.nodies.app'
     ];
 
     setStatus('syncing');
@@ -412,13 +411,15 @@ async function doLoadProvider(): Promise<void> {
 
         const fallbackProviders = {
           chainId,
-          providers: RAILGUN_RPCS.map((rpc, i) => ({
-            provider: rpc,
-            priority: i + 1,
-            weight: 1,
-            maxLogsPerBatch: 10,
-            stallTimeout: 15000,
-          })),
+          providers: RAILGUN_RPCS.map((rpc, i) => {
+            return {
+              provider: rpc,
+              priority: i + 1,
+              weight: 1,
+              maxLogsPerBatch: 2, // Hard limit of 2 for free public nodes to stop 500 errors
+              stallTimeout: 15000,
+            };
+          }),
         };
 
         await loadProvider(fallbackProviders, networkName, 15_000);
