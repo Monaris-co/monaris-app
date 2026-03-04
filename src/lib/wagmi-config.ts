@@ -13,7 +13,8 @@ const arbitrumTransport = fallback(
     webSocket('wss://arb-mainnet.g.alchemy.com/v2/lA12jxcK7XSr4_xdTRtMG'),
     http('https://arb-mainnet.g.alchemy.com/v2/lA12jxcK7XSr4_xdTRtMG'),
     ...(useEnvRpc ? [http(envRpc)] : []),
-    http('https://rpc.ankr.com/arbitrum'),
+    http('https://arb1.arbitrum.io/rpc'),
+    http('https://arb-pokt.nodies.app'),
     http('https://arbitrum.drpc.org'),
   ],
   { rank: true }

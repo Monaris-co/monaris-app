@@ -392,9 +392,9 @@ async function doLoadProvider(): Promise<void> {
 
     // Use entirely separate public RPCs for Railgun to avoid consuming Alchemy/Infura primary quotas
     const RAILGUN_RPCS = [
-      'https://rpc.ankr.com/arbitrum',
       'https://arb1.arbitrum.io/rpc',
-      'https://arb-pokt.nodies.app'
+      'https://arb-pokt.nodies.app',
+      'https://arbitrum.drpc.org'
     ];
 
     setStatus('syncing');
