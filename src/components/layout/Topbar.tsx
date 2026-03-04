@@ -27,25 +27,25 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
   const chainId = useChainId()
   const { balance: usdcBalance, isLoading: isLoadingBalance } = useTokenBalance()
   const { wallets } = useWallets()
-  
+
   const loginMethods = user?.linkedAccounts?.map((acc: any) => acc.type) || []
-  const loggedInWithEmail = loginMethods.some((type: string) => 
+  const loggedInWithEmail = loginMethods.some((type: string) =>
     ['email', 'sms', 'google_oauth', 'twitter_oauth', 'github_oauth'].includes(type)
   )
   const loggedInWithWallet = loginMethods.includes('wallet')
-  
+
   const embeddedWallet = wallets.find(w => {
     const ct = w.connectorType?.toLowerCase() || ''
     const wct = w.walletClientType?.toLowerCase() || ''
     return ct === 'embedded' || wct === 'privy' || ct.includes('privy') || ct.includes('embedded')
   })
-  
+
   const externalWallet = wallets.find(w => {
     const ct = w.connectorType?.toLowerCase() || ''
     const wct = w.walletClientType?.toLowerCase() || ''
     return ct === 'injected' || wct === 'metamask' || ct.includes('injected') || wct.includes('metamask')
   })
-  
+
   let activeWallet
   if (loggedInWithEmail) {
     activeWallet = embeddedWallet || (loggedInWithWallet ? externalWallet : null)
@@ -54,17 +54,17 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
   } else {
     activeWallet = embeddedWallet || externalWallet
   }
-  
+
   const isConnected = authenticated && user && activeWallet && activeWallet.address
   const walletAddress = activeWallet?.address
-  const truncatedAddress = walletAddress 
+  const truncatedAddress = walletAddress
     ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
     : null
 
   const walletType = activeWallet?.walletClientType || activeWallet?.connectorType || 'unknown'
-  const isEmbeddedWallet = walletType === 'privy' || 
-                          activeWallet?.connectorType === 'embedded' ||
-                          (embeddedWallet && !externalWallet)
+  const isEmbeddedWallet = walletType === 'privy' ||
+    activeWallet?.connectorType === 'embedded' ||
+    (embeddedWallet && !externalWallet)
 
   const userEmail = user?.email?.address || user?.google?.email
   const userName = userEmail ? userEmail.split('@')[0] : truncatedAddress || 'User'
@@ -116,8 +116,8 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
   const showLoading = authenticated && user && !isConnected
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 pl-0 pr-1 sm:px-3 md:px-4 lg:px-6 backdrop-blur-xl">
-      <div className="flex items-center gap-4">
+    <header className="absolute md:sticky top-0 z-30 flex w-full h-16 items-center justify-between md:border-b border-transparent md:border-gray-200 md:dark:border-gray-800 bg-transparent md:bg-white/80 md:dark:bg-gray-900/80 pl-2 pr-3 sm:px-3 md:px-4 lg:px-6 md:backdrop-blur-xl pointer-events-none md:pointer-events-auto">
+      <div className="flex items-center gap-4 pointer-events-auto">
         <Button
           variant="ghost"
           size="icon"
@@ -126,13 +126,13 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
         >
           <Menu className="h-5 w-5" />
         </Button>
-        
+
         <div className="hidden md:block">
           <span className="text-sm text-gray-500 dark:text-gray-400">Welcome back</span>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 md:gap-4">
+      <div className="flex items-center gap-2 md:gap-4 pointer-events-auto">
         <Button variant="ghost" size="icon" className="relative text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hidden sm:flex">
           <Mail className="h-5 w-5" />
         </Button>
@@ -182,9 +182,9 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
                         <DollarSign className="h-4 w-4 text-emerald-500" />
                       )}
                       <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {isLoadingBalance ? "..." : usdcBalance.toLocaleString(undefined, { 
-                          minimumFractionDigits: 2, 
-                          maximumFractionDigits: 2 
+                        {isLoadingBalance ? "..." : usdcBalance.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2
                         })}
                         <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">USDC</span>
                       </p>
@@ -216,7 +216,7 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
             </DropdownMenuContent>
           </DropdownMenu>
         ) : showLoading ? (
-          <Button 
+          <Button
             disabled
             className="gap-2 bg-[#c8ff00]/60 text-black/60 font-medium rounded-xl cursor-wait"
           >
@@ -224,7 +224,7 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
             <span className="hidden sm:inline">Loading...</span>
           </Button>
         ) : (
-          <Button 
+          <Button
             onClick={handleLogin}
             disabled={!ready}
             className="gap-2 bg-[#c8ff00] hover:bg-[#b8ef00] text-black font-medium rounded-xl"
