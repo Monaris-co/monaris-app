@@ -417,7 +417,7 @@ async function doLoadProvider(): Promise<void> {
               provider: rpc,
               priority: i + 1,
               weight: 1,
-              maxLogsPerBatch: 2, // Hard limit of 2 specifically for free public nodes like dRPC to bypass rate-blocks
+              maxLogsPerBatch: 10, // Increased limit to speed up sync. Most public nodes can handle 10.
               stallTimeout: 15000,
             };
           }),
