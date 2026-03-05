@@ -95,12 +95,16 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
     try {
       await logout()
       setTimeout(() => {
+        const inviteVerified = localStorage.getItem('monaris_invite_verified')
         localStorage.clear()
+        if (inviteVerified) localStorage.setItem('monaris_invite_verified', inviteVerified)
         sessionStorage.clear()
         window.location.href = '/?reset=' + Date.now()
       }, 300)
     } catch (error) {
+      const inviteVerified = localStorage.getItem('monaris_invite_verified')
       localStorage.clear()
+      if (inviteVerified) localStorage.setItem('monaris_invite_verified', inviteVerified)
       sessionStorage.clear()
       window.location.href = '/?logout=' + Date.now()
     }
