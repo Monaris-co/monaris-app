@@ -4,14 +4,7 @@ import { Lock, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react';
 
 const STORAGE_KEY = 'monaris_invite_verified';
 
-function getValidCodes(): string[] {
-  const raw = import.meta.env.VITE_INVITE_CODES || '';
-  if (!raw.trim()) return [];
-  return raw
-    .split(',')
-    .map((c: string) => c.trim().toUpperCase())
-    .filter(Boolean);
-}
+import { supabase } from '../lib/supabase';
 
 function isAlreadyVerified(): boolean {
   try {
@@ -26,16 +19,15 @@ interface InviteGateProps {
 }
 
 export function InviteGate({ children }: InviteGateProps) {
-  const validCodes = getValidCodes();
-
-  // If no codes are configured, skip the gate entirely
-  if (validCodes.length === 0) return <>{children}</>;
+  // Only gate if we are in production or if you want to gate local dev too.
+  // For now, it will always gate unless already verified in localStorage.
 
   const [verified, setVerified] = useState(isAlreadyVerified);
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [shaking, setShaking] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -44,8 +36,10 @@ export function InviteGate({ children }: InviteGateProps) {
 
   if (verified) return <>{children}</>;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isChecking) return;
+
     setError('');
 
     const entered = code.trim().toUpperCase();
@@ -56,18 +50,49 @@ export function InviteGate({ children }: InviteGateProps) {
       return;
     }
 
-    if (validCodes.includes(entered)) {
+    setIsChecking(true);
+
+    try {
+      // 1. Check if code exists and is unused
+      const { data, error: fetchError } = await supabase
+        .from('invite_codes')
+        .select('*')
+        .eq('code', entered)
+        .single();
+
+      if (fetchError || !data) {
+        throw new Error('Invalid invite code');
+      }
+
+      if (data.is_used) {
+        throw new Error('This invite code has already been used');
+      }
+
+      // 2. Mark code as used
+      const { error: updateError } = await supabase
+        .from('invite_codes')
+        .update({ is_used: true })
+        .eq('code', entered);
+
+      if (updateError) {
+        throw new Error('Failed to verify code. Please try again.');
+      }
+
+      // 3. Success!
       setSuccess(true);
       try {
         localStorage.setItem(STORAGE_KEY, 'true');
-      } catch {}
-      setTimeout(() => setVerified(true), 800);
-    } else {
-      setError('Invalid invite code');
+      } catch { }
+      setTimeout(() => setVerified(true), 1200);
+
+    } catch (err: any) {
+      setError(err.message || 'Invalid invite code');
       setShaking(true);
       setTimeout(() => setShaking(false), 500);
       setCode('');
       inputRef.current?.focus();
+    } finally {
+      setIsChecking(false);
     }
   };
 
@@ -109,7 +134,7 @@ export function InviteGate({ children }: InviteGateProps) {
               {/* Title */}
               <div className="text-center mb-6">
                 <h1 className="text-xl font-semibold text-white mb-2">
-                  {success ? 'Welcome to Monaris' : 'MonarisEarly Access Only'}
+                  {success ? 'Welcome to Monaris' : 'Monaris Early Access Only'}
                 </h1>
                 <p className="text-sm text-white/50 leading-relaxed">
                   {success
@@ -158,6 +183,7 @@ export function InviteGate({ children }: InviteGateProps) {
 
                   <button
                     type="submit"
+                    disabled={isChecking}
                     className="
                       w-full h-12 rounded-xl text-sm font-semibold
                       bg-[#c8ff00] text-black
@@ -166,10 +192,11 @@ export function InviteGate({ children }: InviteGateProps) {
                       flex items-center justify-center gap-2
                       shadow-[0_0_20px_rgba(200,255,0,0.15)]
                       hover:shadow-[0_0_30px_rgba(200,255,0,0.25)]
+                      disabled:opacity-50 disabled:cursor-not-allowed
                     "
                   >
-                    Continue
-                    <ArrowRight className="h-4 w-4" />
+                    {isChecking ? 'Verifying...' : 'Continue'}
+                    {!isChecking && <ArrowRight className="h-4 w-4" />}
                   </button>
                 </form>
               )}
