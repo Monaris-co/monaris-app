@@ -792,7 +792,7 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
 
                   {/* Info */}
                   <div className="flex items-start gap-2 px-2.5 py-2 rounded-lg border border-[#e0e0e0] dark:border-[#2a2a2a] bg-[#fafafa] dark:bg-[#151515]">
-                    <svg className="h-3w-3 text-[#999] mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>
+                    <svg className="h-3 w-3 text-[#999] mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>
                     <p className="text-[9px] text-[#888] leading-relaxed">
                       {isSendingToOther
                         ? 'Funds are sent from the privacy pool. The recipient sees the amount but not the sender.'
