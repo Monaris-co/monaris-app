@@ -212,8 +212,8 @@ export function ShieldDialog({ open, onOpenChange }: ShieldDialogProps) {
 
         {step === 'done' ? (
           <div className="p-8 text-center space-y-5">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-[#ddf9e4] flex items-center justify-center">
-              <CheckCircle2 className="h-8 w-8 text-[#22c55e]" />
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-[#c8ff00]/10 flex items-center justify-center">
+              <CheckCircle2 className="h-8 w-8 text-[#7cb518]" />
             </div>
             <div>
               <h3 className="text-xl font-semibold text-[#1a1a1a] dark:text-white">Funds Shielded!</h3>
@@ -399,13 +399,13 @@ export function ShieldDialog({ open, onOpenChange }: ShieldDialogProps) {
                           className={`flex items-start gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${isActive
                             ? 'bg-[#c8ff00]/10 border border-[#c8ff00]/30'
                             : isDone
-                              ? 'bg-[#f0fdf4] dark:bg-[#22c55e]/5 border border-[#22c55e]/20'
+                              ? 'bg-[#c8ff00]/10 dark:bg-[#c8ff00]/5 border border-[#c8ff00]/20'
                               : 'bg-transparent border border-transparent opacity-40'
                             }`}
                         >
                           <div className="mt-0.5 flex-shrink-0">
                             {isDone ? (
-                              <div className="w-5 h-5 rounded-full bg-[#22c55e] flex items-center justify-center shadow-sm">
+                              <div className="w-5 h-5 rounded-full bg-[#c8ff00] flex items-center justify-center shadow-sm">
                                 <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
                               </div>
                             ) : isActive ? (
@@ -416,10 +416,10 @@ export function ShieldDialog({ open, onOpenChange }: ShieldDialogProps) {
                           </div>
                           <div className="min-w-0">
                             <span className={`block text-[13px] font-bold ${isActive ? 'text-[#1a1a1a] dark:text-white' :
-                              isDone ? 'text-[#22c55e]' :
+                              isDone ? 'text-[#7cb518]' :
                                 'text-[#999]'
                               }`}>{ps.label}</span>
-                            <span className={`block text-[11px] mt-0.5 ${isActive ? 'text-[#888]' : isDone ? 'text-[#22c55e]/60' : 'text-[#ccc] dark:text-[#555]'
+                            <span className={`block text-[11px] mt-0.5 ${isActive ? 'text-[#888]' : isDone ? 'text-[#c8ff00]/60' : 'text-[#ccc] dark:text-[#555]'
                               }`}>{ps.sublabel}</span>
                           </div>
                         </div>

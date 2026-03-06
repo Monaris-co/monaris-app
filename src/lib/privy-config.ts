@@ -46,7 +46,7 @@ export const privyConfig = {
   config: {
     appearance: {
       theme: 'light',
-      accentColor: '#22c55e',
+      accentColor: '#c8ff00',
       logo: '/monar.png',
     },
     loginMethods: ['email', 'google'],

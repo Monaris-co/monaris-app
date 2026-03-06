@@ -14,7 +14,8 @@ import {
   Loader2,
   CheckCircle2,
   ExternalLink,
-  Copy
+  Copy,
+  Save
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
@@ -26,7 +27,7 @@ import {
   DialogContent,
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
-import { useCreateInvoice } from "@/hooks/useInvoice"
+import { useCreateInvoice, saveDraftInvoice, getNextInvoiceNumber } from "@/hooks/useInvoice"
 import { usePrivyAccount } from "@/hooks/usePrivyAccount"
 import { useChainId } from "wagmi"
 import { usePrivy, useWallets } from "@privy-io/react-auth"
@@ -51,11 +52,13 @@ export default function CreateInvoice() {
   ])
   
   const [formData, setFormData] = useState({
-    buyerAddress: "", // Ethereum address
+    buyerAddress: "",
     buyerName: "",
     buyerEmail: "",
     dueDate: "",
-    memo: ""
+    memo: "",
+    sellerName: "",
+    invoiceNumber: "",
   })
   
   const { address } = usePrivyAccount()
@@ -77,6 +80,15 @@ export default function CreateInvoice() {
   const submittedToastShown = useRef<string | null>(null)
   const [successModalOpen, setSuccessModalOpen] = useState(false)
   const [successHash, setSuccessHash] = useState<string | null>(null)
+  const [isSavingDraft, setIsSavingDraft] = useState(false)
+
+  useEffect(() => {
+    if (address && !formData.invoiceNumber) {
+      getNextInvoiceNumber(address).then(num => {
+        setFormData(prev => ({ ...prev, invoiceNumber: num }))
+      }).catch(console.error)
+    }
+  }, [address])
   
   // Show toast when transaction is submitted
   useEffect(() => {
@@ -211,6 +223,9 @@ export default function CreateInvoice() {
             buyer_email: formData.buyerEmail || null,
             memo: formData.memo || null,
             line_items: invoiceMetadata.lineItems,
+            seller_name: formData.sellerName || null,
+            invoice_number: formData.invoiceNumber || null,
+            is_draft: false,
           })
           .select('id')
           .single()
@@ -315,6 +330,40 @@ export default function CreateInvoice() {
       setIsSubmitting(false)
     }
   }, [error, hash, isSuccess, receipt, chainId])
+
+  const handleSaveDraft = async () => {
+    if (!address) {
+      toast.error("Please connect your wallet first")
+      return
+    }
+    setIsSavingDraft(true)
+    try {
+      await saveDraftInvoice({
+        chain_id: chainId,
+        seller_address: address,
+        buyer_address: formData.buyerAddress || '0x0000000000000000000000000000000000000000',
+        amount: totalAmount,
+        due_date: formData.dueDate ? new Date(formData.dueDate).toISOString() : new Date().toISOString(),
+        buyer_name: formData.buyerName || undefined,
+        buyer_email: formData.buyerEmail || undefined,
+        memo: formData.memo || undefined,
+        line_items: lineItems.map(item => ({
+          description: item.description,
+          quantity: item.quantity,
+          rate: item.rate,
+        })),
+        seller_name: formData.sellerName || undefined,
+        invoice_number: formData.invoiceNumber || undefined,
+      })
+      toast.success("Draft saved!", { description: "You can edit it anytime from your invoices list." })
+      navigate("/app/invoices")
+    } catch (err: any) {
+      console.error("Error saving draft:", err)
+      toast.error("Failed to save draft", { description: err?.message || "Please try again" })
+    } finally {
+      setIsSavingDraft(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -478,7 +527,7 @@ export default function CreateInvoice() {
         <div>
           <h1 className="text-[32px] font-semibold text-[#404040] dark:text-white tracking-tight">Create Invoice</h1>
           <p className="text-[#aeaeae] text-base mt-1">
-            Create a new invoice payment link
+            Send an invoice or save as draft to edit later
           </p>
         </div>
       </div>
@@ -694,6 +743,26 @@ export default function CreateInvoice() {
         {/* Payment details */}
         <div className="rounded-[20px] border border-[#f1f1f1] dark:border-gray-700 bg-white dark:bg-gray-800 p-4 md:p-6 shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04)]">
           <h2 className="mb-3 text-lg font-semibold text-[#1a1a1a] dark:text-white">Payment Details</h2>
+          <div className="grid gap-4 md:grid-cols-2 mb-4">
+            <div className="space-y-2">
+              <Label htmlFor="sellerName">Seller / Business Name</Label>
+              <Input
+                id="sellerName"
+                placeholder="Your business name"
+                value={formData.sellerName}
+                onChange={(e) => setFormData({ ...formData, sellerName: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="invoiceNumber">Invoice Number</Label>
+              <Input
+                id="invoiceNumber"
+                placeholder="INV-0001"
+                value={formData.invoiceNumber}
+                onChange={(e) => setFormData({ ...formData, invoiceNumber: e.target.value })}
+              />
+            </div>
+          </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="dueDate">
@@ -737,6 +806,26 @@ export default function CreateInvoice() {
             <Button variant="outline" type="button" asChild size="sm" className="flex-shrink-0 rounded-xl border-[#e8e8e8] hover:border-[#c8ff00] hover:bg-[#c8ff00]/10">
               <Link to="/app/invoices">Cancel</Link>
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isSavingDraft || !address}
+              onClick={handleSaveDraft}
+              className="flex-shrink-0 rounded-xl border-[#e8e8e8] hover:border-[#c8ff00] hover:bg-[#c8ff00]/10"
+            >
+              {isSavingDraft ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Draft
+                </>
+              )}
+            </Button>
             <Button 
               type="submit" 
               size="sm"
@@ -751,7 +840,7 @@ export default function CreateInvoice() {
               ) : (
                 <>
                   <Check className="mr-2 h-4 w-4" />
-                  Create Invoice On-Chain
+                  Send Invoice
                 </>
               )}
             </Button>
@@ -770,8 +859,8 @@ export default function CreateInvoice() {
       <DialogContent className="sm:max-w-md text-center">
         <div className="flex flex-col items-center space-y-6 py-6">
           {/* Big Green Checkmark */}
-          <div className="flex items-center justify-center w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/20">
-            <CheckCircle2 className="h-16 w-16 text-green-600 dark:text-green-500" />
+          <div className="flex items-center justify-center w-20 h-20 rounded-full bg-[#c8ff00]/15 dark:bg-[#c8ff00]/10">
+            <CheckCircle2 className="h-16 w-16 text-[#7cb518] dark:text-[#c8ff00]" />
           </div>
 
           {/* Success Message */}
@@ -831,7 +920,7 @@ export default function CreateInvoice() {
                 {formData.buyerAddress && formData.buyerName && isSupabaseConfigured() && (
                   <Button
                     variant="ghost"
-                    className="w-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
+                    className="w-full text-[#7cb518] hover:text-[#5a8c1a] hover:bg-[#c8ff00]/10 dark:text-[#c8ff00] dark:hover:bg-[#c8ff00]/10"
                     onClick={async () => {
                       const result = await addContact(
                         formData.buyerAddress,

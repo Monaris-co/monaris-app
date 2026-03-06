@@ -13,6 +13,7 @@ import Dashboard from "./pages/app/Dashboard";
 import Invoices from "./pages/app/Invoices";
 import InvoiceDetail from "./pages/app/InvoiceDetail";
 import CreateInvoice from "./pages/app/CreateInvoice";
+import EditInvoice from "./pages/app/EditInvoice";
 import Financing from "./pages/app/Financing";
 import Vault from "./pages/app/Vault";
 import Reputation from "./pages/app/Reputation";
@@ -39,6 +40,7 @@ const MainAppRoutes = () => (
       <Route path="invoices" element={<Invoices />} />
       <Route path="invoices/:invoiceId" element={<InvoiceDetail />} />
       <Route path="invoices/new" element={<CreateInvoice />} />
+      <Route path="invoices/:invoiceId/edit" element={<EditInvoice />} />
       <Route path="financing" element={<Financing />} />
       <Route path="vault" element={<Vault />} />
       <Route path="private-payments" element={<PrivatePayments />} />

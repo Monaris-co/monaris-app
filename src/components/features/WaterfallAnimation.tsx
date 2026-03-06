@@ -75,7 +75,7 @@ export function WaterfallAnimation({
                 initial={{ width: 0 }}
                 animate={{ width: `${sellerPercent}%` }}
                 transition={{ duration: 0.6, delay: isFinanced ? 0.6 : 0.4 }}
-                className="h-full bg-emerald-500"
+                className="h-full bg-[#c8ff00]"
               />
             </div>
           </div>
@@ -128,16 +128,16 @@ export function WaterfallAnimation({
               label="Seller Receives"
               amount={actualSellerAmount}
               percent={sellerPercent}
-              color="text-emerald-600"
-              bgColor="bg-emerald-50 dark:bg-emerald-950/50"
+              color="text-[#7cb518]"
+              bgColor="bg-[#c8ff00]/10 dark:bg-[#c8ff00]/10"
               delay={isFinanced ? 0.6 : 0.4}
               description="Net proceeds"
               highlight
               breakdown={
                 advancePaid !== undefined && (
-                  <div className="mt-1.5 rounded bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 text-xs">
+                  <div className="mt-1.5 rounded bg-[#c8ff00]/15 dark:bg-[#c8ff00]/15 px-2 py-1 text-xs">
                     <span className="text-muted-foreground">Advance paid: </span>
-                    <span className="font-semibold text-emerald-700 dark:text-emerald-300">
+                    <span className="font-semibold text-[#7cb518] dark:text-[#c8ff00]">
                       ${advancePaid.toLocaleString()}
                     </span>
                   </div>
@@ -182,7 +182,7 @@ function CompactSegment({
       className={cn(
         "rounded-lg border p-3 transition-colors",
         highlight 
-          ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/50" 
+          ? "border-[#c8ff00]/30 dark:border-[#c8ff00]/20 bg-[#c8ff00]/10 dark:bg-[#c8ff00]/10" 
           : `border-border ${bgColor}`
       )}
     >
@@ -192,7 +192,7 @@ function CompactSegment({
           {icon}
         </div>
         <div className="min-w-0 flex-1">
-          <p className={cn("text-xs font-medium truncate", highlight ? "text-emerald-700 dark:text-emerald-300" : "text-muted-foreground")}>
+          <p className={cn("text-xs font-medium truncate", highlight ? "text-[#7cb518] dark:text-[#c8ff00]" : "text-muted-foreground")}>
             {label}
           </p>
         </div>
@@ -201,7 +201,7 @@ function CompactSegment({
       {/* Amount */}
       <p className={cn(
         "text-lg font-bold number-display mb-0.5",
-        highlight ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"
+        highlight ? "text-[#7cb518] dark:text-[#c8ff00]" : "text-foreground"
       )}>
         ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </p>
@@ -209,7 +209,7 @@ function CompactSegment({
       {/* Description and Percent */}
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground">{description}</p>
-        <span className={cn("text-xs font-semibold", highlight ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>
+        <span className={cn("text-xs font-semibold", highlight ? "text-[#7cb518] dark:text-[#c8ff00]" : "text-muted-foreground")}>
           {percent.toFixed(1)}%
         </span>
       </div>

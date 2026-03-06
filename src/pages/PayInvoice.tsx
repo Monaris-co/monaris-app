@@ -37,6 +37,8 @@ import { Link } from "react-router-dom"
 import { getExplorerUrl, getExplorerAddressUrl, getPaymentLink, CHAIN_IDS } from "@/lib/chain-utils"
 import { useSearchParams } from "react-router-dom"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
+import { rejectInvoice as rejectInvoiceAction } from "@/hooks/useInvoice"
+import { AlertTriangle, XCircle } from "lucide-react"
 import { PRIVATE_PAYMENTS_ENABLED } from "@/lib/privacy/config"
 import { PrivatePayButton } from "@/components/privacy/PrivatePayButton"
 import { ShieldDialog } from "@/components/privacy/ShieldDialog"
@@ -91,18 +93,24 @@ export default function PayInvoice() {
   
   // Fetch invoice metadata from Supabase (persisted across devices)
   const [supabaseMetadata, setSupabaseMetadata] = useState<{
-    buyer_name?: string; buyer_email?: string; memo?: string; line_items?: any[]
+    id?: string; buyer_name?: string; buyer_email?: string; memo?: string; line_items?: any[];
+    seller_name?: string; invoice_number?: string; status?: string; is_draft?: boolean;
   } | null>(null)
   useEffect(() => {
     if (!invoiceId || !isSupabaseConfigured()) return
     const cid = targetChainId || 42161
     supabase
       .from('invoices')
-      .select('buyer_name, buyer_email, memo, line_items')
+      .select('id, buyer_name, buyer_email, memo, line_items, seller_name, invoice_number, status, is_draft')
       .eq('chain_invoice_id', Number(invoiceId))
       .eq('chain_id', cid)
       .maybeSingle()
-      .then(({ data }) => { if (data) setSupabaseMetadata(data) })
+      .then(({ data }) => {
+        if (data) {
+          setSupabaseMetadata(data)
+          if (data.status === 'rejected') setIsRejected(true)
+        }
+      })
   }, [invoiceId, targetChainId])
 
   const { invoice, isLoading: isLoadingInvoice } = useInvoice(invoiceId)
@@ -209,7 +217,7 @@ export default function PayInvoice() {
     }
   }, [authenticated, address, chainId, addresses.InvoiceRegistry, addresses.SettlementRouter, addresses.DemoUSDC])
   
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PRIVATE_PAYMENTS_ENABLED ? "private" : "privy")
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("privy")
   const [shieldDialogOpen, setShieldDialogOpen] = useState(false)
   const { privateUsdcBalance, isEnabled: isPrivacyEnabled } = usePrivateBalance()
   const [cardNumber, setCardNumber] = useState("")
@@ -220,6 +228,8 @@ export default function PayInvoice() {
   const [payHash, setPayHash] = useState<`0x${string}` | null>(null)
   const [isApproving, setIsApproving] = useState(false)
   const [isPaying, setIsPaying] = useState(false)
+  const [isRejecting, setIsRejecting] = useState(false)
+  const [isRejected, setIsRejected] = useState(false)
   
   // Get correct USDC ABI based on chain (real USDC for mainnet, DemoUSDC for testnet)
   const usdcABI = getUSDCABI(chainId)
@@ -326,17 +336,72 @@ export default function PayInvoice() {
   // Handle payment transaction confirmation - ONLY show success when transaction is confirmed on-chain
   useEffect(() => {
     if (payHash && isPaymentConfirmed) {
-      // Transaction is confirmed on-chain
       console.log('[Payment] Transaction confirmed on-chain:', payHash)
       toast.success("Payment confirmed!", {
         description: "Settlement is being finalized on-chain.",
       })
       setStep("complete")
-      // Clear pending transaction record
+
+      // Sync Supabase status + notify seller (mirrors the notification pattern used elsewhere)
+      if (invoiceId && isSupabaseConfigured() && invoice) {
+        const cid = targetChainId || 42161
+        const amtStr = formatUnits(invoice.amount, 6)
+        const invNum = supabaseMetadata?.invoice_number || `INV-${invoiceId}`
+
+        const syncPayment = async () => {
+          try {
+            // 1) Try to update existing Supabase row
+            const { data: updated, error: updateErr } = await supabase
+              .from('invoices')
+              .update({
+                status: 'paid',
+                tx_hash: payHash,
+                payment_completed_at: new Date().toISOString(),
+              })
+              .eq('chain_invoice_id', Number(invoiceId))
+              .eq('chain_id', cid)
+              .select('id')
+              .maybeSingle()
+
+            // 2) If no row existed, insert one so it shows in both seller & buyer lists
+            if (!updated && !updateErr) {
+              await supabase.from('invoices').insert({
+                chain_invoice_id: Number(invoiceId),
+                chain_id: cid,
+                seller_address: invoice.seller.toLowerCase(),
+                buyer_address: invoice.buyer.toLowerCase(),
+                amount: parseFloat(amtStr),
+                due_date: new Date(Number(invoice.dueDate) * 1000).toISOString(),
+                status: 'paid',
+                tx_hash: payHash,
+                is_draft: false,
+                payment_completed_at: new Date().toISOString(),
+                invoice_number: invNum,
+              })
+            }
+            if (updateErr) console.warn('[Payment] Supabase update failed:', updateErr.message)
+
+            // 3) Notify the seller that the invoice was paid
+            await supabase.from('notifications').insert({
+              recipient_address: invoice.seller.toLowerCase(),
+              type: 'invoice_paid',
+              title: 'Invoice Paid',
+              message: `Invoice ${invNum} was paid for $${parseFloat(amtStr).toFixed(2)}`,
+              chain_invoice_id: Number(invoiceId),
+              chain_id: cid,
+            })
+            console.log('[Payment] Supabase synced + seller notified')
+          } catch (err: any) {
+            console.warn('[Payment] Supabase sync error:', err?.message)
+          }
+        }
+        syncPayment()
+      }
+
       if (invoiceId) {
         localStorage.removeItem(`pending_payment_${invoiceId}`)
         setTimeout(() => {
-          window.location.reload() // Force refresh to get latest invoice status
+          window.location.reload()
         }, 2000)
       }
     } else if (payHash && isPaymentError) {
@@ -813,6 +878,22 @@ export default function PayInvoice() {
     toast.success("Payment link copied!")
   }
 
+  const handleReject = async () => {
+    if (!supabaseMetadata?.id || !invoice) return
+    if (!confirm('Reject this invoice? The seller will be notified.')) return
+    setIsRejecting(true)
+    try {
+      const invNum = supabaseMetadata.invoice_number || `INV-${invoiceId}`
+      await rejectInvoiceAction(supabaseMetadata.id, invoice.seller, invNum)
+      setIsRejected(true)
+      toast.success("Invoice rejected", { description: "The seller has been notified." })
+    } catch (err: any) {
+      toast.error("Failed to reject", { description: err?.message })
+    } finally {
+      setIsRejecting(false)
+    }
+  }
+
   // Debug: Log wallet comparison (must be before early returns)
   useEffect(() => {
     if (address && invoice) {
@@ -880,9 +961,7 @@ export default function PayInvoice() {
   const buyerName = metadata.buyerName && metadata.buyerName.trim() !== '' 
     ? metadata.buyerName 
     : invoice.buyer.slice(0, 6) + '...' + invoice.buyer.slice(-4)
-  const sellerName = metadata.sellerName && metadata.sellerName.trim() !== '' 
-    ? metadata.sellerName 
-    : 'Monaris Business'
+  const sellerName = (supabaseMetadata?.seller_name || metadata.sellerName || '').trim() || 'Monaris Business'
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
@@ -1029,17 +1108,48 @@ export default function PayInvoice() {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td className="px-3 py-2.5 text-sm font-medium text-white">Invoice Amount</td>
-                    <td className="px-3 py-2.5 text-sm text-white/50">Payment for INV-{invoice.invoiceId.toString().padStart(6, '0')}</td>
-                    <td className="px-3 py-2.5 text-sm text-center text-white/70">1</td>
-                    <td className="px-3 py-2.5 text-sm text-right text-white/70">${amountDisplay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td className="px-3 py-2.5 text-sm font-semibold text-right text-white">${amountDisplay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                  </tr>
+                  {metadata.lineItems && metadata.lineItems.length > 0 ? (
+                    metadata.lineItems.map((item: any, idx: number) => (
+                      <tr key={idx}>
+                        <td className="px-3 py-2.5 text-sm font-medium text-white">{item.description || `Item ${idx + 1}`}</td>
+                        <td className="px-3 py-2.5 text-sm text-white/50">Payment for {supabaseMetadata?.invoice_number || `INV-${invoice.invoiceId.toString().padStart(6, '0')}`}</td>
+                        <td className="px-3 py-2.5 text-sm text-center text-white/70">{item.quantity || 1}</td>
+                        <td className="px-3 py-2.5 text-sm text-right text-white/70">${(item.rate || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="px-3 py-2.5 text-sm font-semibold text-right text-white">${((item.quantity || 1) * (item.rate || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td className="px-3 py-2.5 text-sm font-medium text-white">Invoice Amount</td>
+                      <td className="px-3 py-2.5 text-sm text-white/50">Payment for {supabaseMetadata?.invoice_number || `INV-${invoice.invoiceId.toString().padStart(6, '0')}`}</td>
+                      <td className="px-3 py-2.5 text-sm text-center text-white/70">1</td>
+                      <td className="px-3 py-2.5 text-sm text-right text-white/70">${amountDisplay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="px-3 py-2.5 text-sm font-semibold text-right text-white">${amountDisplay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
+
+            {/* Memo */}
+            {metadata.memo && (
+              <div className="mt-3 px-3 py-2.5 rounded-lg bg-white/[0.04] border border-white/[0.06]">
+                <p className="text-xs font-medium text-white/40 mb-1">Memo</p>
+                <p className="text-sm text-white/70">{metadata.memo}</p>
+              </div>
+            )}
           </div>
+
+          {/* Rejected banner */}
+          {isRejected && (
+            <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 flex items-center gap-3">
+              <XCircle className="h-6 w-6 text-red-400 flex-shrink-0" />
+              <div>
+                <h3 className="text-sm font-semibold text-white">Invoice Rejected</h3>
+                <p className="text-xs text-white/50 mt-0.5">You rejected this invoice. The seller has been notified.</p>
+              </div>
+            </div>
+          )}
 
           {/* Payment Method Selection */}
           {invoice.status < 2 && (
@@ -1048,27 +1158,16 @@ export default function PayInvoice() {
               
               {/* Payment Method Options */}
               <div className="mb-4 flex gap-2">
-                {isPrivacyEnabled && (
-                  <button
-                    onClick={() => {
-                      setPaymentMethod("private")
-                      if (!address) connectWallet()
-                    }}
-                    className={`flex-1 rounded-xl border p-3 transition-all ${
-                      paymentMethod === "private"
-                        ? "border-[#c8ff00]/60 bg-[#c8ff00]/10 text-[#c8ff00]"
-                        : "border-white/[0.08] text-white/60 hover:border-white/20 hover:text-white/80"
-                    }`}
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      <Shield className="h-4 w-4" />
-                      <span className="font-medium text-sm">Private</span>
-                    </div>
-                    {paymentMethod === "private" && (
-                      <p className="text-[9px] text-[#c8ff00] mt-0.5 text-center">Recommended</p>
-                    )}
-                  </button>
-                )}
+                <button
+                  disabled
+                  className="flex-1 rounded-xl border border-white/[0.08] p-3 opacity-50 cursor-not-allowed relative"
+                >
+                  <div className="flex items-center justify-center gap-2 text-white/40">
+                    <Shield className="h-4 w-4" />
+                    <span className="font-medium text-sm">Private</span>
+                  </div>
+                  <p className="text-[9px] text-[#c8ff00] mt-0.5 text-center font-semibold">Coming Soon</p>
+                </button>
                 <button
                   onClick={() => {
                     setPaymentMethod("privy")
@@ -1087,31 +1186,25 @@ export default function PayInvoice() {
                 </button>
                 
                 <button
-                  onClick={() => setPaymentMethod("card")}
-                  className={`flex-1 rounded-xl border p-3 transition-all ${
-                    paymentMethod === "card"
-                      ? "border-[#c8ff00]/60 bg-[#c8ff00]/10 text-[#c8ff00]"
-                      : "border-white/[0.08] text-white/60 hover:border-white/20 hover:text-white/80"
-                  }`}
+                  disabled
+                  className="flex-1 rounded-xl border border-white/[0.08] p-3 opacity-50 cursor-not-allowed"
                 >
-                  <div className="flex items-center justify-center gap-2">
+                  <div className="flex items-center justify-center gap-2 text-white/40">
                     <CreditCard className="h-4 w-4" />
                     <span className="font-medium text-sm">Card</span>
                   </div>
+                  <p className="text-[9px] text-[#c8ff00] mt-0.5 text-center font-semibold">Coming Soon</p>
                 </button>
                 
                 <button
-                  onClick={() => setPaymentMethod("bank")}
-                  className={`flex-1 rounded-xl border p-3 transition-all ${
-                    paymentMethod === "bank"
-                      ? "border-[#c8ff00]/60 bg-[#c8ff00]/10 text-[#c8ff00]"
-                      : "border-white/[0.08] text-white/60 hover:border-white/20 hover:text-white/80"
-                  }`}
+                  disabled
+                  className="flex-1 rounded-xl border border-white/[0.08] p-3 opacity-50 cursor-not-allowed"
                 >
-                  <div className="flex items-center justify-center gap-2">
+                  <div className="flex items-center justify-center gap-2 text-white/40">
                     <Building2 className="h-4 w-4" />
                     <span className="font-medium text-sm">Bank transfer</span>
                   </div>
+                  <p className="text-[9px] text-[#c8ff00] mt-0.5 text-center font-semibold">Coming Soon</p>
                 </button>
                 
                 <button
@@ -1360,8 +1453,25 @@ export default function PayInvoice() {
                   </Button>
                 </div>
               )}
-              </div>
-            )}
+              {/* Reject button */}
+              {!isRejected && isBuyer && supabaseMetadata?.id && (
+                <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                  <button
+                    onClick={handleReject}
+                    disabled={isRejecting}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-500/30 text-red-400 text-sm font-medium hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                  >
+                    {isRejecting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <AlertTriangle className="h-4 w-4" />
+                    )}
+                    {isRejecting ? 'Rejecting...' : 'Reject Invoice'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
             {invoice.status >= 2 && (
             <div className="rounded-2xl border border-[#c8ff00]/20 bg-[#c8ff00]/5 p-4 text-center">
@@ -1392,7 +1502,19 @@ export default function PayInvoice() {
                 opacity: isActuallyLoggedIn ? 1 : 0.5
               }} />
               {isActuallyLoggedIn && address ? (
-                <span className="font-mono">{address.slice(0, 6)}...{address.slice(-4)}</span>
+                <>
+                  <span className="font-mono">{address.slice(0, 6)}...{address.slice(-4)}</span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(address)
+                      toast.success("Address copied to clipboard")
+                    }}
+                    className="hover:text-white/70 transition-colors"
+                    title="Copy full address"
+                  >
+                    <Copy className="h-3 w-3" />
+                  </button>
+                </>
               ) : (
                 <span>Not connected</span>
               )}

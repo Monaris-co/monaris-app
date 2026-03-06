@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useReadContract, useWaitForTransactionReceipt, useWatchContractEvent, useChainId, usePublicClient } from 'wagmi';
 import { usePrivyAccount } from './usePrivyAccount';
 import { useChainAddresses } from './useChainAddresses';
 import { InvoiceRegistryABI } from '@/lib/abis';
 import { useSendTransaction, useWallets } from '@privy-io/react-auth';
 import { encodeFunctionData } from 'viem';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 export type InvoiceStatus = 0 | 1 | 2 | 3; // Issued | Financed | Paid | Cleared
 
@@ -551,5 +552,246 @@ export function useSellerInvoicesWithData(sellerAddress?: string) {
     error: idsError || error,
     refetch: refetchIds,
   };
+}
+
+// ─── Supabase-backed types & hooks ────────────────────────────────────────────
+
+export interface SupabaseInvoice {
+  id: string;
+  chain_invoice_id: number | null;
+  chain_id: number;
+  seller_address: string;
+  buyer_address: string;
+  amount: number;
+  due_date: string;
+  status: string;
+  tx_hash: string | null;
+  buyer_name: string | null;
+  buyer_email: string | null;
+  memo: string | null;
+  line_items: { description: string; quantity: number; rate: number }[] | null;
+  is_draft: boolean;
+  seller_name: string | null;
+  invoice_number: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export function useSellerSupabaseInvoices(sellerAddress?: string) {
+  const { address } = usePrivyAccount();
+  const chainId = useChainId();
+  const seller = (sellerAddress || address)?.toLowerCase();
+  const [invoices, setInvoices] = useState<SupabaseInvoice[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetchInvoices = useCallback(async () => {
+    if (!seller || !isSupabaseConfigured()) {
+      setInvoices([]);
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const { data, error: err } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('seller_address', seller)
+        .order('updated_at', { ascending: false });
+      if (err) throw new Error(err.message);
+      setInvoices((data as SupabaseInvoice[]) || []);
+      setError(null);
+    } catch (e: any) {
+      setError(e);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [seller]);
+
+  useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
+
+  return { invoices, isLoading, error, refetch: fetchInvoices };
+}
+
+export function useBuyerInvoices(buyerAddress?: string) {
+  const { address } = usePrivyAccount();
+  const buyer = (buyerAddress || address)?.toLowerCase();
+  const [invoices, setInvoices] = useState<SupabaseInvoice[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetchInvoices = useCallback(async () => {
+    if (!buyer || !isSupabaseConfigured()) {
+      setInvoices([]);
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const { data, error: err } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('buyer_address', buyer)
+        .eq('is_draft', false)
+        .neq('status', 'rejected')
+        .order('created_at', { ascending: false });
+      if (err) throw new Error(err.message);
+      setInvoices((data as SupabaseInvoice[]) || []);
+      setError(null);
+    } catch (e: any) {
+      setError(e);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [buyer]);
+
+  useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
+
+  return { invoices, isLoading, error, refetch: fetchInvoices };
+}
+
+export function useSupabaseInvoice(invoiceUuid?: string) {
+  const [invoice, setInvoice] = useState<SupabaseInvoice | null>(null);
+  const [isLoading, setIsLoading] = useState(!!invoiceUuid);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetchInvoice = useCallback(async () => {
+    if (!invoiceUuid || !isSupabaseConfigured()) {
+      setInvoice(null);
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const { data, error: err } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('id', invoiceUuid)
+        .single();
+      if (err) throw new Error(err.message);
+      setInvoice(data as SupabaseInvoice);
+      setError(null);
+    } catch (e: any) {
+      setError(e);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [invoiceUuid]);
+
+  useEffect(() => { fetchInvoice(); }, [fetchInvoice]);
+
+  return { invoice, isLoading, error, refetch: fetchInvoice };
+}
+
+export async function saveDraftInvoice(data: {
+  id?: string;
+  chain_id: number;
+  seller_address: string;
+  buyer_address: string;
+  amount: number;
+  due_date: string;
+  buyer_name?: string;
+  buyer_email?: string;
+  memo?: string;
+  line_items?: { description: string; quantity: number; rate: number }[];
+  seller_name?: string;
+  invoice_number?: string;
+}): Promise<{ id: string } | null> {
+  if (!isSupabaseConfigured()) return null;
+
+  const row = {
+    chain_id: data.chain_id,
+    seller_address: data.seller_address.toLowerCase(),
+    buyer_address: data.buyer_address.toLowerCase(),
+    amount: data.amount,
+    due_date: data.due_date,
+    status: 'draft',
+    is_draft: true,
+    buyer_name: data.buyer_name || null,
+    buyer_email: data.buyer_email || null,
+    memo: data.memo || null,
+    line_items: data.line_items || null,
+    seller_name: data.seller_name || null,
+    invoice_number: data.invoice_number || null,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (data.id) {
+    const { error } = await supabase
+      .from('invoices')
+      .update(row)
+      .eq('id', data.id);
+    if (error) throw new Error(error.message);
+    return { id: data.id };
+  }
+
+  const { data: inserted, error } = await supabase
+    .from('invoices')
+    .insert({ ...row, chain_invoice_id: null })
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  return inserted as { id: string };
+}
+
+export async function publishDraftOnChain(
+  invoiceUuid: string,
+  chainInvoiceId: number,
+  txHash: string,
+): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  const { error } = await supabase
+    .from('invoices')
+    .update({
+      chain_invoice_id: chainInvoiceId,
+      is_draft: false,
+      status: 'issued',
+      tx_hash: txHash,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', invoiceUuid);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteDraftInvoice(invoiceUuid: string): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  const { error } = await supabase
+    .from('invoices')
+    .delete()
+    .eq('id', invoiceUuid)
+    .eq('is_draft', true);
+  if (error) throw new Error(error.message);
+}
+
+export async function rejectInvoice(
+  invoiceUuid: string,
+  sellerAddress: string,
+  invoiceNumber: string,
+): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+
+  const { error: updateErr } = await supabase
+    .from('invoices')
+    .update({ status: 'rejected', updated_at: new Date().toISOString() })
+    .eq('id', invoiceUuid);
+  if (updateErr) throw new Error(updateErr.message);
+
+  await supabase.from('notifications').insert({
+    recipient_address: sellerAddress.toLowerCase(),
+    type: 'invoice_rejected',
+    title: 'Invoice Rejected',
+    message: `Buyer rejected invoice ${invoiceNumber || invoiceUuid.slice(0, 8)}`,
+    invoice_id: invoiceUuid,
+  });
+}
+
+export async function getNextInvoiceNumber(sellerAddress: string): Promise<string> {
+  if (!isSupabaseConfigured()) return 'INV-0001';
+  const { count } = await supabase
+    .from('invoices')
+    .select('id', { count: 'exact', head: true })
+    .eq('seller_address', sellerAddress.toLowerCase());
+  const num = (count || 0) + 1;
+  return `INV-${num.toString().padStart(4, '0')}`;
 }
 

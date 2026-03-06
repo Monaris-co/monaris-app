@@ -156,7 +156,7 @@ function ProofDetailsPanel({ proof, onClose }: { proof: SnarkProofData; onClose:
           onClick={() => copyToClipboard('full', fullProofJson)}
           className="flex items-center gap-1.5 px-1.5 py-1 rounded text-[9px] font-bold text-[#666] dark:text-[#888] hover:bg-[#f0f0f0] dark:hover:bg-[#222] transition-colors border border-transparent hover:border-[#e0e0e0] dark:hover:border-[#333]"
         >
-          {copied === 'full' ? <Check className="h-2.5 w-2.5 text-[#22c55e]" /> : <Copy className="h-2.5 w-2.5" />}
+          {copied === 'full' ? <Check className="h-2.5 w-2.5 text-[#7cb518]" /> : <Copy className="h-2.5 w-2.5" />}
           {copied === 'full' ? 'Copied' : 'Copy JSON'}
         </button>
       </div>
@@ -195,7 +195,7 @@ function ProofDetailsPanel({ proof, onClose }: { proof: SnarkProofData; onClose:
               onClick={() => copyToClipboard(label, raw)}
               className="p-1 rounded hover:bg-[#f5f5f5] dark:hover:bg-[#222] transition-colors flex-shrink-0"
             >
-              {copied === label ? <Check className="h-3 w-3 text-[#22c55e]" /> : <Copy className="h-3 w-3 text-[#bbb]" />}
+              {copied === label ? <Check className="h-3 w-3 text-[#7cb518]" /> : <Copy className="h-3 w-3 text-[#bbb]" />}
             </button>
           </div>
         ))}
@@ -739,13 +739,13 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
                             className={`w-full bg-white dark:bg-[#1a1a1a] border rounded-[10px] px-3 py-2 text-[12px] font-mono text-[#1a1a1a] dark:text-white placeholder:text-[#ccc] dark:placeholder:text-[#444] outline-none transition-colors ${customRecipient.length > 0 && !isValidCustomAddress
                               ? 'border-red-400 focus:border-red-500'
                               : isValidCustomAddress
-                                ? 'border-[#22c55e]/50 focus:border-[#22c55e]'
+                                ? 'border-[#c8ff00]/50 focus:border-[#c8ff00]'
                                 : 'border-[#1a1a1a]/10 dark:border-[#333] focus:border-[#c8ff00]'
                               }`}
                           />
                           {isValidCustomAddress && (
                             <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                              <Check className="h-4 w-4 text-[#22c55e]" />
+                              <Check className="h-4 w-4 text-[#7cb518]" />
                             </div>
                           )}
                         </div>

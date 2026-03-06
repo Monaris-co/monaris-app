@@ -11,7 +11,9 @@ import {
   Eye,
   Loader2,
   RotateCcw,
-  ImageIcon
+  ImageIcon,
+  Edit,
+  Copy as CopyIcon
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
@@ -26,11 +28,14 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { toast as shadcnToast } from "@/hooks/use-toast"
 import { toast } from "sonner"
-import { useSellerInvoicesWithData, Invoice, InvoiceStatus } from "@/hooks/useInvoice"
+import { useSellerInvoicesWithData, Invoice, InvoiceStatus, useSellerSupabaseInvoices, SupabaseInvoice, deleteDraftInvoice, saveDraftInvoice } from "@/hooks/useInvoice"
+import { supabase, isSupabaseConfigured } from "@/lib/supabase"
+import { usePrivyAccount } from "@/hooks/usePrivyAccount"
 import { useInvoiceNFT } from "@/hooks/useInvoiceNFT"
 import { formatUnits } from "viem"
 import { useChainAddresses } from "@/hooks/useChainAddresses"
-import { useChainId } from "wagmi"
+import { useChainId, usePublicClient } from "wagmi"
+import { InvoiceRegistryABI } from "@/lib/abis"
 import { getPaymentLink } from "@/lib/chain-utils"
 import { Trash2, Download } from "lucide-react"
 import { downloadInvoicePDF } from "@/lib/generateInvoicePDF"
@@ -71,14 +76,18 @@ function setHiddenInvoices(hidden: Set<string>) {
 export default function Invoices() {
   const chainId = useChainId()
   const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
   const [hiddenInvoiceIds, setHiddenInvoiceIds] = useState<Set<string>>(() => getHiddenInvoices())
   const { invoices, isLoading, error } = useSellerInvoicesWithData()
+  const { address } = usePrivyAccount()
+  const { invoices: supabaseInvoices, isLoading: isLoadingSupa, refetch: refetchSupa } = useSellerSupabaseInvoices()
   const addresses = useChainAddresses()
+  const publicClient = usePublicClient({ chainId })
+  const [syncDone, setSyncDone] = useState(false)
 
   // Sync hidden invoices with localStorage (only write, don't read to avoid loops)
   useEffect(() => {
     if (hiddenInvoiceIds.size === 0) {
-      // If empty, clear localStorage
       if (typeof window !== 'undefined') {
         localStorage.removeItem(HIDDEN_INVOICES_KEY)
       }
@@ -87,7 +96,80 @@ export default function Invoices() {
     }
   }, [hiddenInvoiceIds])
 
-  const handleHideInvoice = (invoiceId: bigint) => {
+  // One-time sync: update stale statuses AND insert missing Supabase rows for on-chain invoices
+  useEffect(() => {
+    if (syncDone || !publicClient || !addresses.InvoiceRegistry || !isSupabaseConfigured()) return
+    if (!supabaseInvoices || !invoices) return
+    setSyncDone(true)
+
+    const supaChainIdSet = new Set<number>()
+    for (const si of supabaseInvoices) {
+      if (si.chain_invoice_id != null) supaChainIdSet.add(si.chain_invoice_id)
+    }
+
+    const syncAll = async () => {
+      let changed = false
+
+      // 1) Update stale Supabase invoices with on-chain status
+      const staleInvoices = supabaseInvoices.filter(
+        si => !si.is_draft && si.status !== 'rejected' && si.chain_invoice_id != null &&
+              si.status !== 'paid' && si.status !== 'cleared'
+      )
+      if (staleInvoices.length > 0) {
+        const updates: { supaId: string; newStatus: string }[] = []
+        await Promise.all(
+          staleInvoices.map(async (si) => {
+            try {
+              const onChain = await (publicClient.readContract as any)({
+                address: addresses.InvoiceRegistry as `0x${string}`,
+                abi: InvoiceRegistryABI,
+                functionName: 'getInvoice',
+                args: [BigInt(si.chain_invoice_id!)],
+              }) as { status: number }
+              const onChainStatus = STATUS_MAP[onChain.status as InvoiceStatus] || 'issued'
+              if (onChainStatus !== si.status) {
+                updates.push({ supaId: si.id, newStatus: onChainStatus })
+              }
+            } catch { /* skip */ }
+          })
+        )
+        if (updates.length > 0) {
+          console.log(`[Invoices] Updating ${updates.length} stale statuses`)
+          await Promise.all(
+            updates.map(u => supabase.from('invoices').update({ status: u.newStatus }).eq('id', u.supaId))
+          )
+          changed = true
+        }
+      }
+
+      // 2) Insert Supabase rows for on-chain invoices that have no Supabase entry
+      //    This makes them visible to the buyer's dashboard too
+      const missingInvoices = (invoices || []).filter(
+        inv => inv && inv.invoiceId != null && !supaChainIdSet.has(Number(inv.invoiceId))
+      )
+      if (missingInvoices.length > 0) {
+        console.log(`[Invoices] Creating ${missingInvoices.length} missing Supabase rows`)
+        const rows = missingInvoices.map(inv => ({
+          chain_invoice_id: Number(inv.invoiceId),
+          chain_id: chainId,
+          seller_address: inv.seller.toLowerCase(),
+          buyer_address: inv.buyer.toLowerCase(),
+          amount: parseFloat(formatUnits(inv.amount, 6)),
+          due_date: new Date(Number(inv.dueDate) * 1000).toISOString(),
+          status: STATUS_MAP[inv.status as InvoiceStatus] || 'issued',
+          is_draft: false,
+        }))
+        await supabase.from('invoices').upsert(rows, { onConflict: 'chain_id,chain_invoice_id', ignoreDuplicates: true })
+        changed = true
+      }
+
+      if (changed) refetchSupa()
+    }
+    syncAll()
+  }, [supabaseInvoices, invoices, publicClient, addresses.InvoiceRegistry, syncDone, chainId])
+
+  const handleHideInvoice = (invoiceId: bigint | null) => {
+    if (!invoiceId) return
     setHiddenInvoiceIds(prev => new Set([...prev, invoiceId.toString()]))
     toast.success("Invoice hidden", {
       description: "The invoice has been hidden from your list. It still exists on-chain.",
@@ -113,62 +195,121 @@ export default function Invoices() {
     })
   }
 
-  // Format invoices for display
   const formattedInvoices = useMemo(() => {
-    if (!invoices) return []
-    
-    return invoices.map((invoice) => ({
-      id: `INV-${invoice.invoiceId.toString().padStart(10, '0')}`, // 10 digits to match PDF format
-      invoiceId: invoice.invoiceId,
-      buyer: invoice.buyer,
-      seller: invoice.seller,
-      amount: parseFloat(formatUnits(invoice.amount, 6)), // USDC has 6 decimals
-      amountRaw: invoice.amount, // Keep raw bigint for PDF
-      status: STATUS_MAP[invoice.status] as "issued" | "financed" | "paid" | "cleared",
-      dueDate: new Date(Number(invoice.dueDate) * 1000),
-      createdDate: new Date(Number(invoice.createdAt) * 1000),
-      paidAt: invoice.paidAt,
-      clearedAt: invoice.clearedAt,
-      link: getPaymentLink(chainId, invoice.invoiceId),
-    }))
-  }, [invoices, chainId])
+    const merged: {
+      id: string
+      supabaseId: string
+      invoiceId: bigint | null
+      buyer: string
+      seller: string
+      amount: number
+      amountRaw?: bigint
+      status: string
+      dueDate: Date
+      createdDate: Date
+      link: string
+      isDraft: boolean
+      buyerName?: string
+      invoiceNumber?: string
+      paidAt?: bigint
+      clearedAt?: bigint
+    }[] = []
+
+    // Build on-chain status lookup: chainInvoiceId -> on-chain status string
+    const onChainStatusMap = new Map<number, { status: string; paidAt?: bigint; clearedAt?: bigint }>()
+    for (const inv of (invoices || [])) {
+      if (!inv || inv.invoiceId == null) continue
+      onChainStatusMap.set(Number(inv.invoiceId), {
+        status: STATUS_MAP[inv.status] || 'issued',
+        paidAt: inv.paidAt,
+        clearedAt: inv.clearedAt,
+      })
+    }
+
+    // Track which on-chain IDs already have a Supabase entry
+    const supaChainIds = new Set<number>()
+    for (const si of (supabaseInvoices || [])) {
+      if (si.chain_invoice_id != null) supaChainIds.add(si.chain_invoice_id)
+    }
+
+    // 1) Add Supabase invoices (includes drafts), using on-chain status when available
+    for (const si of (supabaseInvoices || [])) {
+      const onChain = si.chain_invoice_id != null ? onChainStatusMap.get(si.chain_invoice_id) : null
+      const resolvedStatus = si.is_draft
+        ? 'draft'
+        : si.status === 'rejected'
+          ? 'rejected'
+          : onChain?.status || si.status
+
+      merged.push({
+        id: si.invoice_number || (si.chain_invoice_id ? `INV-${si.chain_invoice_id.toString().padStart(10, '0')}` : `DRAFT-${si.id.slice(0, 8)}`),
+        supabaseId: si.id,
+        invoiceId: si.chain_invoice_id ? BigInt(si.chain_invoice_id) : null,
+        buyer: si.buyer_address,
+        seller: si.seller_address,
+        amount: si.amount,
+        status: resolvedStatus,
+        dueDate: new Date(si.due_date),
+        createdDate: new Date(si.created_at),
+        link: si.chain_invoice_id ? getPaymentLink(chainId, BigInt(si.chain_invoice_id)) : '',
+        isDraft: si.is_draft,
+        buyerName: si.buyer_name || undefined,
+        invoiceNumber: si.invoice_number || undefined,
+        paidAt: onChain?.paidAt,
+        clearedAt: onChain?.clearedAt,
+      })
+    }
+
+    // 2) Add on-chain invoices that are NOT already in Supabase
+    for (const inv of (invoices || [])) {
+      if (!inv || inv.invoiceId == null || inv.amount == null) continue
+      if (supaChainIds.has(Number(inv.invoiceId))) continue
+      const amt = Number(formatUnits(inv.amount, 6))
+      merged.push({
+        id: `INV-${inv.invoiceId.toString().padStart(10, '0')}`,
+        supabaseId: '',
+        invoiceId: inv.invoiceId,
+        buyer: inv.buyer,
+        seller: inv.seller,
+        amount: amt,
+        amountRaw: inv.amount,
+        status: STATUS_MAP[inv.status] || 'issued',
+        dueDate: new Date(Number(inv.dueDate) * 1000),
+        createdDate: new Date(Number(inv.dueDate) * 1000),
+        link: getPaymentLink(chainId, inv.invoiceId),
+        isDraft: false,
+        paidAt: inv.paidAt,
+        clearedAt: inv.clearedAt,
+      })
+    }
+
+    return merged.sort((a, b) => b.createdDate.getTime() - a.createdDate.getTime())
+  }, [supabaseInvoices, invoices, chainId])
 
   const filteredInvoices = useMemo(() => {
     if (!formattedInvoices) return []
     
-    // Debug: log invoice counts
-    if (process.env.NODE_ENV === 'development') {
-      console.log('📊 Invoice filtering:', {
-        totalInvoices: formattedInvoices.length,
-        hiddenCount: hiddenInvoiceIds.size,
-        hiddenIds: Array.from(hiddenInvoiceIds),
-        searchQuery,
-      })
-    }
-    
-    const visibleInvoices = formattedInvoices
+    return formattedInvoices
       .filter(inv => {
-        const invoiceIdStr = inv.invoiceId.toString()
+        if (statusFilter === 'all') return true
+        if (statusFilter === 'drafts') return inv.isDraft
+        if (statusFilter === 'sent') return !inv.isDraft && (inv.status === 'issued' || inv.status === 'financed')
+        if (statusFilter === 'paid') return inv.status === 'paid' || inv.status === 'cleared'
+        if (statusFilter === 'rejected') return inv.status === 'rejected'
+        return true
+      })
+      .filter(inv => {
+        const invoiceIdStr = inv.invoiceId?.toString() || ''
         const isHidden = hiddenInvoiceIds.has(invoiceIdStr)
-        return !isHidden
+        return !isHidden || inv.isDraft
       })
       .filter(
         (inv) =>
           inv.buyer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          inv.id.toLowerCase().includes(searchQuery.toLowerCase())
+          inv.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (inv.buyerName || '').toLowerCase().includes(searchQuery.toLowerCase())
       )
-    
-    // Debug: log filtered results
-    if (process.env.NODE_ENV === 'development') {
-      console.log('✅ Filtered invoices result:', {
-        visibleCount: visibleInvoices.length,
-        totalCount: formattedInvoices.length,
-        hiddenCount: hiddenInvoiceIds.size,
-      })
-    }
-    
-    return visibleInvoices
-  }, [formattedInvoices, searchQuery, hiddenInvoiceIds])
+  }, [formattedInvoices, searchQuery, hiddenInvoiceIds, statusFilter])
 
   const copyLink = (link: string) => {
     navigator.clipboard.writeText(link)
@@ -190,9 +331,9 @@ export default function Invoices() {
           <h1 className="text-[32px] font-semibold text-[#404040] dark:text-white tracking-tight">Invoices</h1>
           <p className="text-[#aeaeae] text-base mt-1">
             Create and manage your invoice payment links
-            {invoices && invoices.length > 0 && (
+            {formattedInvoices.length > 0 && (
               <span className="ml-2 text-xs">
-                (Showing {filteredInvoices.length} of {invoices.length}{hiddenInvoiceIds.size > 0 ? `, ${hiddenInvoiceIds.size} hidden` : ''})
+                (Showing {filteredInvoices.length} of {formattedInvoices.length}{hiddenInvoiceIds.size > 0 ? `, ${hiddenInvoiceIds.size} hidden` : ''})
               </span>
             )}
           </p>
@@ -205,7 +346,35 @@ export default function Invoices() {
         </Button>
       </div>
 
-      {/* Filters */}
+      {/* Status Tabs */}
+      <div className="flex items-center gap-1 overflow-x-auto pb-1">
+        {[
+          { key: 'all', label: 'All' },
+          { key: 'drafts', label: 'Drafts' },
+          { key: 'sent', label: 'Sent' },
+          { key: 'paid', label: 'Paid' },
+          { key: 'rejected', label: 'Rejected' },
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setStatusFilter(tab.key)}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
+              statusFilter === tab.key
+                ? 'bg-[#c8ff00] text-[#1a1a1a] shadow-sm'
+                : 'text-[#aeaeae] hover:text-[#404040] dark:hover:text-white hover:bg-[#f8f8f8] dark:hover:bg-gray-800'
+            }`}
+          >
+            {tab.label}
+            {tab.key === 'drafts' && supabaseInvoices?.filter(i => i.is_draft).length ? (
+              <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-xs text-amber-700 dark:text-amber-300">
+                {supabaseInvoices.filter(i => i.is_draft).length}
+              </span>
+            ) : null}
+          </button>
+        ))}
+      </div>
+
+      {/* Search & Filters */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
         <div className="relative flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#aeaeae]" />
@@ -237,7 +406,7 @@ export default function Invoices() {
 
       {/* Invoice table */}
       <div className="rounded-[20px] border border-[#f1f1f1] dark:border-gray-700 bg-white dark:bg-gray-800 shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04)] overflow-x-auto">
-        {isLoading ? (
+        {(isLoading || isLoadingSupa) ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <span className="ml-3 text-muted-foreground">Loading invoices...</span>
@@ -284,12 +453,22 @@ export default function Invoices() {
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <Link 
-                        to={`/app/invoices/${invoice.invoiceId}`}
-                        className="font-semibold text-primary hover:underline"
+                        to={invoice.isDraft ? `/app/invoices/${invoice.supabaseId}/edit` : `/app/invoices/${invoice.invoiceId}`}
+                        className="font-semibold text-[#1a1a1a] dark:text-white hover:underline"
                       >
                         {invoice.id}
                       </Link>
-                      {addresses.InvoiceNFT && (
+                      {invoice.isDraft && (
+                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-xs font-medium text-amber-700 dark:text-amber-300">
+                          Draft
+                        </span>
+                      )}
+                      {invoice.status === 'rejected' && (
+                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-xs font-medium text-red-700 dark:text-red-300">
+                          Rejected
+                        </span>
+                      )}
+                      {!invoice.isDraft && invoice.invoiceId && addresses.InvoiceNFT && (
                         <div className="mt-1">
                           <InvoiceNFTBadge invoiceId={invoice.invoiceId} />
                         </div>
@@ -322,26 +501,42 @@ export default function Invoices() {
                   </div>
                   
                   <div className="flex items-center gap-2 mt-4 pt-3 border-t border-[#f1f1f1] dark:border-gray-700">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => copyLink(invoice.link)}
-                      className="flex-1 rounded-lg"
-                    >
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copy Link
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      asChild
-                      className="flex-1 rounded-lg"
-                    >
-                      <Link to={`/app/invoices/${invoice.invoiceId}`}>
-                        <Eye className="h-4 w-4 mr-2" />
-                        View
-                      </Link>
-                    </Button>
+                    {invoice.isDraft ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        asChild
+                        className="flex-1 rounded-lg"
+                      >
+                        <Link to={`/app/invoices/${invoice.supabaseId}/edit`}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit Draft
+                        </Link>
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => copyLink(invoice.link)}
+                          className="flex-1 rounded-lg"
+                        >
+                          <Copy className="h-4 w-4 mr-2" />
+                          Copy Link
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          asChild
+                          className="flex-1 rounded-lg"
+                        >
+                          <Link to={`/app/invoices/${invoice.invoiceId}`}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View
+                          </Link>
+                        </Button>
+                      </>
+                    )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm" className="rounded-lg">
@@ -355,16 +550,8 @@ export default function Invoices() {
                             Open Payment Page
                           </a>
                         </DropdownMenuItem>
-                        {invoice.status === "issued" && (
-                          <DropdownMenuItem className="text-primary" asChild>
-                            <Link to={`/app/financing`}>
-                              <Zap className="mr-2 h-4 w-4" />
-                              Request Advance
-                            </Link>
-                          </DropdownMenuItem>
-                        )}
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           onClick={() => handleHideInvoice(invoice.invoiceId)}
                           className="text-destructive focus:text-destructive"
                         >
@@ -410,12 +597,22 @@ export default function Invoices() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <Link 
-                          to={`/app/invoices/${invoice.invoiceId}`}
-                          className="font-medium text-primary hover:underline"
+                          to={invoice.isDraft ? `/app/invoices/${invoice.supabaseId}/edit` : `/app/invoices/${invoice.invoiceId}`}
+                          className="font-medium text-[#1a1a1a] dark:text-white hover:underline"
                         >
                           {invoice.id}
                         </Link>
-                        {addresses.InvoiceNFT && (
+                        {invoice.isDraft && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-xs font-medium text-amber-700 dark:text-amber-300">
+                            Draft
+                          </span>
+                        )}
+                        {invoice.status === 'rejected' && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-xs font-medium text-red-700 dark:text-red-300">
+                            Rejected
+                          </span>
+                        )}
+                        {!invoice.isDraft && invoice.invoiceId && addresses.InvoiceNFT && (
                           <InvoiceNFTBadge invoiceId={invoice.invoiceId} />
                         )}
                       </div>
@@ -450,11 +647,6 @@ export default function Invoices() {
                         >
                           <Copy className="h-4 w-4" />
                         </Button>
-                        {invoice.status === "issued" && (
-                          <Button variant="ghost" size="sm" className="text-primary">
-                            <Zap className="h-4 w-4" />
-                          </Button>
-                        )}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm">
@@ -462,67 +654,88 @@ export default function Invoices() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem asChild>
-                              <Link to={`/app/invoices/${invoice.invoiceId}`}>
-                                <Eye className="mr-2 h-4 w-4" />
-                                View Details
-                              </Link>
-                            </DropdownMenuItem>
-                            {/* PDF download button hidden for now */}
-                            {false && <InvoicePDFDownloadButton invoice={invoice} />}
-                            <DropdownMenuItem onClick={() => copyLink(invoice.link)}>
-                              <Copy className="mr-2 h-4 w-4" />
-                              Copy Link
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <a href={invoice.link} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="mr-2 h-4 w-4" />
-                              Open Payment Page
-                              </a>
-                            </DropdownMenuItem>
-                            {invoice.status === "issued" && (
+                            {invoice.isDraft ? (
                               <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-primary" asChild>
-                                  <Link to={`/app/financing`}>
-                                    <Zap className="mr-2 h-4 w-4" />
-                                    Request Advance
+                                <DropdownMenuItem asChild>
+                                  <Link to={`/app/invoices/${invoice.supabaseId}/edit`}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Edit Draft
                                   </Link>
                                 </DropdownMenuItem>
-                              </>
-                            )}
-                            <DropdownMenuSeparator />
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <DropdownMenuItem 
-                                  onSelect={(e) => e.preventDefault()}
+                                <DropdownMenuItem
+                                  onClick={async () => {
+                                    try {
+                                      await deleteDraftInvoice(invoice.supabaseId)
+                                      toast.success("Draft deleted")
+                                      refetchSupa()
+                                    } catch (err: any) {
+                                      toast.error("Failed to delete draft")
+                                    }
+                                  }}
                                   className="text-destructive focus:text-destructive"
                                 >
                                   <Trash2 className="mr-2 h-4 w-4" />
-                                  Hide Invoice
+                                  Delete Draft
                                 </DropdownMenuItem>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Hide Invoice?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This will hide the invoice from your list. The invoice still exists on-chain and cannot be permanently deleted. 
-                                    You can view it again by clearing your browser's local storage.
-                                    <br /><br />
-                                    Invoice: <strong>{invoice.id}</strong>
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleHideInvoice(invoice.invoiceId)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    Hide Invoice
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                              </>
+                            ) : (
+                              <>
+                                <DropdownMenuItem asChild>
+                                  <Link to={`/app/invoices/${invoice.invoiceId}`}>
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    View Details
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <Link to={`/app/invoices/${invoice.supabaseId}/edit`}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Edit Invoice
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => copyLink(invoice.link)}>
+                                  <Copy className="mr-2 h-4 w-4" />
+                                  Copy Link
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <a href={invoice.link} target="_blank" rel="noopener noreferrer">
+                                    <ExternalLink className="mr-2 h-4 w-4" />
+                                    Open Payment Page
+                                  </a>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem 
+                                      onSelect={(e) => e.preventDefault()}
+                                      className="text-destructive focus:text-destructive"
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Hide Invoice
+                                    </DropdownMenuItem>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Hide Invoice?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        This will hide the invoice from your list. The invoice still exists on-chain and cannot be permanently deleted. 
+                                        You can view it again by clearing your browser's local storage.
+                                        <br /><br />
+                                        Invoice: <strong>{invoice.id}</strong>
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => handleHideInvoice(invoice.invoiceId)}
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      >
+                                        Hide Invoice
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>

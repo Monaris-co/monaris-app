@@ -187,7 +187,7 @@ export default function PrivatePayments() {
             <div className="flex items-center gap-2">
               <p className="text-2xl font-semibold text-[#1a1a1a] dark:text-white">{engineStatusLabel}</p>
               <div className={`h-2.5 w-2.5 rounded-full ${
-                engineStatus === "ready" ? "bg-[#22c55e] animate-pulse" :
+                engineStatus === "ready" ? "bg-[#c8ff00] animate-pulse" :
                 (engineStatus === "initializing" || engineStatus === "loading-artifacts" || engineStatus === "syncing") ? "bg-[#f59e0b] animate-pulse" :
                 "bg-[#aeaeae]"
               }`} />
@@ -196,7 +196,7 @@ export default function PrivatePayments() {
               {chainId === 42161 ? "Arbitrum" : `Chain ${chainId}`}
             </p>
             <div className="mt-4 w-10 h-10 rounded-lg bg-[#ddf9e4] flex items-center justify-center">
-              <ShieldCheck className="h-5 w-5 text-[#22c55e]" />
+              <ShieldCheck className="h-5 w-5 text-[#7cb518]" />
             </div>
             <p className="text-base font-medium text-[#404040] dark:text-white mt-3">Privacy Engine</p>
           </div>
@@ -250,7 +250,7 @@ export default function PrivatePayments() {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-[#1a1a1a] dark:text-white">Shielded Balances</h2>
                 <div className="flex items-center gap-1.5">
-                  <span className={`w-1.5 h-1.5 rounded-full ${isSyncing ? "bg-[#f59e0b] animate-pulse" : "bg-[#22c55e]"}`} />
+                  <span className={`w-1.5 h-1.5 rounded-full ${isSyncing ? "bg-[#f59e0b] animate-pulse" : "bg-[#c8ff00]"}`} />
                   <span className="text-[10px] text-[#aeaeae]">{isSyncing ? "Syncing" : "Live"}</span>
                 </div>
               </div>
@@ -478,14 +478,14 @@ export default function PrivatePayments() {
               {/* Step 3 */}
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-10 h-10 rounded-lg bg-[#ddf9e4] flex items-center justify-center flex-shrink-0">
-                  <EyeOff className="h-5 w-5 text-[#22c55e]" />
+                  <EyeOff className="h-5 w-5 text-[#7cb518]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <div className="flex-1 h-2 rounded-full bg-[#f1f1f1] dark:bg-gray-700 overflow-hidden">
-                      <div className="h-full rounded-full bg-gradient-to-r from-[#22c55e] to-[#10b981] w-full" />
+                      <div className="h-full rounded-full bg-gradient-to-r from-[#c8ff00] to-[#a8df00] w-full" />
                     </div>
-                    <span className="text-xs font-semibold text-[#22c55e] w-6 text-right">3</span>
+                    <span className="text-xs font-semibold text-[#7cb518] w-6 text-right">3</span>
                   </div>
                   <p className="text-sm text-[#aeaeae]">Hidden – sender, receiver & amount fully concealed on-chain</p>
                 </div>
@@ -515,15 +515,15 @@ export default function PrivatePayments() {
                 <h3 className="text-base font-semibold text-[#1a1a1a] dark:text-white mb-3">Privacy Guarantees</h3>
                 <div className="space-y-3">
                   <div className="flex items-start gap-2.5">
-                    <CheckCircle2 className="h-4 w-4 text-[#22c55e] mt-0.5 flex-shrink-0" />
+                    <CheckCircle2 className="h-4 w-4 text-[#7cb518] mt-0.5 flex-shrink-0" />
                     <p className="text-xs text-[#696969] dark:text-gray-400">Zero-knowledge proofs verify every transfer</p>
                   </div>
                   <div className="flex items-start gap-2.5">
-                    <CheckCircle2 className="h-4 w-4 text-[#22c55e] mt-0.5 flex-shrink-0" />
+                    <CheckCircle2 className="h-4 w-4 text-[#7cb518] mt-0.5 flex-shrink-0" />
                     <p className="text-xs text-[#696969] dark:text-gray-400">Keys encrypted client-side, never leave your browser</p>
                   </div>
                   <div className="flex items-start gap-2.5">
-                    <CheckCircle2 className="h-4 w-4 text-[#22c55e] mt-0.5 flex-shrink-0" />
+                    <CheckCircle2 className="h-4 w-4 text-[#7cb518] mt-0.5 flex-shrink-0" />
                     <p className="text-xs text-[#696969] dark:text-gray-400">Non-custodial – you always control your funds</p>
                   </div>
                   <div className="flex items-start gap-2.5">
@@ -573,7 +573,7 @@ export default function PrivatePayments() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-[#ddf9e4] flex items-center justify-center">
-                      <ShieldCheck className="h-4 w-4 text-[#22c55e]" />
+                      <ShieldCheck className="h-4 w-4 text-[#7cb518]" />
                     </div>
                     <div>
                       <p className="text-sm font-medium text-[#1a1a1a] dark:text-white">Wallet Active</p>
@@ -583,7 +583,7 @@ export default function PrivatePayments() {
                   <div className="flex items-center gap-4 text-xs text-[#aeaeae]">
                     <span>{chainId === 42161 ? "Arbitrum" : `Chain ${chainId}`}</span>
                     <span className="flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#c8ff00]" />
                       RAILGUN
                     </span>
                   </div>

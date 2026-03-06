@@ -149,8 +149,8 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="gap-3 h-auto py-2 px-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl">
-                <Avatar className="h-9 w-9 bg-gradient-to-br from-emerald-400 to-cyan-400">
-                  <AvatarFallback className="bg-gradient-to-br from-emerald-400 to-cyan-400 text-white font-medium text-sm">
+                <Avatar className="h-9 w-9 bg-gradient-to-br from-[#c8ff00] to-[#a8df00]">
+                  <AvatarFallback className="bg-gradient-to-br from-[#c8ff00] to-[#a8df00] text-white font-medium text-sm">
                     {userInitials}
                   </AvatarFallback>
                 </Avatar>
@@ -167,8 +167,8 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
               <DropdownMenuLabel className="py-3">
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10 bg-gradient-to-br from-emerald-400 to-cyan-400">
-                      <AvatarFallback className="bg-gradient-to-br from-emerald-400 to-cyan-400 text-white font-medium">
+                    <Avatar className="h-10 w-10 bg-gradient-to-br from-[#c8ff00] to-[#a8df00]">
+                      <AvatarFallback className="bg-gradient-to-br from-[#c8ff00] to-[#a8df00] text-white font-medium">
                         {userInitials}
                       </AvatarFallback>
                     </Avatar>
@@ -183,7 +183,7 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
                       {isLoadingBalance ? (
                         <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
                       ) : (
-                        <DollarSign className="h-4 w-4 text-emerald-500" />
+                        <DollarSign className="h-4 w-4 text-[#7cb518]" />
                       )}
                       <p className="text-lg font-semibold text-gray-900 dark:text-white">
                         {isLoadingBalance ? "..." : usdcBalance.toLocaleString(undefined, {

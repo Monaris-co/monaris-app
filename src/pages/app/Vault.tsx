@@ -584,7 +584,7 @@ function DepositDialog({
       
       toast.success(
         <div className="flex items-center gap-2">
-          <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-500 flex-shrink-0" />
+          <CheckCircle2 className="h-6 w-6 text-[#7cb518] dark:text-[#c8ff00] flex-shrink-0" />
           <span className="font-semibold">Approval Successful!</span>
         </div>,
         {
@@ -937,8 +937,8 @@ function DepositDialog({
         <DialogContent className="sm:max-w-md text-center">
           <div className="flex flex-col items-center space-y-6 py-6">
             {/* Big Green Checkmark */}
-            <div className="flex items-center justify-center w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/20">
-              <CheckCircle2 className="h-16 w-16 text-green-600 dark:text-green-500" />
+            <div className="flex items-center justify-center w-20 h-20 rounded-full bg-[#c8ff00]/15 dark:bg-[#c8ff00]/10">
+              <CheckCircle2 className="h-16 w-16 text-[#7cb518] dark:text-[#c8ff00]" />
             </div>
 
             {/* Success Message */}
@@ -1035,7 +1035,7 @@ function WithdrawDialog({
       
       toast.success(
         <div className="flex items-center gap-2">
-          <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-500 flex-shrink-0" />
+          <CheckCircle2 className="h-6 w-6 text-[#7cb518] dark:text-[#c8ff00] flex-shrink-0" />
           <span className="font-semibold">Withdrawal Successful!</span>
         </div>,
         {

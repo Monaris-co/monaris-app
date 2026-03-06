@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
-import { Bell, CheckCheck, FileText, ExternalLink } from 'lucide-react'
+import { Bell, CheckCheck, CheckCircle, FileText, ExternalLink, AlertTriangle, XCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useNotifications, Notification } from '@/hooks/useNotifications'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { rejectInvoice } from '@/hooks/useInvoice'
 
 function timeAgo(dateStr: string): string {
   const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
@@ -24,11 +26,37 @@ function getPayLink(n: Notification): string | null {
 }
 
 export function NotificationBell() {
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications()
+  const { notifications, unreadCount, markAsRead, markAllAsRead, dismissNotification } = useNotifications()
   const [open, setOpen] = useState(false)
+  const [rejectingId, setRejectingId] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
   const prevUnreadRef = useRef(unreadCount)
+
+  const handleReject = async (n: Notification) => {
+    if (!n.chain_invoice_id || !n.chain_id || !isSupabaseConfigured()) return
+    setRejectingId(n.id)
+    try {
+      const { data } = await supabase
+        .from('invoices')
+        .select('id, seller_address, invoice_number')
+        .eq('chain_invoice_id', n.chain_invoice_id)
+        .eq('chain_id', n.chain_id)
+        .maybeSingle()
+      if (!data) {
+        toast.error('Invoice not found')
+        return
+      }
+      await rejectInvoice(data.id, data.seller_address, data.invoice_number || '')
+      // Dismiss the notification so it vanishes from the buyer's list instantly
+      await dismissNotification(n.id)
+      toast.success('Invoice rejected', { description: 'The seller has been notified.' })
+    } catch (err: any) {
+      toast.error('Failed to reject', { description: err?.message || 'Please try again' })
+    } finally {
+      setRejectingId(null)
+    }
+  }
 
   // Show toast on new realtime notification
   useEffect(() => {
@@ -98,7 +126,7 @@ export function NotificationBell() {
             {unreadCount > 0 && (
               <button
                 onClick={() => markAllAsRead()}
-                className="text-xs text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 font-medium flex items-center gap-1"
+                className="text-xs text-[#7cb518] hover:text-[#5a8c1a] dark:text-[#c8ff00] font-medium flex items-center gap-1"
               >
                 <CheckCheck className="h-3.5 w-3.5" />
                 Mark all read
@@ -118,15 +146,21 @@ export function NotificationBell() {
                   key={n.id}
                   onClick={() => handleNotificationClick(n)}
                   className={`w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-50 dark:border-gray-800/50 last:border-0 ${
-                    !n.is_read ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : ''
+                    !n.is_read ? 'bg-[#c8ff00]/8 dark:bg-[#c8ff00]/5' : ''
                   }`}
                 >
                   <div className={`mt-0.5 flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${
-                    !n.is_read
-                      ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-400'
+                    n.type === 'invoice_rejected'
+                      ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+                      : n.type === 'invoice_paid' || n.type === 'invoice_paid_private'
+                        ? 'bg-[#c8ff00]/20 dark:bg-[#c8ff00]/15 text-[#7cb518] dark:text-[#c8ff00]'
+                        : !n.is_read
+                          ? 'bg-[#c8ff00]/15 dark:bg-[#c8ff00]/15 text-[#7cb518] dark:text-[#c8ff00]'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-400'
                   }`}>
-                    <FileText className="h-4 w-4" />
+                    {n.type === 'invoice_rejected' ? <AlertTriangle className="h-4 w-4" /> :
+                     (n.type === 'invoice_paid' || n.type === 'invoice_paid_private') ? <CheckCircle className="h-4 w-4" /> :
+                     <FileText className="h-4 w-4" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
@@ -140,15 +174,31 @@ export function NotificationBell() {
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">
                       {n.message}
                     </p>
-                    {getPayLink(n) && (
-                      <span className="inline-flex items-center gap-1 mt-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                        <ExternalLink className="h-3 w-3" />
-                        Pay Now
-                      </span>
+                    {getPayLink(n) && n.type !== 'invoice_rejected' && n.type !== 'invoice_paid' && n.type !== 'invoice_paid_private' && (
+                      <div className="flex items-center gap-3 mt-1.5">
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-[#7cb518] dark:text-[#c8ff00]">
+                          <ExternalLink className="h-3 w-3" />
+                          Pay Now
+                        </span>
+                        <span
+                          className="inline-flex items-center gap-1 text-xs font-medium text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleReject(n)
+                          }}
+                        >
+                          {rejectingId === n.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <XCircle className="h-3 w-3" />
+                          )}
+                          {rejectingId === n.id ? 'Rejecting...' : 'Reject'}
+                        </span>
+                      </div>
                     )}
                   </div>
                   {!n.is_read && (
-                    <div className="mt-2 flex-shrink-0 h-2 w-2 rounded-full bg-emerald-500" />
+                    <div className="mt-2 flex-shrink-0 h-2 w-2 rounded-full bg-[#c8ff00]" />
                   )}
                 </button>
               ))

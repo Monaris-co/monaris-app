@@ -38,9 +38,9 @@ const COLORS = {
   lightBlueCard: [247, 250, 254],  // #F7FAFE
   infoStrip: [241, 246, 254],      // #F1F6FE
   tableHeader: [234, 242, 255],    // #EAF2FF
-  greenAccent: [80, 176, 128],     // #50B080
-  greenIconBg: [232, 248, 240],    // #E8F8F0
-  successBox: [244, 250, 249],     // #F4FAF9
+  greenAccent: [124, 181, 24],     // #7CB518 (Monaris dark lime)
+  greenIconBg: [245, 255, 220],    // #F5FFDC (light lime tint)
+  successBox: [250, 255, 240],     // #FAFFF0 (very light lime)
   redDate: [201, 58, 50],          // #C93A32
   purplePillBg: [240, 236, 253],   // #F0ECFD
   purplePillText: [96, 32, 160],   // #6020A0

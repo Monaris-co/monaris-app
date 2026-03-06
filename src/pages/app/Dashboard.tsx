@@ -20,6 +20,8 @@ import {
   Download,
   Camera,
   X,
+  AlertTriangle,
+  Inbox,
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
@@ -46,16 +48,17 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useSellerInvoicesWithData, InvoiceStatus } from "@/hooks/useInvoice"
+import { useSellerInvoicesWithData, InvoiceStatus, useBuyerInvoices, useSellerSupabaseInvoices, SupabaseInvoice, rejectInvoice as rejectInvoiceAction } from "@/hooks/useInvoice"
 import { useReputation } from "@/hooks/useReputation"
 import { useTokenBalance } from "@/hooks/useTokenBalance"
 import { useUSMTBalance } from "@/hooks/useUSMTBalance"
 import { usePrivyAccount } from "@/hooks/usePrivyAccount"
 import { useSendTransaction, useWallets } from "@privy-io/react-auth"
-import { useBalance, useWaitForTransactionReceipt, useChainId } from "wagmi"
+import { useBalance, useWaitForTransactionReceipt, useChainId, usePublicClient } from "wagmi"
 import { useChainAddresses } from "@/hooks/useChainAddresses"
-import { DemoUSDCABI, USMTPlusABI } from "@/lib/abis"
+import { DemoUSDCABI, USMTPlusABI, InvoiceRegistryABI } from "@/lib/abis"
 import { formatUnits, parseUnits, encodeFunctionData, isAddress } from "viem"
+import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { toast } from "sonner"
 import { QRCodeSVG } from "qrcode.react"
 import { getExplorerUrl, getChainMetadata } from "@/lib/chain-utils"
@@ -86,10 +89,49 @@ export default function Dashboard() {
   const nativeTokenSymbol = chainMetadata?.nativeCurrency.symbol || "ETH"
   const addresses = useChainAddresses()
   const { invoices, isLoading: isLoadingInvoices, error: invoiceError } = useSellerInvoicesWithData()
+  const { invoices: sellerSupaInvoices } = useSellerSupabaseInvoices()
   const { score, tierLabel, stats, isLoading: isLoadingReputation } = useReputation()
   const { balance: usdcBalance, isLoading: isLoadingBalance, error: balanceError } = useTokenBalance()
   const { balance: usmtBalance, isLoading: isLoadingUSMT } = useUSMTBalance()
   const { address } = usePrivyAccount()
+  const { invoices: buyerInvoices, isLoading: isLoadingBuyerInvoices, refetch: refetchBuyerInvoices } = useBuyerInvoices()
+  const publicClient = usePublicClient({ chainId })
+  const [enrichedBuyerInvoices, setEnrichedBuyerInvoices] = useState<SupabaseInvoice[]>([])
+
+  // Enrich buyer invoices with on-chain status & sync back to Supabase
+  useEffect(() => {
+    if (!buyerInvoices || buyerInvoices.length === 0 || !publicClient || !addresses.InvoiceRegistry) {
+      setEnrichedBuyerInvoices(buyerInvoices || [])
+      return
+    }
+    let cancelled = false
+    const syncStatuses = async () => {
+      const enriched = await Promise.all(
+        buyerInvoices.map(async (inv) => {
+          if (!inv.chain_invoice_id) return inv
+          try {
+            const onChain = await (publicClient.readContract as any)({
+              address: addresses.InvoiceRegistry as `0x${string}`,
+              abi: InvoiceRegistryABI,
+              functionName: 'getInvoice',
+              args: [BigInt(inv.chain_invoice_id)],
+            }) as { status: number }
+            const onChainStatus = STATUS_MAP[onChain.status as InvoiceStatus] || inv.status
+            if (onChainStatus !== inv.status && isSupabaseConfigured()) {
+              supabase.from('invoices').update({ status: onChainStatus }).eq('id', inv.id).then(() => {})
+            }
+            return { ...inv, status: onChainStatus }
+          } catch {
+            return inv
+          }
+        })
+      )
+      if (!cancelled) setEnrichedBuyerInvoices(enriched)
+    }
+    syncStatuses()
+    return () => { cancelled = true }
+  }, [buyerInvoices, publicClient, addresses.InvoiceRegistry])
+
   const { data: nativeBalance, isLoading: isLoadingNative } = useBalance({
     address: address as `0x${string}` | undefined,
     query: {
@@ -200,7 +242,17 @@ export default function Dashboard() {
     })
   }, [invoiceError, balanceError, isLoadingInvoices, isLoadingReputation, isLoadingBalance, isLoadingUSMT, isLoadingNative, isLoadingAllBalances, invoices, score, usdcBalance, usmtBalance, nativeBalanceFormatted, nativeBalanceUSD, unifiedBalance, address, hasAddress, addresses, hasUSDCAddress, hasUSMTAddress])
 
-  // Calculate stats from invoices
+  // Calculate stats from invoices (excluding rejected ones)
+  const rejectedChainIds = useMemo(() => {
+    const ids = new Set<number>()
+    for (const si of (sellerSupaInvoices || [])) {
+      if (si.status === 'rejected' && si.chain_invoice_id != null) {
+        ids.add(si.chain_invoice_id)
+      }
+    }
+    return ids
+  }, [sellerSupaInvoices])
+
   const statsData = useMemo(() => {
     if (!invoices || invoices.length === 0) {
       return {
@@ -211,24 +263,23 @@ export default function Dashboard() {
       }
     }
 
-    // Outstanding (only issued or financed that haven't been paid/cleared)
-    // Status 0 = Issued, Status 1 = Financed (both are outstanding)
-    // Status 2 = Paid (being settled, should NOT be in outstanding)
-    // Status 3 = Cleared (settlement complete, should NOT be in outstanding)
-    const outstandingInvoices = invoices.filter(
+    // Exclude rejected invoices from all calculations
+    const activeInvoices = invoices.filter(
+      inv => !rejectedChainIds.has(Number(inv.invoiceId))
+    )
+
+    const outstandingInvoices = activeInvoices.filter(
       inv => inv.status === 0 || inv.status === 1
     )
     const outstanding = outstandingInvoices.reduce((sum, inv) => {
       return sum + parseFloat(formatUnits(inv.amount, 6))
     }, 0)
 
-    // Cleared volume (status === 3)
-    const clearedInvoices = invoices.filter(inv => inv.status === 3)
+    const clearedInvoices = activeInvoices.filter(inv => inv.status === 3)
     const clearedVolume = clearedInvoices.reduce((sum, inv) => {
       return sum + parseFloat(formatUnits(inv.amount, 6))
     }, 0)
 
-    // Advance eligible (issued invoices, up to 90% LTV for tier A, 65% for tier B, 35% for tier C)
     const ltvMap: Record<string, number> = { A: 0.90, B: 0.65, C: 0.35 }
     const ltv = ltvMap[effectiveTierLabel] || 0.75
     const advanceEligible = outstandingInvoices.reduce((sum, inv) => {
@@ -241,7 +292,7 @@ export default function Dashboard() {
       clearedVolume,
       advanceEligible,
     }
-  }, [invoices, effectiveTierLabel])
+  }, [invoices, effectiveTierLabel, rejectedChainIds])
 
   // Get recent invoices (10 most recent)
   const recentInvoices = useMemo(() => {
@@ -434,8 +485,8 @@ export default function Dashboard() {
                               <stop offset="100%" stopColor="#1d4ed8" />
                             </linearGradient>
                             <linearGradient id="clearedGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" stopColor="#10b981" />
-                              <stop offset="100%" stopColor="#059669" />
+                              <stop offset="0%" stopColor="#c8ff00" />
+                              <stop offset="100%" stopColor="#a8df00" />
                             </linearGradient>
                             <linearGradient id="outstandingGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                               <stop offset="0%" stopColor="#f59e0b" />
@@ -481,7 +532,7 @@ export default function Dashboard() {
                             strokeLinecap="round"
                             strokeDasharray={`${clearedPercent * 2.01} 201`}
                             className={`transition-all duration-700 ease-out cursor-pointer ${hoveredSegment === 'cleared' ? 'opacity-100' : 'opacity-90'}`}
-                            style={{ filter: hoveredSegment === 'cleared' ? 'drop-shadow(0 0 6px #10b981)' : 'none' }}
+                            style={{ filter: hoveredSegment === 'cleared' ? 'drop-shadow(0 0 6px #c8ff00)' : 'none' }}
                             onMouseEnter={() => setHoveredSegment('cleared')}
                             onMouseLeave={() => setHoveredSegment(null)}
                           />
@@ -508,7 +559,7 @@ export default function Dashboard() {
                           {hoveredSegment === null ? (
                             <>
                               <span className="flex items-center gap-1 text-[9px] text-[#aeaeae] mb-0.5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#c8ff00] animate-pulse" />
                                 Live
                               </span>
                               <span className="text-lg font-bold text-[#1a1a1a] dark:text-white">
@@ -518,7 +569,7 @@ export default function Dashboard() {
                           ) : (
                             <>
                               <span className={`text-lg font-bold ${hoveredSegment === 'balance' ? 'text-blue-500' :
-                                hoveredSegment === 'cleared' ? 'text-emerald-500' :
+                                hoveredSegment === 'cleared' ? 'text-[#7cb518]' :
                                   'text-amber-500'
                                 }`}>
                                 {hoveredSegment === 'balance' ? `${balancePercent.toFixed(0)}%` :
@@ -533,7 +584,7 @@ export default function Dashboard() {
                         {/* Tooltip */}
                         {hoveredSegment && (
                           <div className={`absolute -top-1 left-1/2 -translate-x-1/2 -translate-y-full px-3 py-1.5 rounded-lg shadow-xl z-30 whitespace-nowrap ${hoveredSegment === 'balance' ? 'bg-gradient-to-r from-blue-500 to-blue-600' :
-                            hoveredSegment === 'cleared' ? 'bg-gradient-to-r from-emerald-500 to-emerald-600' :
+                            hoveredSegment === 'cleared' ? 'bg-gradient-to-r from-[#c8ff00] to-[#a8df00]' :
                               'bg-gradient-to-r from-amber-500 to-amber-600'
                             }`}>
                             <p className="text-white text-xs font-medium">
@@ -542,7 +593,7 @@ export default function Dashboard() {
                                   outstandingVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                             </p>
                             <div className={`absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-r-[5px] border-t-[5px] border-transparent ${hoveredSegment === 'balance' ? 'border-t-blue-600' :
-                              hoveredSegment === 'cleared' ? 'border-t-emerald-600' :
+                              hoveredSegment === 'cleared' ? 'border-t-[#a8df00]' :
                                 'border-t-amber-600'
                               }`} />
                           </div>
@@ -566,7 +617,7 @@ export default function Dashboard() {
                       onMouseEnter={() => setHoveredSegment('cleared')}
                       onMouseLeave={() => setHoveredSegment(null)}
                     >
-                      <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-[#c8ff00] to-[#a8df00]" />
                       <span className="text-[10px] text-[#696969] dark:text-gray-400">Cleared</span>
                     </button>
                     <button
@@ -698,8 +749,8 @@ export default function Dashboard() {
                   ${isLoading ? "..." : statsData.advanceEligible.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </p>
                 <p className="text-sm text-[#aeaeae] mt-1">Up to {maxLTV}% LTV</p>
-                <div className="mt-4 w-10 h-10 rounded-lg bg-[#ddf9e4] flex items-center justify-center">
-                  <Zap className="h-5 w-5 text-[#22c55e]" />
+                <div className="mt-4 w-10 h-10 rounded-lg bg-[#c8ff00]/15 flex items-center justify-center">
+                  <Zap className="h-5 w-5 text-[#7cb518]" />
                 </div>
                 <p className="text-base font-medium text-[#404040] dark:text-white mt-3">Advance Eligible</p>
               </div>
@@ -1007,14 +1058,14 @@ export default function Dashboard() {
 
               {/* Progress Item: Payment History */}
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-10 h-10 rounded bg-[#ddf9e4] flex items-center justify-center flex-shrink-0">
-                  <TrendingUp className="h-5 w-5 text-[#22c55e]" />
+                <div className="w-10 h-10 rounded bg-[#c8ff00]/15 flex items-center justify-center flex-shrink-0">
+                  <TrendingUp className="h-5 w-5 text-[#7cb518]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1.5">
                     <div className="flex-1 h-2 rounded-full bg-[#f1f1f1] dark:bg-gray-700 overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-[#209d43] to-[#2bc255]"
+                        className="h-full rounded-full bg-gradient-to-r from-[#c8ff00] to-[#a8df00]"
                         style={{ width: `${progressToNextTier}%` }}
                       />
                     </div>
@@ -1083,6 +1134,38 @@ export default function Dashboard() {
           </div>
         </div>
       </motion.div>
+
+      {/* Received Invoices (Buyer View) */}
+      {enrichedBuyerInvoices && enrichedBuyerInvoices.length > 0 && (
+        <motion.div
+          variants={item}
+          className="bg-white dark:bg-[#1a1a2e] rounded-[20px] sm:rounded-[32px] shadow-[0px_24px_32px_0px_rgba(0,0,0,0.04),0px_16px_24px_0px_rgba(0,0,0,0.04),0px_4px_8px_0px_rgba(0,0,0,0.04)] p-3 sm:p-8 mx-1 sm:mx-0"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#c8ff00]/10 flex items-center justify-center">
+                <Inbox className="h-5 w-5 text-[#c8ff00]" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-[#1a1a1a] dark:text-white">Received Invoices</h2>
+                <p className="text-sm text-[#aeaeae]">Invoices sent to you by other businesses</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {isLoadingBuyerInvoices ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-5 w-5 animate-spin text-[#aeaeae]" />
+              </div>
+            ) : (
+              enrichedBuyerInvoices.map((inv) => (
+                <BuyerInvoiceCard key={inv.id} invoice={inv} onReject={() => refetchBuyerInvoices()} />
+              ))
+            )}
+          </div>
+        </motion.div>
+      )}
 
       {/* Dialogs */}
       <WithdrawDialog
@@ -1154,6 +1237,91 @@ const TOKEN_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>
   'USDC': UsdcTokenIcon,
   'ETH': EthTokenIcon,
   'USMT+': UsmtPlusTokenIcon,
+}
+
+function BuyerInvoiceCard({ invoice, onReject }: { invoice: SupabaseInvoice; onReject: () => void }) {
+  const chainId = useChainId()
+  const [isRejecting, setIsRejecting] = useState(false)
+
+  const handleReject = async () => {
+    if (!confirm('Reject this invoice? The seller will be notified.')) return
+    setIsRejecting(true)
+    try {
+      await rejectInvoiceAction(invoice.id, invoice.seller_address, invoice.invoice_number || invoice.id.slice(0, 8))
+      toast.success('Invoice rejected')
+      onReject()
+    } catch (err: any) {
+      toast.error('Failed to reject', { description: err?.message })
+    } finally {
+      setIsRejecting(false)
+    }
+  }
+
+  const isRejected = invoice.status === 'rejected'
+  const isPaid = invoice.status === 'paid' || invoice.status === 'cleared'
+  const dueDate = new Date(invoice.due_date)
+  const payLink = invoice.chain_invoice_id ? `/pay/${invoice.chain_id}/${invoice.chain_invoice_id}` : null
+
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl border border-[#f1f1f1] dark:border-gray-700 bg-white dark:bg-gray-800 shadow-[0px_2px_6px_0px_rgba(0,0,0,0.04)]">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <p className="text-sm font-semibold text-[#1a1a1a] dark:text-white truncate">
+            {invoice.invoice_number || `INV-${(invoice.chain_invoice_id || '').toString().padStart(6, '0')}`}
+          </p>
+          {isRejected && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-xs font-medium text-red-700 dark:text-red-300">
+              Rejected
+            </span>
+          )}
+          {isPaid && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#c8ff00]/15 dark:bg-[#c8ff00]/10 text-xs font-medium text-[#7cb518] dark:text-[#c8ff00]">
+              Paid
+            </span>
+          )}
+          {!isRejected && !isPaid && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/30 text-xs font-medium text-orange-700 dark:text-orange-300">
+              {invoice.status === 'financed' ? 'Financed' : 'Issued'}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-4 text-xs text-[#aeaeae]">
+          <span>From: {invoice.seller_name || `${invoice.seller_address.slice(0, 6)}...${invoice.seller_address.slice(-4)}`}</span>
+          <span>Due: {dueDate.toLocaleDateString()}</span>
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <p className="text-lg font-bold text-[#1a1a1a] dark:text-white whitespace-nowrap">
+          ${invoice.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </p>
+        {!isRejected && !isPaid && payLink && (
+          <div className="flex items-center gap-2">
+            <Link
+              to={payLink}
+              className="px-4 py-2 rounded-xl bg-[#c8ff00] hover:bg-[#b8ef00] text-[#1a1a1a] text-sm font-semibold transition-colors"
+            >
+              Pay
+            </Link>
+            <button
+              onClick={handleReject}
+              disabled={isRejecting}
+              className="px-3 py-2 rounded-xl border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+            >
+              {isRejecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <AlertTriangle className="h-4 w-4" />}
+            </button>
+          </div>
+        )}
+        {isPaid && payLink && (
+          <Link
+            to={payLink}
+            className="px-4 py-2 rounded-xl border border-[#e8e8e8] dark:border-gray-700 text-sm font-medium text-[#696969] dark:text-gray-400 hover:bg-[#f8f8f8] dark:hover:bg-gray-800 transition-colors"
+          >
+            View
+          </Link>
+        )}
+      </div>
+    </div>
+  )
 }
 
 function WithdrawDialog({

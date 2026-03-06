@@ -29,8 +29,8 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
       },
       success: {
         card: "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800",
-        icon: "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400",
-        accent: "before:absolute before:left-0 before:top-0 before:h-full before:w-1 before:bg-emerald-500 before:rounded-l-xl"
+        icon: "bg-[#c8ff00]/10 dark:bg-[#c8ff00]/10 text-[#7cb518] dark:text-[#c8ff00]",
+        accent: "before:absolute before:left-0 before:top-0 before:h-full before:w-1 before:bg-[#c8ff00] before:rounded-l-xl"
       },
       warning: {
         card: "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800",
@@ -65,7 +65,7 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
                   className={cn(
                     "inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full",
                     trend.value >= 0 
-                      ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400" 
+                      ? "bg-[#c8ff00]/10 text-[#7cb518] dark:bg-[#c8ff00]/10 dark:text-[#c8ff00]" 
                       : "bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400"
                   )}
                 >

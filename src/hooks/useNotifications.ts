@@ -32,6 +32,7 @@ export function useNotifications() {
         .from('notifications')
         .select('*')
         .eq('recipient_address', normalizedAddress)
+        .neq('type', 'dismissed')
         .order('created_at', { ascending: false })
         .limit(50)
 
@@ -56,6 +57,18 @@ export function useNotifications() {
     setNotifications(prev =>
       prev.map(n => (n.id === notificationId ? { ...n, is_read: true } : n))
     )
+    setUnreadCount(prev => Math.max(0, prev - 1))
+  }, [])
+
+  const dismissNotification = useCallback(async (notificationId: string) => {
+    if (!isSupabaseConfigured()) return
+    // Mark as read + set type to 'dismissed' so it won't reappear on refetch
+    await supabase
+      .from('notifications')
+      .update({ is_read: true, type: 'dismissed' })
+      .eq('id', notificationId)
+
+    setNotifications(prev => prev.filter(n => n.id !== notificationId))
     setUnreadCount(prev => Math.max(0, prev - 1))
   }, [])
 
@@ -112,6 +125,7 @@ export function useNotifications() {
     isLoading,
     markAsRead,
     markAllAsRead,
+    dismissNotification,
     refetch: fetchNotifications,
   }
 }

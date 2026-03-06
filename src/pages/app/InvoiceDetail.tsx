@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef, useCallback } from "react"
 import { motion } from "framer-motion"
 import { useParams, Link } from "react-router-dom"
 import { 
@@ -23,10 +24,12 @@ import { useInvoiceNFT } from "@/hooks/useInvoiceNFT"
 import { useReputation } from "@/hooks/useReputation"
 import { formatUnits } from "viem"
 import { toast } from "sonner"
-import { Image as ImageIcon, Sparkles, Shield, TrendingUp } from "lucide-react"
+import { Image as ImageIcon, Sparkles, Shield, TrendingUp, Download } from "lucide-react"
 import { useChainId } from "wagmi"
 import { getPaymentLink, getExplorerAddressUrl } from "@/lib/chain-utils"
 import { useChainAddresses } from "@/hooks/useChainAddresses"
+import { supabase, isSupabaseConfigured } from "@/lib/supabase"
+import { Edit } from "lucide-react"
 
 const STATUS_LABELS: Record<number, string> = {
   0: "Issued",
@@ -38,7 +41,7 @@ const STATUS_LABELS: Record<number, string> = {
 const STATUS_COLORS: Record<number, string> = {
   0: "bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400",
   1: "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400",
-  2: "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400",
+  2: "bg-[#c8ff00]/15 text-[#5a8c1a] dark:bg-[#c8ff00]/10 dark:text-[#c8ff00]",
   3: "bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400",
 }
 
@@ -51,7 +54,27 @@ export default function InvoiceDetail() {
   const { tierLabel } = useReputation()
   const chainId = useChainId()
   const addresses = useChainAddresses()
+
+  const [supaMetadata, setSupaMetadata] = useState<{
+    id?: string; buyer_name?: string; buyer_email?: string; memo?: string;
+    line_items?: { description: string; quantity: number; rate: number }[];
+    seller_name?: string; invoice_number?: string; is_draft?: boolean; status?: string;
+  } | null>(null)
+
+  useEffect(() => {
+    if (!invoiceId || !isSupabaseConfigured()) return
+    supabase
+      .from('invoices')
+      .select('id, buyer_name, buyer_email, memo, line_items, seller_name, invoice_number, is_draft, status')
+      .eq('chain_invoice_id', Number(invoiceId))
+      .eq('chain_id', chainId)
+      .maybeSingle()
+      .then(({ data }) => { if (data) setSupaMetadata(data) })
+  }, [invoiceId, chainId])
   
+  const invoiceRef = useRef<HTMLDivElement>(null)
+  const [isDownloading, setIsDownloading] = useState(false)
+
   // APR map - Tier C uses fixed 18% APR
   const aprMap: Record<string, { min: number; max: number; fixed?: number }> = {
     A: { min: 6, max: 8 },
@@ -121,16 +144,23 @@ export default function InvoiceDetail() {
   // Get invoice metadata from localStorage (stored when invoice was created)
   // Includes: buyerName, buyerEmail, memo, lineItems
   const getInvoiceMetadata = () => {
-    try {
-      // Try invoice ID first
-      const stored = localStorage.getItem(`invoice_metadata_${invoice.invoiceId}`)
-      if (stored) {
-        return JSON.parse(stored)
+    if (supaMetadata) {
+      return {
+        buyerName: supaMetadata.buyer_name || '',
+        buyerEmail: supaMetadata.buyer_email || '',
+        memo: supaMetadata.memo || '',
+        lineItems: supaMetadata.line_items || [],
+        sellerName: supaMetadata.seller_name || '',
+        invoiceNumber: supaMetadata.invoice_number || '',
       }
+    }
+    try {
+      const stored = localStorage.getItem(`invoice_metadata_${invoice.invoiceId}`)
+      if (stored) return JSON.parse(stored)
     } catch (e) {
       console.error('Error reading invoice metadata:', e)
     }
-    return { buyerName: '', buyerEmail: '', memo: '', lineItems: [] }
+    return { buyerName: '', buyerEmail: '', memo: '', lineItems: [], sellerName: '', invoiceNumber: '' }
   }
   
   const invoiceMetadata = getInvoiceMetadata()
@@ -138,6 +168,50 @@ export default function InvoiceDetail() {
   const buyerEmail = invoiceMetadata.buyerEmail || ''
   const memo = invoiceMetadata.memo || ''
   const lineItems = invoiceMetadata.lineItems || []
+  const sellerDisplayName = invoiceMetadata.sellerName || 'Monaris Protocol'
+
+  const handleDownloadPDF = useCallback(async () => {
+    if (!invoiceRef.current) return
+    setIsDownloading(true)
+    try {
+      const html2canvas = (await import('html2canvas')).default
+      const jsPDF = (await import('jspdf')).default
+
+      const el = invoiceRef.current
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+      })
+
+      const imgData = canvas.toDataURL('image/png')
+      const imgWidth = canvas.width
+      const imgHeight = canvas.height
+
+      const pdfWidth = 595.28 // A4 width in pt
+      const pdfHeight = 841.89 // A4 height in pt
+      const ratio = pdfWidth / imgWidth
+      const scaledHeight = imgHeight * ratio
+
+      const doc = new jsPDF({
+        orientation: scaledHeight > pdfHeight ? 'portrait' : 'portrait',
+        unit: 'pt',
+        format: scaledHeight > pdfHeight ? [pdfWidth, scaledHeight + 40] : 'a4',
+      })
+
+      doc.addImage(imgData, 'PNG', 0, 20, pdfWidth, scaledHeight)
+
+      const invNum = invoiceMetadata.invoiceNumber || `INV-${invoice.invoiceId.toString().padStart(6, '0')}`
+      doc.save(`${invNum}-${dueDate.toLocaleDateString('en-CA')}.pdf`)
+      toast.success('Invoice PDF downloaded')
+    } catch (err: any) {
+      console.error('PDF generation failed:', err)
+      toast.error('Failed to generate PDF')
+    } finally {
+      setIsDownloading(false)
+    }
+  }, [invoiceMetadata.invoiceNumber, invoice.invoiceId, dueDate])
 
   return (
     <div className="min-h-screen bg-background">
@@ -159,6 +233,18 @@ export default function InvoiceDetail() {
                 <Copy className="mr-2 h-4 w-4" />
                 Copy Link
               </Button>
+              {supaMetadata?.id && (
+                <Button variant="outline" size="sm" asChild>
+                  <Link to={`/app/invoices/${supaMetadata.id}/edit`}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
+                  </Link>
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={isDownloading}>
+                {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                Download PDF
+              </Button>
               <Button variant="outline" size="sm" asChild>
                 <a
                   href={getExplorerAddressUrl(chainId, addresses.InvoiceRegistry || '')}
@@ -173,7 +259,7 @@ export default function InvoiceDetail() {
           </div>
 
           {/* Invoice Document */}
-          <div className="rounded-xl border border-border bg-white dark:bg-card shadow-lg p-8 md:p-12">
+          <div ref={invoiceRef} className="rounded-xl border border-border bg-white dark:bg-card shadow-lg p-8 md:p-12">
             {/* Title */}
             <h1 className="text-3xl font-bold text-gray-900 dark:text-foreground mb-8">BILL DETAILS</h1>
 
@@ -184,7 +270,7 @@ export default function InvoiceDetail() {
                 <div>
                   <p className="text-sm text-gray-600 dark:text-muted-foreground">Bill No:</p>
                   <p className="font-semibold text-gray-900 dark:text-foreground">
-                    INV-{invoice.invoiceId.toString().padStart(10, '0')}
+                    {invoiceMetadata.invoiceNumber || `INV-${invoice.invoiceId.toString().padStart(10, '0')}`}
                   </p>
                 </div>
                 <div>
@@ -205,7 +291,7 @@ export default function InvoiceDetail() {
                   </div>
                 </div>
                 <div className="space-y-1 text-sm text-gray-600 dark:text-muted-foreground">
-                  <p className="font-medium text-gray-900 dark:text-foreground">Monaris Protocol</p>
+                  <p className="font-medium text-gray-900 dark:text-foreground">{sellerDisplayName}</p>
                   <p className="font-mono text-xs break-all">{sellerAddress.slice(0, 6)}...{sellerAddress.slice(-4)}</p>
                   <p className="font-mono text-xs break-all">{sellerAddress}</p>
                 </div>
@@ -244,19 +330,19 @@ export default function InvoiceDetail() {
 
               {/* Tokenized Bill Info */}
               {nftAddress && (
-                <div className="mt-4 border-l-4 border-green-500 bg-green-50/50 dark:bg-green-950/10 p-5 rounded-r-lg">
+                <div className="mt-4 border-l-4 border-[#c8ff00] bg-[#c8ff00]/8 dark:bg-[#c8ff00]/5 p-5 rounded-r-lg">
                   <div className="flex items-start gap-5">
                     <div className="flex-1 space-y-2.5">
                       <div className="flex items-center gap-3 flex-wrap">
-                        <p className="text-base font-semibold text-green-900 dark:text-green-200">
+                        <p className="text-base font-semibold text-[#5a8c1a] dark:text-[#c8ff00]">
                           Tokenized Bill Powered by Monaris
                         </p>
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 dark:bg-green-900/40 px-2.5 py-1 text-xs font-semibold text-green-700 dark:text-green-300 border border-green-200 dark:border-green-700">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#c8ff00]/15 dark:bg-[#c8ff00]/15 px-2.5 py-1 text-xs font-semibold text-[#7cb518] dark:text-[#c8ff00] border border-[#c8ff00]/30 dark:border-[#c8ff00]/30">
                           <Shield className="h-3 w-3" />
                           RWA
                         </span>
                       </div>
-                      <p className="text-sm text-green-800/90 dark:text-green-300/90 leading-relaxed">
+                      <p className="text-sm text-[#5a8c1a] dark:text-[#c8ff00]/90 leading-relaxed">
                         This invoice has been tokenized as an ERC721 NFT by Monaris, making it a tradeable Real-World Asset (RWA).
                       </p>
                     </div>
@@ -266,7 +352,7 @@ export default function InvoiceDetail() {
                           variant="outline"
                           size="icon"
                           asChild
-                          className="h-10 w-10 rounded-lg border-green-300 dark:border-green-700 bg-white dark:bg-green-950/20 hover:bg-green-100 dark:hover:bg-green-900/30 hover:border-green-400 dark:hover:border-green-600 transition-all"
+                          className="h-10 w-10 rounded-lg border-[#c8ff00]/40 dark:border-[#c8ff00]/30 bg-white dark:bg-[#c8ff00]/10 hover:bg-[#c8ff00]/15 dark:hover:bg-[#c8ff00]/15 hover:border-[#c8ff00]/50 dark:hover:border-[#c8ff00]/40 transition-all"
                           title="View on Explorer"
                           onClick={(e) => {
                             // On right-click or ctrl+click, copy ID instead
@@ -282,7 +368,7 @@ export default function InvoiceDetail() {
                             target="_blank"
                             rel="noopener noreferrer"
                           >
-                            <ExternalLink className="h-4 w-4 text-green-700 dark:text-green-300" />
+                            <ExternalLink className="h-4 w-4 text-[#7cb518] dark:text-[#c8ff00]" />
                           </a>
                         </Button>
                       </div>
@@ -374,7 +460,7 @@ export default function InvoiceDetail() {
                   </div>
                 )}
                 {discount > 0 && (
-                  <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
+                  <div className="flex justify-between text-sm text-[#7cb518] dark:text-[#c8ff00]">
                     <span>Discount (5%):</span>
                     <span className="font-medium">
                       -${discount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -401,9 +487,15 @@ export default function InvoiceDetail() {
                   <div className="text-base font-bold text-gray-900 dark:text-foreground">Monaris Network</div>
                   <div className="flex items-center gap-2">
                     <p className="text-xs text-gray-600 dark:text-muted-foreground">Payment Status:</p>
-                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor}`}>
-                      {statusLabel}
-                    </span>
+                    {supaMetadata?.status === 'rejected' ? (
+                      <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
+                        Rejected
+                      </span>
+                    ) : (
+                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor}`}>
+                        {statusLabel}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <p className="text-xs text-gray-600 dark:text-muted-foreground">Due On:</p>
@@ -509,10 +601,10 @@ export default function InvoiceDetail() {
 
             {/* Payment Information (if paid/cleared) */}
             {invoice.status >= 2 && (
-              <div className="mt-6 p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/50 rounded-lg">
+              <div className="mt-6 p-4 bg-[#c8ff00]/10 dark:bg-[#c8ff00]/10 border border-[#c8ff00]/30 dark:border-[#c8ff00]/20 rounded-lg">
                 <div className="flex items-center gap-2 mb-3">
-                  <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  <h3 className="font-semibold text-green-900 dark:text-green-400">Payment Information</h3>
+                  <CheckCircle2 className="h-5 w-5 text-[#7cb518] dark:text-[#c8ff00]" />
+                  <h3 className="font-semibold text-[#5a8c1a] dark:text-[#c8ff00]">Payment Information</h3>
                 </div>
                 <div className="space-y-2 text-sm">
                   {invoice.paidAt > 0n && (
