@@ -1135,38 +1135,6 @@ export default function Dashboard() {
         </div>
       </motion.div>
 
-      {/* Received Invoices (Buyer View) */}
-      {enrichedBuyerInvoices && enrichedBuyerInvoices.length > 0 && (
-        <motion.div
-          variants={item}
-          className="bg-white dark:bg-[#1a1a2e] rounded-[20px] sm:rounded-[32px] shadow-[0px_24px_32px_0px_rgba(0,0,0,0.04),0px_16px_24px_0px_rgba(0,0,0,0.04),0px_4px_8px_0px_rgba(0,0,0,0.04)] p-3 sm:p-8 mx-1 sm:mx-0"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#c8ff00]/10 flex items-center justify-center">
-                <Inbox className="h-5 w-5 text-[#c8ff00]" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-[#1a1a1a] dark:text-white">Received Invoices</h2>
-                <p className="text-sm text-[#aeaeae]">Invoices sent to you by other businesses</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {isLoadingBuyerInvoices ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-5 w-5 animate-spin text-[#aeaeae]" />
-              </div>
-            ) : (
-              enrichedBuyerInvoices.map((inv) => (
-                <BuyerInvoiceCard key={inv.id} invoice={inv} onReject={() => refetchBuyerInvoices()} />
-              ))
-            )}
-          </div>
-        </motion.div>
-      )}
-
       {/* Dialogs */}
       <WithdrawDialog
         open={withdrawDialogOpen}
