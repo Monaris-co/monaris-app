@@ -22,7 +22,6 @@ import {
   X,
 } from "lucide-react"
 import { Link } from "react-router-dom"
-import { PremiumGate } from "@/components/PremiumGate"
 import { Button } from "@/components/ui/button"
 import { StatCard } from "@/components/ui/stat-card"
 import { StatusBadge } from "@/components/ui/status-badge"
@@ -297,814 +296,812 @@ export default function Dashboard() {
   const isLoading = isLoadingInvoices || isLoadingReputation
 
   return (
-    <PremiumGate>
+    <motion.div
+      variants={container}
+      initial="hidden"
+      animate="show"
+      className="space-y-6"
+    >
+      {/* Main Dashboard Container - Figma Style */}
       <motion.div
-        variants={container}
-        initial="hidden"
-        animate="show"
-        className="space-y-6"
+        variants={item}
+        className="bg-white dark:bg-[#1a1a2e] rounded-[20px] sm:rounded-[32px] shadow-[0px_24px_32px_0px_rgba(0,0,0,0.04),0px_16px_24px_0px_rgba(0,0,0,0.04),0px_4px_8px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-3 sm:p-8 mx-1 sm:mx-0"
       >
-        {/* Main Dashboard Container - Figma Style */}
-        <motion.div
-          variants={item}
-          className="bg-white dark:bg-[#1a1a2e] rounded-[20px] sm:rounded-[32px] shadow-[0px_24px_32px_0px_rgba(0,0,0,0.04),0px_16px_24px_0px_rgba(0,0,0,0.04),0px_4px_8px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-3 sm:p-8 mx-1 sm:mx-0"
-        >
-          {/* Page Header */}
-          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
-            <div>
-              <h1 className="text-[32px] font-semibold text-[#404040] dark:text-white tracking-tight">Dashboard</h1>
-              <p className="text-[#aeaeae] text-base mt-1">
-                Get summary Cashflow Graph, Policy Router, Self-repaying Credit here
-              </p>
-            </div>
-
-            {/* User Profile & Actions */}
-            <div className="flex items-center gap-4">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="flex items-center gap-3 px-5 py-2.5 rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-[0px_2px_6px_0px_rgba(0,0,0,0.04)] hover:shadow-md transition-all">
-                    <div className="w-8 h-8 rounded-full bg-[#197bbd]/10 flex items-center justify-center">
-                      <DollarSign className="h-4 w-4 text-[#197bbd]" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-xs text-[#aeaeae] font-medium">Total Balance</p>
-                      <p className="text-lg font-semibold text-[#404040] dark:text-white">
-                        {isLoadingAllBalances ? "..." : `$${unifiedBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                      </p>
-                    </div>
-                    <ChevronDown className="h-4 w-4 text-[#c7c7c7]" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-64 p-3 rounded-2xl shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06)]">
-                  <p className="text-xs font-semibold text-[#aeaeae] mb-2 px-1">Token Balances</p>
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-[#f8f8f8] dark:bg-gray-800">
-                      <span className="text-sm text-[#404040] dark:text-gray-300">USDC</span>
-                      <span className="text-sm font-semibold text-[#404040] dark:text-white">
-                        {isLoadingBalance ? "..." : usdcBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-[#f8f8f8] dark:bg-gray-800">
-                      <span className="text-sm text-[#404040] dark:text-gray-300">USMT+</span>
-                      <span className="text-sm font-semibold text-[#404040] dark:text-white">
-                        {isLoadingUSMT ? "..." : usmtBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-[#f8f8f8] dark:bg-gray-800">
-                      <span className="text-sm text-[#404040] dark:text-gray-300">{nativeTokenSymbol}</span>
-                      <span className="text-sm font-semibold text-[#404040] dark:text-white">
-                        {isLoadingNative ? "..." : nativeBalanceFormatted.toFixed(4)}
-                      </span>
-                    </div>
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+        {/* Page Header */}
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
+          <div>
+            <h1 className="text-[32px] font-semibold text-[#404040] dark:text-white tracking-tight">Dashboard</h1>
+            <p className="text-[#aeaeae] text-base mt-1">
+              Get summary Cashflow Graph, Policy Router, Self-repaying Credit here
+            </p>
           </div>
 
-          {/* Cards Section - Balance & Stats */}
-          <div className="grid lg:grid-cols-12 gap-2 sm:gap-6 mb-4 sm:mb-6">
-            {/* Left: Balance Card */}
-            <div className="lg:col-span-5">
-              <div className="bg-white dark:bg-gray-800 rounded-[16px] sm:rounded-[28px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-2.5 sm:p-6 h-full">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-[#1a1a1a] dark:text-white">Balance Overview</h2>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setReceiveFundsDialogOpen(true)}
-                      className="p-2 rounded-lg bg-[#f0f7ff] dark:bg-blue-900/30 hover:bg-[#e0efff] transition-colors"
-                    >
-                      <QrCode className="h-4 w-4 text-[#197bbd]" />
-                    </button>
-                    <button
-                      onClick={() => setWithdrawDialogOpen(true)}
-                      className="p-2 rounded-lg bg-[#f0f7ff] dark:bg-blue-900/30 hover:bg-[#e0efff] transition-colors"
-                    >
-                      <ArrowUpLeft className="h-4 w-4 text-[#197bbd]" />
-                    </button>
+          {/* User Profile & Actions */}
+          <div className="flex items-center gap-4">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-3 px-5 py-2.5 rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-[0px_2px_6px_0px_rgba(0,0,0,0.04)] hover:shadow-md transition-all">
+                  <div className="w-8 h-8 rounded-full bg-[#197bbd]/10 flex items-center justify-center">
+                    <DollarSign className="h-4 w-4 text-[#197bbd]" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-xs text-[#aeaeae] font-medium">Total Balance</p>
+                    <p className="text-lg font-semibold text-[#404040] dark:text-white">
+                      {isLoadingAllBalances ? "..." : `$${unifiedBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    </p>
+                  </div>
+                  <ChevronDown className="h-4 w-4 text-[#c7c7c7]" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64 p-3 rounded-2xl shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06)]">
+                <p className="text-xs font-semibold text-[#aeaeae] mb-2 px-1">Token Balances</p>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-[#f8f8f8] dark:bg-gray-800">
+                    <span className="text-sm text-[#404040] dark:text-gray-300">USDC</span>
+                    <span className="text-sm font-semibold text-[#404040] dark:text-white">
+                      {isLoadingBalance ? "..." : usdcBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-[#f8f8f8] dark:bg-gray-800">
+                    <span className="text-sm text-[#404040] dark:text-gray-300">USMT+</span>
+                    <span className="text-sm font-semibold text-[#404040] dark:text-white">
+                      {isLoadingUSMT ? "..." : usmtBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-[#f8f8f8] dark:bg-gray-800">
+                    <span className="text-sm text-[#404040] dark:text-gray-300">{nativeTokenSymbol}</span>
+                    <span className="text-sm font-semibold text-[#404040] dark:text-white">
+                      {isLoadingNative ? "..." : nativeBalanceFormatted.toFixed(4)}
+                    </span>
+                  </div>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        {/* Cards Section - Balance & Stats */}
+        <div className="grid lg:grid-cols-12 gap-2 sm:gap-6 mb-4 sm:mb-6">
+          {/* Left: Balance Card */}
+          <div className="lg:col-span-5">
+            <div className="bg-white dark:bg-gray-800 rounded-[16px] sm:rounded-[28px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-2.5 sm:p-6 h-full">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-[#1a1a1a] dark:text-white">Balance Overview</h2>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setReceiveFundsDialogOpen(true)}
+                    className="p-2 rounded-lg bg-[#f0f7ff] dark:bg-blue-900/30 hover:bg-[#e0efff] transition-colors"
+                  >
+                    <QrCode className="h-4 w-4 text-[#197bbd]" />
+                  </button>
+                  <button
+                    onClick={() => setWithdrawDialogOpen(true)}
+                    className="p-2 rounded-lg bg-[#f0f7ff] dark:bg-blue-900/30 hover:bg-[#e0efff] transition-colors"
+                  >
+                    <ArrowUpLeft className="h-4 w-4 text-[#197bbd]" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Balance Data with Circle Chart - Side by Side */}
+              <div className="flex items-start gap-6 mb-6">
+                {/* Left Side - Balance Data */}
+                <div className="flex-1">
+                  {/* Current Balance */}
+                  <div className="mb-5">
+                    <p className="text-sm font-medium text-[#aeaeae] mb-1">Current balance</p>
+                    <p className="text-3xl font-bold text-[#197bbd]">
+                      <span className="text-lg">$</span> {isLoadingAllBalances ? "..." : unifiedBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  </div>
+
+                  {/* Cleared Volume */}
+                  <div className="mb-4">
+                    <p className="text-sm font-medium text-[#aeaeae] mb-1">Cleared Volume</p>
+                    <p className="text-xl font-bold text-[#439a86]">
+                      <span className="text-base">$</span> {isLoading ? "..." : statsData.clearedVolume.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  </div>
+
+                  {/* Outstanding */}
+                  <div>
+                    <p className="text-sm font-medium text-[#aeaeae] mb-1">Outstanding</p>
+                    <p className="text-xl font-bold text-[#f59e0b]">
+                      <span className="text-base">$</span> {isLoading ? "..." : statsData.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
                   </div>
                 </div>
 
-                {/* Balance Data with Circle Chart - Side by Side */}
-                <div className="flex items-start gap-6 mb-6">
-                  {/* Left Side - Balance Data */}
-                  <div className="flex-1">
-                    {/* Current Balance */}
-                    <div className="mb-5">
-                      <p className="text-sm font-medium text-[#aeaeae] mb-1">Current balance</p>
-                      <p className="text-3xl font-bold text-[#197bbd]">
-                        <span className="text-lg">$</span> {isLoadingAllBalances ? "..." : unifiedBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </p>
-                    </div>
+                {/* Right Side - Modern Radial Chart */}
+                <div className="flex flex-col items-center justify-center">
+                  {(() => {
+                    const balanceVal = isLoadingAllBalances ? 0 : unifiedBalance;
+                    const clearedVal = isLoading ? 0 : statsData.clearedVolume;
+                    const outstandingVal = isLoading ? 0 : statsData.outstanding;
+                    const total = balanceVal + clearedVal + outstandingVal;
 
-                    {/* Cleared Volume */}
-                    <div className="mb-4">
-                      <p className="text-sm font-medium text-[#aeaeae] mb-1">Cleared Volume</p>
-                      <p className="text-xl font-bold text-[#439a86]">
-                        <span className="text-base">$</span> {isLoading ? "..." : statsData.clearedVolume.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </p>
-                    </div>
+                    const balancePercent = total > 0 ? (balanceVal / total) * 100 : 0;
+                    const clearedPercent = total > 0 ? (clearedVal / total) * 100 : 0;
+                    const outstandingPercent = total > 0 ? (outstandingVal / total) * 100 : 0;
 
-                    {/* Outstanding */}
-                    <div>
-                      <p className="text-sm font-medium text-[#aeaeae] mb-1">Outstanding</p>
-                      <p className="text-xl font-bold text-[#f59e0b]">
-                        <span className="text-base">$</span> {isLoading ? "..." : statsData.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </p>
-                    </div>
-                  </div>
+                    return (
+                      <div className="relative w-[140px] h-[140px]">
+                        {/* SVG Radial Progress */}
+                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                          <defs>
+                            <linearGradient id="balanceGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                              <stop offset="0%" stopColor="#3b82f6" />
+                              <stop offset="100%" stopColor="#1d4ed8" />
+                            </linearGradient>
+                            <linearGradient id="clearedGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                              <stop offset="0%" stopColor="#10b981" />
+                              <stop offset="100%" stopColor="#059669" />
+                            </linearGradient>
+                            <linearGradient id="outstandingGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                              <stop offset="0%" stopColor="#f59e0b" />
+                              <stop offset="100%" stopColor="#d97706" />
+                            </linearGradient>
+                          </defs>
 
-                  {/* Right Side - Modern Radial Chart */}
-                  <div className="flex flex-col items-center justify-center">
-                    {(() => {
-                      const balanceVal = isLoadingAllBalances ? 0 : unifiedBalance;
-                      const clearedVal = isLoading ? 0 : statsData.clearedVolume;
-                      const outstandingVal = isLoading ? 0 : statsData.outstanding;
-                      const total = balanceVal + clearedVal + outstandingVal;
+                          {/* Background Track */}
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="42"
+                            fill="none"
+                            stroke="#f3f4f6"
+                            strokeWidth="8"
+                            className="dark:stroke-gray-700"
+                          />
 
-                      const balancePercent = total > 0 ? (balanceVal / total) * 100 : 0;
-                      const clearedPercent = total > 0 ? (clearedVal / total) * 100 : 0;
-                      const outstandingPercent = total > 0 ? (outstandingVal / total) * 100 : 0;
+                          {/* Balance Ring (Outer) */}
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="42"
+                            fill="none"
+                            stroke="url(#balanceGradient)"
+                            strokeWidth="8"
+                            strokeLinecap="round"
+                            strokeDasharray={`${balancePercent * 2.64} 264`}
+                            className={`transition-all duration-700 ease-out cursor-pointer ${hoveredSegment === 'balance' ? 'opacity-100' : 'opacity-90'}`}
+                            style={{ filter: hoveredSegment === 'balance' ? 'drop-shadow(0 0 6px #3b82f6)' : 'none' }}
+                            onMouseEnter={() => setHoveredSegment('balance')}
+                            onMouseLeave={() => setHoveredSegment(null)}
+                          />
 
-                      return (
-                        <div className="relative w-[140px] h-[140px]">
-                          {/* SVG Radial Progress */}
-                          <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                            <defs>
-                              <linearGradient id="balanceGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stopColor="#3b82f6" />
-                                <stop offset="100%" stopColor="#1d4ed8" />
-                              </linearGradient>
-                              <linearGradient id="clearedGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stopColor="#10b981" />
-                                <stop offset="100%" stopColor="#059669" />
-                              </linearGradient>
-                              <linearGradient id="outstandingGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stopColor="#f59e0b" />
-                                <stop offset="100%" stopColor="#d97706" />
-                              </linearGradient>
-                            </defs>
+                          {/* Cleared Ring (Middle) */}
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="32"
+                            fill="none"
+                            stroke="url(#clearedGradient)"
+                            strokeWidth="8"
+                            strokeLinecap="round"
+                            strokeDasharray={`${clearedPercent * 2.01} 201`}
+                            className={`transition-all duration-700 ease-out cursor-pointer ${hoveredSegment === 'cleared' ? 'opacity-100' : 'opacity-90'}`}
+                            style={{ filter: hoveredSegment === 'cleared' ? 'drop-shadow(0 0 6px #10b981)' : 'none' }}
+                            onMouseEnter={() => setHoveredSegment('cleared')}
+                            onMouseLeave={() => setHoveredSegment(null)}
+                          />
 
-                            {/* Background Track */}
-                            <circle
-                              cx="50"
-                              cy="50"
-                              r="42"
-                              fill="none"
-                              stroke="#f3f4f6"
-                              strokeWidth="8"
-                              className="dark:stroke-gray-700"
-                            />
+                          {/* Outstanding Ring (Inner) */}
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="22"
+                            fill="none"
+                            stroke="url(#outstandingGradient)"
+                            strokeWidth="8"
+                            strokeLinecap="round"
+                            strokeDasharray={`${outstandingPercent * 1.38} 138`}
+                            className={`transition-all duration-700 ease-out cursor-pointer ${hoveredSegment === 'outstanding' ? 'opacity-100' : 'opacity-90'}`}
+                            style={{ filter: hoveredSegment === 'outstanding' ? 'drop-shadow(0 0 6px #f59e0b)' : 'none' }}
+                            onMouseEnter={() => setHoveredSegment('outstanding')}
+                            onMouseLeave={() => setHoveredSegment(null)}
+                          />
+                        </svg>
 
-                            {/* Balance Ring (Outer) */}
-                            <circle
-                              cx="50"
-                              cy="50"
-                              r="42"
-                              fill="none"
-                              stroke="url(#balanceGradient)"
-                              strokeWidth="8"
-                              strokeLinecap="round"
-                              strokeDasharray={`${balancePercent * 2.64} 264`}
-                              className={`transition-all duration-700 ease-out cursor-pointer ${hoveredSegment === 'balance' ? 'opacity-100' : 'opacity-90'}`}
-                              style={{ filter: hoveredSegment === 'balance' ? 'drop-shadow(0 0 6px #3b82f6)' : 'none' }}
-                              onMouseEnter={() => setHoveredSegment('balance')}
-                              onMouseLeave={() => setHoveredSegment(null)}
-                            />
-
-                            {/* Cleared Ring (Middle) */}
-                            <circle
-                              cx="50"
-                              cy="50"
-                              r="32"
-                              fill="none"
-                              stroke="url(#clearedGradient)"
-                              strokeWidth="8"
-                              strokeLinecap="round"
-                              strokeDasharray={`${clearedPercent * 2.01} 201`}
-                              className={`transition-all duration-700 ease-out cursor-pointer ${hoveredSegment === 'cleared' ? 'opacity-100' : 'opacity-90'}`}
-                              style={{ filter: hoveredSegment === 'cleared' ? 'drop-shadow(0 0 6px #10b981)' : 'none' }}
-                              onMouseEnter={() => setHoveredSegment('cleared')}
-                              onMouseLeave={() => setHoveredSegment(null)}
-                            />
-
-                            {/* Outstanding Ring (Inner) */}
-                            <circle
-                              cx="50"
-                              cy="50"
-                              r="22"
-                              fill="none"
-                              stroke="url(#outstandingGradient)"
-                              strokeWidth="8"
-                              strokeLinecap="round"
-                              strokeDasharray={`${outstandingPercent * 1.38} 138`}
-                              className={`transition-all duration-700 ease-out cursor-pointer ${hoveredSegment === 'outstanding' ? 'opacity-100' : 'opacity-90'}`}
-                              style={{ filter: hoveredSegment === 'outstanding' ? 'drop-shadow(0 0 6px #f59e0b)' : 'none' }}
-                              onMouseEnter={() => setHoveredSegment('outstanding')}
-                              onMouseLeave={() => setHoveredSegment(null)}
-                            />
-                          </svg>
-
-                          {/* Center Content */}
-                          <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            {hoveredSegment === null ? (
-                              <>
-                                <span className="flex items-center gap-1 text-[9px] text-[#aeaeae] mb-0.5">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                  Live
-                                </span>
-                                <span className="text-lg font-bold text-[#1a1a1a] dark:text-white">
-                                  ${total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                </span>
-                              </>
-                            ) : (
-                              <>
-                                <span className={`text-lg font-bold ${hoveredSegment === 'balance' ? 'text-blue-500' :
-                                  hoveredSegment === 'cleared' ? 'text-emerald-500' :
-                                    'text-amber-500'
-                                  }`}>
-                                  {hoveredSegment === 'balance' ? `${balancePercent.toFixed(0)}%` :
-                                    hoveredSegment === 'cleared' ? `${clearedPercent.toFixed(0)}%` :
-                                      `${outstandingPercent.toFixed(0)}%`}
-                                </span>
-                                <span className="text-[10px] text-[#696969] capitalize">{hoveredSegment}</span>
-                              </>
-                            )}
-                          </div>
-
-                          {/* Tooltip */}
-                          {hoveredSegment && (
-                            <div className={`absolute -top-1 left-1/2 -translate-x-1/2 -translate-y-full px-3 py-1.5 rounded-lg shadow-xl z-30 whitespace-nowrap ${hoveredSegment === 'balance' ? 'bg-gradient-to-r from-blue-500 to-blue-600' :
-                              hoveredSegment === 'cleared' ? 'bg-gradient-to-r from-emerald-500 to-emerald-600' :
-                                'bg-gradient-to-r from-amber-500 to-amber-600'
-                              }`}>
-                              <p className="text-white text-xs font-medium">
-                                ${hoveredSegment === 'balance' ? balanceVal.toLocaleString(undefined, { minimumFractionDigits: 2 }) :
-                                  hoveredSegment === 'cleared' ? clearedVal.toLocaleString(undefined, { minimumFractionDigits: 2 }) :
-                                    outstandingVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                              </p>
-                              <div className={`absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-r-[5px] border-t-[5px] border-transparent ${hoveredSegment === 'balance' ? 'border-t-blue-600' :
-                                hoveredSegment === 'cleared' ? 'border-t-emerald-600' :
-                                  'border-t-amber-600'
-                                }`} />
-                            </div>
+                        {/* Center Content */}
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          {hoveredSegment === null ? (
+                            <>
+                              <span className="flex items-center gap-1 text-[9px] text-[#aeaeae] mb-0.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                Live
+                              </span>
+                              <span className="text-lg font-bold text-[#1a1a1a] dark:text-white">
+                                ${total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className={`text-lg font-bold ${hoveredSegment === 'balance' ? 'text-blue-500' :
+                                hoveredSegment === 'cleared' ? 'text-emerald-500' :
+                                  'text-amber-500'
+                                }`}>
+                                {hoveredSegment === 'balance' ? `${balancePercent.toFixed(0)}%` :
+                                  hoveredSegment === 'cleared' ? `${clearedPercent.toFixed(0)}%` :
+                                    `${outstandingPercent.toFixed(0)}%`}
+                              </span>
+                              <span className="text-[10px] text-[#696969] capitalize">{hoveredSegment}</span>
+                            </>
                           )}
                         </div>
-                      );
-                    })()}
 
-                    {/* Legend */}
-                    <div className="flex items-center gap-4 mt-3">
-                      <button
-                        className={`flex items-center gap-1.5 transition-all ${hoveredSegment === 'balance' ? 'scale-105' : ''}`}
-                        onMouseEnter={() => setHoveredSegment('balance')}
-                        onMouseLeave={() => setHoveredSegment(null)}
-                      >
-                        <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-blue-500 to-blue-600" />
-                        <span className="text-[10px] text-[#696969] dark:text-gray-400">Balance</span>
-                      </button>
-                      <button
-                        className={`flex items-center gap-1.5 transition-all ${hoveredSegment === 'cleared' ? 'scale-105' : ''}`}
-                        onMouseEnter={() => setHoveredSegment('cleared')}
-                        onMouseLeave={() => setHoveredSegment(null)}
-                      >
-                        <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600" />
-                        <span className="text-[10px] text-[#696969] dark:text-gray-400">Cleared</span>
-                      </button>
-                      <button
-                        className={`flex items-center gap-1.5 transition-all ${hoveredSegment === 'outstanding' ? 'scale-105' : ''}`}
-                        onMouseEnter={() => setHoveredSegment('outstanding')}
-                        onMouseLeave={() => setHoveredSegment(null)}
-                      >
-                        <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600" />
-                        <span className="text-[10px] text-[#696969] dark:text-gray-400">Pending</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Auto-Earn Toggle */}
-                <div className="pt-4 border-t border-[#f1f1f1] dark:border-gray-700">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-[#1a1a1a] dark:text-white">Auto-Earn</p>
-                      <p className="text-xs text-[#aeaeae]">Earn yield on idle balance</p>
-                    </div>
-                    <button
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${autoEarnEnabled
-                        ? 'bg-[#c8ff00]'
-                        : 'bg-gray-300 dark:bg-gray-600'
-                        }`}
-                      onClick={() => {
-                        const newValue = !autoEarnEnabled
-                        setAutoEarnEnabled(newValue)
-                        localStorage.setItem('autoEarnEnabled', JSON.stringify(newValue))
-                        toast.success(newValue ? 'Auto-Earn enabled' : 'Auto-Earn disabled', {
-                          description: newValue
-                            ? 'Your idle balance will now earn yield automatically'
-                            : 'Auto-Earn has been turned off'
-                        })
-                      }}
-                    >
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${autoEarnEnabled ? 'translate-x-6' : 'translate-x-1'
-                        }`} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Quick Send Section */}
-                <div className="pt-5 mt-5 border-t border-[#f1f1f1] dark:border-gray-700">
-                  <h3 className="text-lg font-semibold text-[#1a1a1a] dark:text-white mb-4">Quick Send</h3>
-
-                  {/* Recent Contacts */}
-                  <div className="flex items-center gap-4 mb-5 overflow-x-auto pb-2">
-                    {/* Sample contacts - these would be dynamic in real app */}
-                    {[
-                      { name: 'Ann', image: '/image.png' },
-                      { name: 'Monica', image: '/image copy.png' },
-                      { name: 'John', image: '/image copy 3.png' },
-                      { name: 'Mike', image: '/image copy 2.png' },
-                    ].map((contact, index) => (
-                      <button
-                        key={index}
-                        className="flex flex-col items-center gap-1.5 group flex-shrink-0"
-                      >
-                        <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-transparent group-hover:ring-[#c8ff00] transition-all">
-                          <img
-                            src={contact.image}
-                            alt={contact.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <span className="text-xs text-[#696969] dark:text-gray-400 group-hover:text-[#1a1a1a] dark:group-hover:text-white transition-colors">{contact.name}</span>
-                      </button>
-                    ))}
-
-                    {/* Add New Button */}
-                    <button className="flex flex-col items-center gap-1.5 group flex-shrink-0">
-                      <div className="w-12 h-12 rounded-full border-2 border-dashed border-[#c8ff00] flex items-center justify-center group-hover:bg-[#c8ff00]/10 transition-colors">
-                        <Plus className="h-5 w-5 text-[#c8ff00]" />
+                        {/* Tooltip */}
+                        {hoveredSegment && (
+                          <div className={`absolute -top-1 left-1/2 -translate-x-1/2 -translate-y-full px-3 py-1.5 rounded-lg shadow-xl z-30 whitespace-nowrap ${hoveredSegment === 'balance' ? 'bg-gradient-to-r from-blue-500 to-blue-600' :
+                            hoveredSegment === 'cleared' ? 'bg-gradient-to-r from-emerald-500 to-emerald-600' :
+                              'bg-gradient-to-r from-amber-500 to-amber-600'
+                            }`}>
+                            <p className="text-white text-xs font-medium">
+                              ${hoveredSegment === 'balance' ? balanceVal.toLocaleString(undefined, { minimumFractionDigits: 2 }) :
+                                hoveredSegment === 'cleared' ? clearedVal.toLocaleString(undefined, { minimumFractionDigits: 2 }) :
+                                  outstandingVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </p>
+                            <div className={`absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-r-[5px] border-t-[5px] border-transparent ${hoveredSegment === 'balance' ? 'border-t-blue-600' :
+                              hoveredSegment === 'cleared' ? 'border-t-emerald-600' :
+                                'border-t-amber-600'
+                              }`} />
+                          </div>
+                        )}
                       </div>
-                      <span className="text-xs text-[#696969] dark:text-gray-400">Add New</span>
-                    </button>
-                  </div>
+                    );
+                  })()}
 
-                  {/* Amount Input & Send Button */}
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                    <div className="flex-1 relative">
-                      <input
-                        type="number"
-                        placeholder="0"
-                        className="w-full h-12 pl-4 pr-10 rounded-xl border-2 border-[#e8e8e8] dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1a1a1a] dark:text-white text-lg font-medium focus:border-[#c8ff00] focus:outline-none transition-colors"
-                      />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#aeaeae] font-medium">$</span>
-                    </div>
-                    <button className="h-12 px-5 rounded-xl bg-[#c8ff00] hover:bg-[#b8ef00] text-[#1a1a1a] font-semibold text-sm flex items-center justify-center gap-2 transition-colors whitespace-nowrap">
-                      Send Transfer
-                      <ArrowRight className="h-4 w-4" />
+                  {/* Legend */}
+                  <div className="flex items-center gap-4 mt-3">
+                    <button
+                      className={`flex items-center gap-1.5 transition-all ${hoveredSegment === 'balance' ? 'scale-105' : ''}`}
+                      onMouseEnter={() => setHoveredSegment('balance')}
+                      onMouseLeave={() => setHoveredSegment(null)}
+                    >
+                      <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-blue-500 to-blue-600" />
+                      <span className="text-[10px] text-[#696969] dark:text-gray-400">Balance</span>
+                    </button>
+                    <button
+                      className={`flex items-center gap-1.5 transition-all ${hoveredSegment === 'cleared' ? 'scale-105' : ''}`}
+                      onMouseEnter={() => setHoveredSegment('cleared')}
+                      onMouseLeave={() => setHoveredSegment(null)}
+                    >
+                      <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600" />
+                      <span className="text-[10px] text-[#696969] dark:text-gray-400">Cleared</span>
+                    </button>
+                    <button
+                      className={`flex items-center gap-1.5 transition-all ${hoveredSegment === 'outstanding' ? 'scale-105' : ''}`}
+                      onMouseEnter={() => setHoveredSegment('outstanding')}
+                      onMouseLeave={() => setHoveredSegment(null)}
+                    >
+                      <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600" />
+                      <span className="text-[10px] text-[#696969] dark:text-gray-400">Pending</span>
                     </button>
                   </div>
                 </div>
               </div>
+
+              {/* Auto-Earn Toggle */}
+              <div className="pt-4 border-t border-[#f1f1f1] dark:border-gray-700">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-[#1a1a1a] dark:text-white">Auto-Earn</p>
+                    <p className="text-xs text-[#aeaeae]">Earn yield on idle balance</p>
+                  </div>
+                  <button
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${autoEarnEnabled
+                      ? 'bg-[#c8ff00]'
+                      : 'bg-gray-300 dark:bg-gray-600'
+                      }`}
+                    onClick={() => {
+                      const newValue = !autoEarnEnabled
+                      setAutoEarnEnabled(newValue)
+                      localStorage.setItem('autoEarnEnabled', JSON.stringify(newValue))
+                      toast.success(newValue ? 'Auto-Earn enabled' : 'Auto-Earn disabled', {
+                        description: newValue
+                          ? 'Your idle balance will now earn yield automatically'
+                          : 'Auto-Earn has been turned off'
+                      })
+                    }}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${autoEarnEnabled ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Send Section */}
+              <div className="pt-5 mt-5 border-t border-[#f1f1f1] dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-[#1a1a1a] dark:text-white mb-4">Quick Send</h3>
+
+                {/* Recent Contacts */}
+                <div className="flex items-center gap-4 mb-5 overflow-x-auto pb-2">
+                  {/* Sample contacts - these would be dynamic in real app */}
+                  {[
+                    { name: 'Ann', image: '/image.png' },
+                    { name: 'Monica', image: '/image copy.png' },
+                    { name: 'John', image: '/image copy 3.png' },
+                    { name: 'Mike', image: '/image copy 2.png' },
+                  ].map((contact, index) => (
+                    <button
+                      key={index}
+                      className="flex flex-col items-center gap-1.5 group flex-shrink-0"
+                    >
+                      <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-transparent group-hover:ring-[#c8ff00] transition-all">
+                        <img
+                          src={contact.image}
+                          alt={contact.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <span className="text-xs text-[#696969] dark:text-gray-400 group-hover:text-[#1a1a1a] dark:group-hover:text-white transition-colors">{contact.name}</span>
+                    </button>
+                  ))}
+
+                  {/* Add New Button */}
+                  <button className="flex flex-col items-center gap-1.5 group flex-shrink-0">
+                    <div className="w-12 h-12 rounded-full border-2 border-dashed border-[#c8ff00] flex items-center justify-center group-hover:bg-[#c8ff00]/10 transition-colors">
+                      <Plus className="h-5 w-5 text-[#c8ff00]" />
+                    </div>
+                    <span className="text-xs text-[#696969] dark:text-gray-400">Add New</span>
+                  </button>
+                </div>
+
+                {/* Amount Input & Send Button */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  <div className="flex-1 relative">
+                    <input
+                      type="number"
+                      placeholder="0"
+                      className="w-full h-12 pl-4 pr-10 rounded-xl border-2 border-[#e8e8e8] dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1a1a1a] dark:text-white text-lg font-medium focus:border-[#c8ff00] focus:outline-none transition-colors"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#aeaeae] font-medium">$</span>
+                  </div>
+                  <button className="h-12 px-5 rounded-xl bg-[#c8ff00] hover:bg-[#b8ef00] text-[#1a1a1a] font-semibold text-sm flex items-center justify-center gap-2 transition-colors whitespace-nowrap">
+                    Send Transfer
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Goal Cards (Stats) */}
+          <div className="lg:col-span-7">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-[#1a1a1a] dark:text-white">Invoice Stats</h2>
+              <Link
+                to="/app/invoices/new"
+                className="flex items-center gap-1.5 text-sm font-medium text-[#197bbd] hover:text-[#1565a0] transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                New Invoice
+              </Link>
             </div>
 
-            {/* Right: Goal Cards (Stats) */}
-            <div className="lg:col-span-7">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+              {/* Outstanding Card */}
+              <div className="bg-white dark:bg-gray-800 rounded-[16px] sm:rounded-[28px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-2.5 sm:p-5">
+                <p className="text-2xl font-semibold text-[#1a1a1a] dark:text-white">
+                  ${isLoading ? "..." : statsData.outstanding.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </p>
+                <p className="text-sm text-[#aeaeae] mt-1">Pending</p>
+                <div className="mt-4 w-10 h-10 rounded-lg bg-[#ffeada] flex items-center justify-center">
+                  <Clock className="h-5 w-5 text-[#f59e0b]" />
+                </div>
+                <p className="text-base font-medium text-[#404040] dark:text-white mt-3">Outstanding</p>
+              </div>
+
+              {/* Advance Eligible Card */}
+              <div className="bg-white dark:bg-gray-800 rounded-[16px] sm:rounded-[28px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-2.5 sm:p-5">
+                <p className="text-2xl font-semibold text-[#1a1a1a] dark:text-white">
+                  ${isLoading ? "..." : statsData.advanceEligible.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </p>
+                <p className="text-sm text-[#aeaeae] mt-1">Up to {maxLTV}% LTV</p>
+                <div className="mt-4 w-10 h-10 rounded-lg bg-[#ddf9e4] flex items-center justify-center">
+                  <Zap className="h-5 w-5 text-[#22c55e]" />
+                </div>
+                <p className="text-base font-medium text-[#404040] dark:text-white mt-3">Advance Eligible</p>
+              </div>
+
+              {/* Reputation Score Card */}
+              <div className="bg-white dark:bg-gray-800 rounded-[16px] sm:rounded-[28px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-2.5 sm:p-5">
+                <p className="text-2xl font-semibold text-[#1a1a1a] dark:text-white">
+                  {isLoading ? "..." : displayScore}
+                </p>
+                <p className="text-sm text-[#aeaeae] mt-1">Tier {effectiveTierLabel}</p>
+                <div className="mt-4 w-10 h-10 rounded-lg bg-[#e4f0ff] flex items-center justify-center">
+                  <TrendingUp className="h-5 w-5 text-[#197bbd]" />
+                </div>
+                <p className="text-base font-medium text-[#404040] dark:text-white mt-3">Reputation</p>
+              </div>
+            </div>
+
+            {/* Your Card Section */}
+            <div className="mt-5">
+              {/* Header with title and add button */}
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-[#1a1a1a] dark:text-white">Invoice Stats</h2>
-                <Link
-                  to="/app/invoices/new"
-                  className="flex items-center gap-1.5 text-sm font-medium text-[#197bbd] hover:text-[#1565a0] transition-colors"
+                <h2 className="text-xl font-bold text-[#1a1a1a] dark:text-white">Cashflow Card</h2>
+                <button className="w-8 h-8 rounded-lg border-2 border-dashed border-[#197bbd] flex items-center justify-center hover:bg-[#f0f7ff] transition-colors">
+                  <Plus className="h-4 w-4 text-[#197bbd]" />
+                </button>
+              </div>
+
+              {/* Credit Card - Monaris Split Design with Flip Animation */}
+              <div className="flex flex-col items-center w-full">
+                <div
+                  className="w-full max-w-[460px] relative group cursor-pointer select-none"
+                  style={{ perspective: '1000px' }}
+                  onMouseEnter={() => setIsCardFlipped(true)}
+                  onMouseLeave={() => setIsCardFlipped(false)}
+                  onClick={() => setIsCardFlipped(!isCardFlipped)}
                 >
-                  <Plus className="h-4 w-4" />
-                  New Invoice
+                  {/* Glow effect for pop-up - White/neutral */}
+                  <div className="absolute -inset-3 bg-gradient-to-r from-white/30 via-white/15 to-white/30 rounded-[32px] blur-2xl opacity-60 group-hover:opacity-90 transition-opacity duration-300" />
+                  <div className="absolute -inset-1 bg-gradient-to-br from-white/20 to-transparent rounded-[24px] blur-md" />
+
+                  {/* Card Flip Container */}
+                  <div
+                    className="relative w-full transition-transform duration-700 ease-in-out"
+                    style={{
+                      transformStyle: 'preserve-3d',
+                      transform: isCardFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
+                    }}
+                  >
+                    {/* FRONT SIDE */}
+                    <div
+                      className="relative rounded-[20px] overflow-hidden shadow-[0_40px_80px_-20px_rgba(255,255,255,0.15),0_20px_40px_-10px_rgba(255,255,255,0.1)]"
+                      style={{ backfaceVisibility: 'hidden' }}
+                    >
+                      {/* Split Card Layout */}
+                      <div className="flex min-h-[260px]">
+                        {/* Left Side - Lime/Monaris color with wave patterns */}
+                        <div className="w-[65%] bg-gradient-to-br from-[#d4f542] via-[#c8ff00] to-[#a8df00] relative overflow-hidden">
+                          {/* Wave patterns */}
+                          <div className="absolute inset-0">
+                            {/* Wave 1 - Lightest */}
+                            <div className="absolute left-0 top-0 bottom-0 w-[35%] bg-gradient-to-r from-[#e8ffb3]/70 to-transparent"
+                              style={{ clipPath: 'ellipse(100% 80% at 0% 50%)' }} />
+                            {/* Wave 2 - Medium */}
+                            <div className="absolute left-[15%] top-0 bottom-0 w-[40%] bg-gradient-to-r from-[#dcff85]/50 to-transparent"
+                              style={{ clipPath: 'ellipse(80% 90% at 20% 50%)' }} />
+                            {/* Wave 3 - Subtle */}
+                            <div className="absolute left-[30%] top-0 bottom-0 w-[35%] bg-gradient-to-r from-[#c8ff00]/40 to-transparent"
+                              style={{ clipPath: 'ellipse(70% 100% at 30% 50%)' }} />
+                          </div>
+
+                          {/* Card Content - Left Side */}
+                          <div className="relative z-10 p-6 flex flex-col justify-between h-full">
+                            {/* Top - Account Info */}
+                            <div>
+                              <p className="text-[#1a1a1a]/50 text-[10px] font-semibold uppercase tracking-wider mb-1">Cashflow Account</p>
+                              <p className="text-[#1a1a1a]/80 text-sm font-mono">
+                                {address ? `${address.slice(0, 6)}…${address.slice(-4)}` : '0x0000…0000'}
+                              </p>
+                            </div>
+
+                            {/* Middle - Credit Limit */}
+                            <div className="my-4">
+                              <p className="text-[#1a1a1a]/50 text-[10px] font-semibold uppercase tracking-wider mb-1">Credit Limit</p>
+                              <p className="text-[#1a1a1a] font-bold text-2xl">
+                                ${isLoading ? "..." : statsData.outstanding.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                              </p>
+                            </div>
+
+                            {/* Bottom Info */}
+                            <div className="flex items-end gap-6">
+                              <div>
+                                <p className="text-[#1a1a1a]/50 text-[10px] font-semibold uppercase tracking-wider">Net Inflow</p>
+                                <p className="text-[#1a1a1a] font-bold text-base">
+                                  +${isLoading ? "..." : statsData.clearedVolume.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-[#1a1a1a]/50 text-[10px] font-semibold uppercase tracking-wider">Credit Tier</p>
+                                <p className="text-[#1a1a1a] font-bold text-base">{effectiveTierLabel}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right Side - Dark with noise texture */}
+                        <div className="w-[35%] bg-[#0f0f14] relative overflow-hidden">
+                          {/* Subtle noise texture */}
+                          <div className="absolute inset-0 opacity-30" style={{
+                            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+                          }} />
+
+                          {/* Content - Right Side */}
+                          <div className="relative z-10 p-5 flex flex-col h-full">
+                            {/* Top - Monaris Logo */}
+                            <div className="mb-auto">
+                              <p className="text-white font-bold text-2xl italic tracking-tight">Monaris</p>
+                            </div>
+
+                            {/* Available Now */}
+                            <div className="mb-2">
+                              <p className="text-white/40 text-[10px] font-semibold uppercase tracking-wider mb-1">Available Now</p>
+                              <p className="text-[#c8ff00] font-bold text-xl">
+                                ${isLoading ? "..." : statsData.advanceEligible.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                              </p>
+                            </div>
+
+                            {/* Reserved */}
+                            <div className="mb-4">
+                              <p className="text-white/30 text-[9px] font-medium uppercase tracking-wider">Reserved</p>
+                              <p className="text-white/50 text-sm font-semibold">
+                                ${isLoading ? "..." : Math.max(0, statsData.outstanding - statsData.advanceEligible).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                              </p>
+                            </div>
+
+                            {/* Bottom - Badge */}
+                            <div className="flex items-end justify-end">
+                              <span className="text-[#c8ff00]/70 text-[9px] font-medium">Verified</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* BACK SIDE - Credit Card Style */}
+                    <div
+                      className="absolute inset-0 rounded-[20px] overflow-hidden shadow-[0_40px_80px_-20px_rgba(255,255,255,0.15),0_20px_40px_-10px_rgba(255,255,255,0.1)]"
+                      style={{
+                        backfaceVisibility: 'hidden',
+                        transform: 'rotateY(180deg)'
+                      }}
+                    >
+                      {/* Back Card Layout - Monaris Color Scheme */}
+                      <div className="min-h-[260px] relative overflow-hidden">
+                        {/* Solid Background - Monaris Lime Green (matches logo) */}
+                        <div className="absolute inset-0 bg-[#c8ff00]" />
+
+                        {/* Subtle pattern overlay */}
+                        <div className="absolute inset-0 opacity-20" style={{
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                        }} />
+
+                        {/* Content */}
+                        <div className="relative z-10 p-6 flex flex-col h-full min-h-[165px]">
+                          {/* Top - Cashflow-Backed left, Monaris Logo right */}
+                          <div className="flex items-start justify-between">
+                            <p className="text-[#1a1a1a]/70 text-[11px] font-semibold uppercase tracking-wider">Cashflow-Backed</p>
+                            <img src="/monar.png" alt="Monaris" className="w-12 h-12 rounded-xl shadow-lg" />
+                          </div>
+                        </div>
+
+                        {/* Bottom Dark Section */}
+                        <div className="absolute bottom-0 left-0 right-0 bg-[#1a1a1a] p-5">
+                          <div className="flex items-end justify-between">
+                            {/* Left - Card Info */}
+                            <div>
+                              <p className="text-white/60 text-xs mb-0.5">02/30</p>
+                              <p className="text-white font-semibold text-base tracking-wide">MONARIS LLC</p>
+                              <p className="text-white/40 text-[10px] mt-2">Card connected by <span className="text-[#c8ff00]">avici</span> ending •••• 8009</p>
+                            </div>
+
+                            {/* Right - Chip Icon */}
+                            <div className="w-12 h-10 rounded border-2 border-white/30 grid grid-cols-3 grid-rows-2 gap-0.5 p-1">
+                              <div className="bg-white/20 rounded-sm" />
+                              <div className="bg-white/20 rounded-sm" />
+                              <div className="bg-white/20 rounded-sm" />
+                              <div className="bg-white/20 rounded-sm" />
+                              <div className="bg-white/20 rounded-sm" />
+                              <div className="bg-white/20 rounded-sm" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Carousel dots */}
+                <div className="flex items-center justify-center gap-2 mt-5">
+                  <div className={`w-2.5 h-2.5 rounded-full transition-colors ${!isCardFlipped ? 'bg-[#c8ff00]' : 'bg-gray-300'}`} />
+                  <div className={`w-2.5 h-2.5 rounded-full transition-colors ${isCardFlipped ? 'bg-[#c8ff00]' : 'bg-gray-300'}`} />
+                  <div className="w-2.5 h-2.5 rounded-full bg-gray-300" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Section: Transactions & Statistics */}
+        <div className="grid lg:grid-cols-12 gap-2 sm:gap-6">
+          {/* Left Column: Transactions */}
+          <div className="lg:col-span-6 space-y-2 sm:space-y-6">
+            {/* Transaction History */}
+            <div className="bg-white dark:bg-gray-800 rounded-[16px] sm:rounded-[19px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-2.5 sm:p-6">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-xl font-bold text-[#1a1a1a] dark:text-white">Transaction history</h2>
+                <Link
+                  to="/app/invoices"
+                  className="text-sm font-medium text-[#197bbd] hover:text-[#1565a0]"
+                >
+                  View All →
                 </Link>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
-                {/* Outstanding Card */}
-                <div className="bg-white dark:bg-gray-800 rounded-[16px] sm:rounded-[28px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-2.5 sm:p-5">
-                  <p className="text-2xl font-semibold text-[#1a1a1a] dark:text-white">
-                    ${isLoading ? "..." : statsData.outstanding.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                  </p>
-                  <p className="text-sm text-[#aeaeae] mt-1">Pending</p>
-                  <div className="mt-4 w-10 h-10 rounded-lg bg-[#ffeada] flex items-center justify-center">
-                    <Clock className="h-5 w-5 text-[#f59e0b]" />
-                  </div>
-                  <p className="text-base font-medium text-[#404040] dark:text-white mt-3">Outstanding</p>
-                </div>
-
-                {/* Advance Eligible Card */}
-                <div className="bg-white dark:bg-gray-800 rounded-[16px] sm:rounded-[28px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-2.5 sm:p-5">
-                  <p className="text-2xl font-semibold text-[#1a1a1a] dark:text-white">
-                    ${isLoading ? "..." : statsData.advanceEligible.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                  </p>
-                  <p className="text-sm text-[#aeaeae] mt-1">Up to {maxLTV}% LTV</p>
-                  <div className="mt-4 w-10 h-10 rounded-lg bg-[#ddf9e4] flex items-center justify-center">
-                    <Zap className="h-5 w-5 text-[#22c55e]" />
-                  </div>
-                  <p className="text-base font-medium text-[#404040] dark:text-white mt-3">Advance Eligible</p>
-                </div>
-
-                {/* Reputation Score Card */}
-                <div className="bg-white dark:bg-gray-800 rounded-[16px] sm:rounded-[28px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-2.5 sm:p-5">
-                  <p className="text-2xl font-semibold text-[#1a1a1a] dark:text-white">
-                    {isLoading ? "..." : displayScore}
-                  </p>
-                  <p className="text-sm text-[#aeaeae] mt-1">Tier {effectiveTierLabel}</p>
-                  <div className="mt-4 w-10 h-10 rounded-lg bg-[#e4f0ff] flex items-center justify-center">
-                    <TrendingUp className="h-5 w-5 text-[#197bbd]" />
-                  </div>
-                  <p className="text-base font-medium text-[#404040] dark:text-white mt-3">Reputation</p>
-                </div>
+              {/* Table Header */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-3 px-2">
+                <p className="text-sm text-[#aeaeae]">Receiver</p>
+                <p className="text-sm text-[#aeaeae] hidden sm:block">Type</p>
+                <p className="text-sm text-[#aeaeae] hidden sm:block">Date</p>
+                <p className="text-sm text-[#aeaeae] text-right">Amount</p>
               </div>
 
-              {/* Your Card Section */}
-              <div className="mt-5">
-                {/* Header with title and add button */}
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold text-[#1a1a1a] dark:text-white">Cashflow Card</h2>
-                  <button className="w-8 h-8 rounded-lg border-2 border-dashed border-[#197bbd] flex items-center justify-center hover:bg-[#f0f7ff] transition-colors">
-                    <Plus className="h-4 w-4 text-[#197bbd]" />
-                  </button>
-                </div>
-
-                {/* Credit Card - Monaris Split Design with Flip Animation */}
-                <div className="flex flex-col items-center w-full">
-                  <div
-                    className="w-full max-w-[460px] relative group cursor-pointer select-none"
-                    style={{ perspective: '1000px' }}
-                    onMouseEnter={() => setIsCardFlipped(true)}
-                    onMouseLeave={() => setIsCardFlipped(false)}
-                    onClick={() => setIsCardFlipped(!isCardFlipped)}
-                  >
-                    {/* Glow effect for pop-up - White/neutral */}
-                    <div className="absolute -inset-3 bg-gradient-to-r from-white/30 via-white/15 to-white/30 rounded-[32px] blur-2xl opacity-60 group-hover:opacity-90 transition-opacity duration-300" />
-                    <div className="absolute -inset-1 bg-gradient-to-br from-white/20 to-transparent rounded-[24px] blur-md" />
-
-                    {/* Card Flip Container */}
-                    <div
-                      className="relative w-full transition-transform duration-700 ease-in-out"
-                      style={{
-                        transformStyle: 'preserve-3d',
-                        transform: isCardFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
-                      }}
+              {/* Table Body */}
+              <div className="space-y-0">
+                {isLoadingInvoices ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-5 w-5 animate-spin text-[#aeaeae]" />
+                  </div>
+                ) : recentInvoices.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <div className="w-12 h-12 rounded-xl bg-[#f1f1f1] dark:bg-gray-700 flex items-center justify-center mb-3">
+                      <FileText className="h-5 w-5 text-[#aeaeae]" />
+                    </div>
+                    <p className="text-[#aeaeae] text-sm mb-4">No transactions yet</p>
+                    <Link
+                      to="/app/invoices/new"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#c8ff00] hover:bg-[#b8ef00] text-[#1a1a1a] text-sm font-semibold transition-colors"
                     >
-                      {/* FRONT SIDE */}
-                      <div
-                        className="relative rounded-[20px] overflow-hidden shadow-[0_40px_80px_-20px_rgba(255,255,255,0.15),0_20px_40px_-10px_rgba(255,255,255,0.1)]"
-                        style={{ backfaceVisibility: 'hidden' }}
-                      >
-                        {/* Split Card Layout */}
-                        <div className="flex min-h-[260px]">
-                          {/* Left Side - Lime/Monaris color with wave patterns */}
-                          <div className="w-[65%] bg-gradient-to-br from-[#d4f542] via-[#c8ff00] to-[#a8df00] relative overflow-hidden">
-                            {/* Wave patterns */}
-                            <div className="absolute inset-0">
-                              {/* Wave 1 - Lightest */}
-                              <div className="absolute left-0 top-0 bottom-0 w-[35%] bg-gradient-to-r from-[#e8ffb3]/70 to-transparent"
-                                style={{ clipPath: 'ellipse(100% 80% at 0% 50%)' }} />
-                              {/* Wave 2 - Medium */}
-                              <div className="absolute left-[15%] top-0 bottom-0 w-[40%] bg-gradient-to-r from-[#dcff85]/50 to-transparent"
-                                style={{ clipPath: 'ellipse(80% 90% at 20% 50%)' }} />
-                              {/* Wave 3 - Subtle */}
-                              <div className="absolute left-[30%] top-0 bottom-0 w-[35%] bg-gradient-to-r from-[#c8ff00]/40 to-transparent"
-                                style={{ clipPath: 'ellipse(70% 100% at 30% 50%)' }} />
-                            </div>
-
-                            {/* Card Content - Left Side */}
-                            <div className="relative z-10 p-6 flex flex-col justify-between h-full">
-                              {/* Top - Account Info */}
-                              <div>
-                                <p className="text-[#1a1a1a]/50 text-[10px] font-semibold uppercase tracking-wider mb-1">Cashflow Account</p>
-                                <p className="text-[#1a1a1a]/80 text-sm font-mono">
-                                  {address ? `${address.slice(0, 6)}…${address.slice(-4)}` : '0x0000…0000'}
-                                </p>
-                              </div>
-
-                              {/* Middle - Credit Limit */}
-                              <div className="my-4">
-                                <p className="text-[#1a1a1a]/50 text-[10px] font-semibold uppercase tracking-wider mb-1">Credit Limit</p>
-                                <p className="text-[#1a1a1a] font-bold text-2xl">
-                                  ${isLoading ? "..." : statsData.outstanding.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                </p>
-                              </div>
-
-                              {/* Bottom Info */}
-                              <div className="flex items-end gap-6">
-                                <div>
-                                  <p className="text-[#1a1a1a]/50 text-[10px] font-semibold uppercase tracking-wider">Net Inflow</p>
-                                  <p className="text-[#1a1a1a] font-bold text-base">
-                                    +${isLoading ? "..." : statsData.clearedVolume.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                  </p>
-                                </div>
-                                <div>
-                                  <p className="text-[#1a1a1a]/50 text-[10px] font-semibold uppercase tracking-wider">Credit Tier</p>
-                                  <p className="text-[#1a1a1a] font-bold text-base">{effectiveTierLabel}</p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Right Side - Dark with noise texture */}
-                          <div className="w-[35%] bg-[#0f0f14] relative overflow-hidden">
-                            {/* Subtle noise texture */}
-                            <div className="absolute inset-0 opacity-30" style={{
-                              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-                            }} />
-
-                            {/* Content - Right Side */}
-                            <div className="relative z-10 p-5 flex flex-col h-full">
-                              {/* Top - Monaris Logo */}
-                              <div className="mb-auto">
-                                <p className="text-white font-bold text-2xl italic tracking-tight">Monaris</p>
-                              </div>
-
-                              {/* Available Now */}
-                              <div className="mb-2">
-                                <p className="text-white/40 text-[10px] font-semibold uppercase tracking-wider mb-1">Available Now</p>
-                                <p className="text-[#c8ff00] font-bold text-xl">
-                                  ${isLoading ? "..." : statsData.advanceEligible.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                </p>
-                              </div>
-
-                              {/* Reserved */}
-                              <div className="mb-4">
-                                <p className="text-white/30 text-[9px] font-medium uppercase tracking-wider">Reserved</p>
-                                <p className="text-white/50 text-sm font-semibold">
-                                  ${isLoading ? "..." : Math.max(0, statsData.outstanding - statsData.advanceEligible).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                </p>
-                              </div>
-
-                              {/* Bottom - Badge */}
-                              <div className="flex items-end justify-end">
-                                <span className="text-[#c8ff00]/70 text-[9px] font-medium">Verified</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* BACK SIDE - Credit Card Style */}
-                      <div
-                        className="absolute inset-0 rounded-[20px] overflow-hidden shadow-[0_40px_80px_-20px_rgba(255,255,255,0.15),0_20px_40px_-10px_rgba(255,255,255,0.1)]"
-                        style={{
-                          backfaceVisibility: 'hidden',
-                          transform: 'rotateY(180deg)'
-                        }}
-                      >
-                        {/* Back Card Layout - Monaris Color Scheme */}
-                        <div className="min-h-[260px] relative overflow-hidden">
-                          {/* Solid Background - Monaris Lime Green (matches logo) */}
-                          <div className="absolute inset-0 bg-[#c8ff00]" />
-
-                          {/* Subtle pattern overlay */}
-                          <div className="absolute inset-0 opacity-20" style={{
-                            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-                          }} />
-
-                          {/* Content */}
-                          <div className="relative z-10 p-6 flex flex-col h-full min-h-[165px]">
-                            {/* Top - Cashflow-Backed left, Monaris Logo right */}
-                            <div className="flex items-start justify-between">
-                              <p className="text-[#1a1a1a]/70 text-[11px] font-semibold uppercase tracking-wider">Cashflow-Backed</p>
-                              <img src="/monar.png" alt="Monaris" className="w-12 h-12 rounded-xl shadow-lg" />
-                            </div>
-                          </div>
-
-                          {/* Bottom Dark Section */}
-                          <div className="absolute bottom-0 left-0 right-0 bg-[#1a1a1a] p-5">
-                            <div className="flex items-end justify-between">
-                              {/* Left - Card Info */}
-                              <div>
-                                <p className="text-white/60 text-xs mb-0.5">02/30</p>
-                                <p className="text-white font-semibold text-base tracking-wide">MONARIS LLC</p>
-                                <p className="text-white/40 text-[10px] mt-2">Card connected by <span className="text-[#c8ff00]">avici</span> ending •••• 8009</p>
-                              </div>
-
-                              {/* Right - Chip Icon */}
-                              <div className="w-12 h-10 rounded border-2 border-white/30 grid grid-cols-3 grid-rows-2 gap-0.5 p-1">
-                                <div className="bg-white/20 rounded-sm" />
-                                <div className="bg-white/20 rounded-sm" />
-                                <div className="bg-white/20 rounded-sm" />
-                                <div className="bg-white/20 rounded-sm" />
-                                <div className="bg-white/20 rounded-sm" />
-                                <div className="bg-white/20 rounded-sm" />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                      <Plus className="h-4 w-4" />
+                      Create Invoice
+                    </Link>
                   </div>
-
-                  {/* Carousel dots */}
-                  <div className="flex items-center justify-center gap-2 mt-5">
-                    <div className={`w-2.5 h-2.5 rounded-full transition-colors ${!isCardFlipped ? 'bg-[#c8ff00]' : 'bg-gray-300'}`} />
-                    <div className={`w-2.5 h-2.5 rounded-full transition-colors ${isCardFlipped ? 'bg-[#c8ff00]' : 'bg-gray-300'}`} />
-                    <div className="w-2.5 h-2.5 rounded-full bg-gray-300" />
-                  </div>
-                </div>
+                ) : (
+                  recentInvoices.map((invoice, index) => (
+                    <Link
+                      key={invoice.id}
+                      to={`/app/invoices/${invoice.invoiceId}`}
+                      className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 items-center px-2 py-3 hover:bg-[#f8f8f8] dark:hover:bg-gray-700/50 rounded-lg transition-colors border-b border-[#f1f1f1] dark:border-gray-700 last:border-0"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-6 h-6 rounded bg-[#efefef] dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                          <DollarSign className="h-3 w-3 text-[#404040] dark:text-gray-400" />
+                        </div>
+                        <span className="text-sm text-[#404040] dark:text-white font-medium truncate">{invoice.buyer}</span>
+                      </div>
+                      <span className="text-sm text-[#c7c7c7] hidden sm:block">
+                        {invoice.status === 'cleared' ? 'Received' : invoice.status === 'paid' ? 'Pending' : 'Invoice'}
+                      </span>
+                      <span className="text-sm text-[#c7c7c7] hidden sm:block">{invoice.date}</span>
+                      <span className="text-sm font-semibold text-[#404040] dark:text-white text-right">
+                        ${invoice.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </span>
+                    </Link>
+                  ))
+                )}
               </div>
             </div>
           </div>
 
-          {/* Bottom Section: Transactions & Statistics */}
-          <div className="grid lg:grid-cols-12 gap-2 sm:gap-6">
-            {/* Left Column: Transactions */}
-            <div className="lg:col-span-6 space-y-2 sm:space-y-6">
-              {/* Transaction History */}
-              <div className="bg-white dark:bg-gray-800 rounded-[16px] sm:rounded-[19px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-2.5 sm:p-6">
-                <div className="flex items-center justify-between mb-5">
-                  <h2 className="text-xl font-bold text-[#1a1a1a] dark:text-white">Transaction history</h2>
-                  <Link
-                    to="/app/invoices"
-                    className="text-sm font-medium text-[#197bbd] hover:text-[#1565a0]"
-                  >
-                    View All →
-                  </Link>
-                </div>
+          {/* Right Column: Statistics & CTA */}
+          <div className="lg:col-span-6 space-y-2 sm:space-y-4">
+            {/* Outcome Statistics */}
+            <div className="bg-white dark:bg-gray-800 rounded-[16px] sm:rounded-[19px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-2.5 sm:p-5">
+              <h2 className="text-xl font-bold text-[#1a1a1a] dark:text-white mb-4">Reputation Breakdown</h2>
 
-                {/* Table Header */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-3 px-2">
-                  <p className="text-sm text-[#aeaeae]">Receiver</p>
-                  <p className="text-sm text-[#aeaeae] hidden sm:block">Type</p>
-                  <p className="text-sm text-[#aeaeae] hidden sm:block">Date</p>
-                  <p className="text-sm text-[#aeaeae] text-right">Amount</p>
+              {/* Progress Item: Invoices Cleared */}
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-10 h-10 rounded bg-[#ffeada] flex items-center justify-center flex-shrink-0">
+                  <CheckCircle2 className="h-5 w-5 text-[#f59e0b]" />
                 </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <div className="flex-1 h-2 rounded-full bg-[#f1f1f1] dark:bg-gray-700 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-[#f59e0b] to-[#fbbf24]"
+                        style={{ width: `${Math.min((clearedInvoices.length / 10) * 100, 100)}%` }}
+                      />
+                    </div>
+                    <span className="text-lg font-semibold text-[#1a1a1a] dark:text-white w-12 text-right">
+                      {clearedInvoices.length * 10}%
+                    </span>
+                  </div>
+                  <p className="text-sm text-[#aeaeae]">Invoices Cleared</p>
+                </div>
+              </div>
 
-                {/* Table Body */}
-                <div className="space-y-0">
-                  {isLoadingInvoices ? (
-                    <div className="flex items-center justify-center py-12">
-                      <Loader2 className="h-5 w-5 animate-spin text-[#aeaeae]" />
+              {/* Progress Item: Payment History */}
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-10 h-10 rounded bg-[#ddf9e4] flex items-center justify-center flex-shrink-0">
+                  <TrendingUp className="h-5 w-5 text-[#22c55e]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <div className="flex-1 h-2 rounded-full bg-[#f1f1f1] dark:bg-gray-700 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-[#209d43] to-[#2bc255]"
+                        style={{ width: `${progressToNextTier}%` }}
+                      />
                     </div>
-                  ) : recentInvoices.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12">
-                      <div className="w-12 h-12 rounded-xl bg-[#f1f1f1] dark:bg-gray-700 flex items-center justify-center mb-3">
-                        <FileText className="h-5 w-5 text-[#aeaeae]" />
-                      </div>
-                      <p className="text-[#aeaeae] text-sm mb-4">No transactions yet</p>
-                      <Link
-                        to="/app/invoices/new"
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#c8ff00] hover:bg-[#b8ef00] text-[#1a1a1a] text-sm font-semibold transition-colors"
-                      >
-                        <Plus className="h-4 w-4" />
-                        Create Invoice
-                      </Link>
+                    <span className="text-lg font-semibold text-[#1a1a1a] dark:text-white w-12 text-right">
+                      {Math.round(progressToNextTier)}%
+                    </span>
+                  </div>
+                  <p className="text-sm text-[#aeaeae]">Progress to Tier {effectiveTierLabel === 'C' ? 'B' : 'A'}</p>
+                </div>
+              </div>
+
+              {/* Progress Item: Trust Score */}
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded bg-[#e4f0ff] flex items-center justify-center flex-shrink-0">
+                  <Zap className="h-5 w-5 text-[#70a6e8]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <div className="flex-1 h-2 rounded-full bg-[#f1f1f1] dark:bg-gray-700 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-[#70a6e8]"
+                        style={{ width: `${(displayScore / 1000) * 100}%` }}
+                      />
                     </div>
-                  ) : (
-                    recentInvoices.map((invoice, index) => (
-                      <Link
-                        key={invoice.id}
-                        to={`/app/invoices/${invoice.invoiceId}`}
-                        className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 items-center px-2 py-3 hover:bg-[#f8f8f8] dark:hover:bg-gray-700/50 rounded-lg transition-colors border-b border-[#f1f1f1] dark:border-gray-700 last:border-0"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className="w-6 h-6 rounded bg-[#efefef] dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                            <DollarSign className="h-3 w-3 text-[#404040] dark:text-gray-400" />
-                          </div>
-                          <span className="text-sm text-[#404040] dark:text-white font-medium truncate">{invoice.buyer}</span>
-                        </div>
-                        <span className="text-sm text-[#c7c7c7] hidden sm:block">
-                          {invoice.status === 'cleared' ? 'Received' : invoice.status === 'paid' ? 'Pending' : 'Invoice'}
-                        </span>
-                        <span className="text-sm text-[#c7c7c7] hidden sm:block">{invoice.date}</span>
-                        <span className="text-sm font-semibold text-[#404040] dark:text-white text-right">
-                          ${invoice.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        </span>
-                      </Link>
-                    ))
-                  )}
+                    <span className="text-lg font-semibold text-[#1a1a1a] dark:text-white w-12 text-right">
+                      {Math.round((displayScore / 1000) * 100)}%
+                    </span>
+                  </div>
+                  <p className="text-sm text-[#aeaeae]">Trust Score</p>
                 </div>
               </div>
             </div>
 
-            {/* Right Column: Statistics & CTA */}
-            <div className="lg:col-span-6 space-y-2 sm:space-y-4">
-              {/* Outcome Statistics */}
-              <div className="bg-white dark:bg-gray-800 rounded-[16px] sm:rounded-[19px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04),0px_0px_1px_0px_rgba(0,0,0,0.04)] p-2.5 sm:p-5">
-                <h2 className="text-xl font-bold text-[#1a1a1a] dark:text-white mb-4">Reputation Breakdown</h2>
+            {/* Get Advance CTA Card */}
+            <div className="bg-gradient-to-b from-[#d4f542] to-[#c8ff00] rounded-[16px] sm:rounded-[19px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06)] p-2.5 sm:p-6 text-[#1a1a1a] relative overflow-hidden">
+              {/* Decorative elements */}
+              <div className="absolute top-0 left-0 w-16 h-16 bg-black/5 rounded-full -translate-x-1/2 -translate-y-1/2" />
+              <div className="absolute bottom-0 right-0 w-20 h-20 bg-black/5 rounded-full translate-x-1/3 translate-y-1/3" />
 
-                {/* Progress Item: Invoices Cleared */}
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-10 h-10 rounded bg-[#ffeada] flex items-center justify-center flex-shrink-0">
-                    <CheckCircle2 className="h-5 w-5 text-[#f59e0b]" />
+              <div className="relative">
+                <h3 className="text-xl font-semibold mb-1">Get great</h3>
+                <h3 className="text-xl font-semibold mb-4">advance!</h3>
+
+                <div className="bg-black/10 rounded-xl p-4 mb-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-black/60">Available</span>
+                    <span className="text-lg font-bold">
+                      ${isLoading ? "..." : statsData.advanceEligible.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <div className="flex-1 h-2 rounded-full bg-[#f1f1f1] dark:bg-gray-700 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-[#f59e0b] to-[#fbbf24]"
-                          style={{ width: `${Math.min((clearedInvoices.length / 10) * 100, 100)}%` }}
-                        />
-                      </div>
-                      <span className="text-lg font-semibold text-[#1a1a1a] dark:text-white w-12 text-right">
-                        {clearedInvoices.length * 10}%
-                      </span>
-                    </div>
-                    <p className="text-sm text-[#aeaeae]">Invoices Cleared</p>
+                  <div className="flex justify-between items-center mt-2 text-sm">
+                    <span className="text-black/40">APR from</span>
+                    <span className="font-medium">{effectiveTierLabel === 'A' ? '6%' : effectiveTierLabel === 'B' ? '8%' : '18%'}</span>
                   </div>
                 </div>
 
-                {/* Progress Item: Payment History */}
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-10 h-10 rounded bg-[#ddf9e4] flex items-center justify-center flex-shrink-0">
-                    <TrendingUp className="h-5 w-5 text-[#22c55e]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <div className="flex-1 h-2 rounded-full bg-[#f1f1f1] dark:bg-gray-700 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-[#209d43] to-[#2bc255]"
-                          style={{ width: `${progressToNextTier}%` }}
-                        />
-                      </div>
-                      <span className="text-lg font-semibold text-[#1a1a1a] dark:text-white w-12 text-right">
-                        {Math.round(progressToNextTier)}%
-                      </span>
-                    </div>
-                    <p className="text-sm text-[#aeaeae]">Progress to Tier {effectiveTierLabel === 'C' ? 'B' : 'A'}</p>
-                  </div>
-                </div>
-
-                {/* Progress Item: Trust Score */}
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded bg-[#e4f0ff] flex items-center justify-center flex-shrink-0">
-                    <Zap className="h-5 w-5 text-[#70a6e8]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <div className="flex-1 h-2 rounded-full bg-[#f1f1f1] dark:bg-gray-700 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-[#70a6e8]"
-                          style={{ width: `${(displayScore / 1000) * 100}%` }}
-                        />
-                      </div>
-                      <span className="text-lg font-semibold text-[#1a1a1a] dark:text-white w-12 text-right">
-                        {Math.round((displayScore / 1000) * 100)}%
-                      </span>
-                    </div>
-                    <p className="text-sm text-[#aeaeae]">Trust Score</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Get Advance CTA Card */}
-              <div className="bg-gradient-to-b from-[#d4f542] to-[#c8ff00] rounded-[16px] sm:rounded-[19px] shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06)] p-2.5 sm:p-6 text-[#1a1a1a] relative overflow-hidden">
-                {/* Decorative elements */}
-                <div className="absolute top-0 left-0 w-16 h-16 bg-black/5 rounded-full -translate-x-1/2 -translate-y-1/2" />
-                <div className="absolute bottom-0 right-0 w-20 h-20 bg-black/5 rounded-full translate-x-1/3 translate-y-1/3" />
-
-                <div className="relative">
-                  <h3 className="text-xl font-semibold mb-1">Get great</h3>
-                  <h3 className="text-xl font-semibold mb-4">advance!</h3>
-
-                  <div className="bg-black/10 rounded-xl p-4 mb-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-black/60">Available</span>
-                      <span className="text-lg font-bold">
-                        ${isLoading ? "..." : statsData.advanceEligible.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center mt-2 text-sm">
-                      <span className="text-black/40">APR from</span>
-                      <span className="font-medium">{effectiveTierLabel === 'A' ? '6%' : effectiveTierLabel === 'B' ? '8%' : '18%'}</span>
-                    </div>
-                  </div>
-
-                  <Link
-                    to="/app/financing"
-                    className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#1a1a1a] hover:bg-[#2a2a2a] text-white text-sm font-semibold transition-colors"
-                  >
-                    Request Advance
-                    <ArrowUpRight className="h-4 w-4" />
-                  </Link>
-                </div>
+                <Link
+                  to="/app/financing"
+                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#1a1a1a] hover:bg-[#2a2a2a] text-white text-sm font-semibold transition-colors"
+                >
+                  Request Advance
+                  <ArrowUpRight className="h-4 w-4" />
+                </Link>
               </div>
             </div>
           </div>
-        </motion.div>
-
-        {/* Dialogs */}
-        <WithdrawDialog
-          open={withdrawDialogOpen}
-          onOpenChange={setWithdrawDialogOpen}
-          usdcBalance={usdcBalance}
-          usdcRawBalance={0}
-          usmtBalance={usmtBalance}
-          nativeBalance={nativeBalanceFormatted}
-          nativeTokenSymbol={nativeTokenSymbol}
-        />
-
-        <ReceiveFundsDialog
-          open={receiveFundsDialogOpen}
-          onOpenChange={setReceiveFundsDialogOpen}
-          address={address}
-        />
-
+        </div>
       </motion.div>
-    </PremiumGate>
+
+      {/* Dialogs */}
+      <WithdrawDialog
+        open={withdrawDialogOpen}
+        onOpenChange={setWithdrawDialogOpen}
+        usdcBalance={usdcBalance}
+        usdcRawBalance={0}
+        usmtBalance={usmtBalance}
+        nativeBalance={nativeBalanceFormatted}
+        nativeTokenSymbol={nativeTokenSymbol}
+      />
+
+      <ReceiveFundsDialog
+        open={receiveFundsDialogOpen}
+        onOpenChange={setReceiveFundsDialogOpen}
+        address={address}
+      />
+
+    </motion.div>
   )
 }
 
