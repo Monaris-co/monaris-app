@@ -304,7 +304,10 @@ async function doEngineStart(): Promise<void> {
 
     setStatus('loading-artifacts');
 
-    const poiNodeURLs = ['https://ppoi-agg.horsewithsixlegs.xyz'];
+    const poiNodeURLs = [
+      'https://ppoi-agg.horsewithsixlegs.xyz',
+      'https://poi.railgun.org'
+    ];
 
     await startRailgunEngine(
       'monarispay',
@@ -360,6 +363,12 @@ async function doEngineStart(): Promise<void> {
 
 let _providerLoaded = false;
 let _providerLoadPromise: Promise<void> | null = null;
+let _providerFailedAt = 0;
+const PROVIDER_RETRY_COOLDOWN_MS = 30_000;
+
+export function isProviderLoaded(): boolean {
+  return _providerLoaded;
+}
 
 /**
  * Phase 2: Load the network provider and trigger quicksync + RPC scan.
@@ -369,6 +378,11 @@ let _providerLoadPromise: Promise<void> | null = null;
 export async function loadProviderAndSync(): Promise<void> {
   if (_providerLoaded) return;
   if (_providerLoadPromise) return _providerLoadPromise;
+
+  if (_providerFailedAt && Date.now() - _providerFailedAt < PROVIDER_RETRY_COOLDOWN_MS) {
+    console.log('[RAILGUN] Provider load on cooldown, skipping retry');
+    return;
+  }
 
   _providerLoadPromise = doLoadProvider();
   return _providerLoadPromise;
@@ -390,11 +404,12 @@ async function doLoadProvider(): Promise<void> {
     const networkName =
       chainId === 42161 ? NetworkName.Arbitrum : NetworkName.Arbitrum;
 
-    // Use entirely separate public RPCs for Railgun to avoid consuming Alchemy/Infura primary quotas
+    // Two public RPCs with weight 1 each → total weight 2, quorum = ceil(2/2) = 1.
+    // Only ONE needs to respond, avoiding "quorum not met" errors from block-height drift.
+    // SDK requires total weight >= 2 (enforced in shared-models/fallback-provider.js).
     const RAILGUN_RPCS = [
-      'https://arb1.arbitrum.io/rpc',
-      'https://arb-pokt.nodies.app',
-      'https://arbitrum.drpc.org'
+      'https://arbitrum-one-rpc.publicnode.com',
+      'https://arbitrum.drpc.org',
     ];
 
     setStatus('syncing');
@@ -403,34 +418,36 @@ async function doLoadProvider(): Promise<void> {
     let lastErr: any;
     for (let attempt = 1; attempt <= MAX_PROVIDER_RETRIES; attempt++) {
       try {
-        // SDK caches the pollingProvider — unload fully before retries
-        // so we get a fresh polling provider each time.
         if (attempt > 1) {
           try { await unloadProvider(networkName); } catch (_) { }
         }
 
         const fallbackProviders = {
           chainId,
-          providers: RAILGUN_RPCS.map((rpc, i) => {
-            return {
-              provider: rpc,
-              priority: i + 1,
-              weight: 1,
-              maxLogsPerBatch: 2, // Hard limit of 2 for free public nodes to stop 500 errors
-              stallTimeout: 15000,
-            };
-          }),
+          providers: RAILGUN_RPCS.map((rpc, i) => ({
+            provider: rpc,
+            priority: i + 1,
+            weight: 1,
+            maxLogsPerBatch: 10,
+            stallTimeout: 2500,
+          })),
         };
 
-        await loadProvider(fallbackProviders, networkName, 15_000);
+        await loadProvider(fallbackProviders, networkName, 10_000);
 
         _providerLoaded = true;
+        _providerFailedAt = 0;
         setStatus('ready');
         console.log('[RAILGUN] Engine fully ready (attempt', attempt + ')');
         return;
       } catch (err: any) {
         lastErr = err;
-        console.warn(`[RAILGUN] loadProvider attempt ${attempt}/${MAX_PROVIDER_RETRIES} failed:`, err?.message);
+        const causeMsg = err?.cause?.message || '';
+        console.warn(
+          `[RAILGUN] loadProvider attempt ${attempt}/${MAX_PROVIDER_RETRIES} failed:`,
+          err?.message,
+          causeMsg ? `| cause: ${causeMsg}` : '',
+        );
         if (attempt < MAX_PROVIDER_RETRIES) {
           const delay = RETRY_BASE_MS * Math.pow(2, attempt - 1);
           console.log(`[RAILGUN] Retrying in ${delay}ms...`);
@@ -442,8 +459,9 @@ async function doLoadProvider(): Promise<void> {
     throw lastErr;
   } catch (err: any) {
     console.error('[RAILGUN] loadProvider failed after all retries:', err?.message);
+    _providerFailedAt = Date.now();
     _providerLoadPromise = null;
-    setStatus('ready');
+    setStatus('error');
   }
 }
 
@@ -482,10 +500,12 @@ export async function triggerMerkleScans(walletIds: string[]): Promise<void> {
 }
 
 /**
- * Trigger POI proof generation + refresh for a wallet.
- * On POI-required networks (Arbitrum), shielded funds sit in ShieldPending
- * until the wallet generates a Proof of Innocence and submits it to the
- * POI aggregator. This function kicks that process.
+ * Full POI pipeline: rescan → balance refresh → generate proofs → fetch external POIs.
+ *
+ * On Arbitrum, shielded UTXOs move through buckets:
+ *   ShieldPending → ProofSubmitted → Spendable
+ * If the UTXO scan is behind the TXID scan, UTXOs land in MissingExternalPOI.
+ * A full rescan fixes the desync, then POI generation can proceed.
  */
 export async function refreshPOIsForWallet(walletId: string): Promise<void> {
   if (!_providerLoaded) {
@@ -510,17 +530,22 @@ export async function refreshPOIsForWallet(walletId: string): Promise<void> {
     const chainId = Number(import.meta.env.VITE_DEFAULT_CHAIN_ID || '42161');
     const networkName = chainId === 42161 ? NetworkName.Arbitrum : NetworkName.Arbitrum;
 
-    console.log('[RAILGUN-POI] Generating POI proofs for wallet...');
+    // Step 1: Generate local POI proofs for any unproven UTXOs and submit to aggregator.
+    // For shield txs this is a no-op (progress 0) since shield POIs are generated by the aggregator.
+    console.log('[RAILGUN-POI] Step 1/2: Generating POI proofs...');
     await walletModule.generatePOIsForWallet(networkName, walletId);
-    console.log('[RAILGUN-POI] POI proof generation complete');
 
-    console.log('[RAILGUN-POI] Refreshing receive POIs...');
+    // Step 2: Fetch external POIs from aggregator nodes.
+    // For MissingExternalPOI → Spendable, the aggregator must have validated the shield.
+    console.log('[RAILGUN-POI] Step 2/2: Fetching external POIs from aggregator...');
     await walletModule.refreshReceivePOIsForWallet(
       TXIDVersion.V2_PoseidonMerkle,
       networkName,
       walletId,
     );
-    console.log('[RAILGUN-POI] Receive POI refresh complete');
+
+    console.log('[RAILGUN-POI] POI pipeline complete — checking bucket state...');
+    await getBucketBreakdown(walletId);
   } catch (err: any) {
     console.warn('[RAILGUN-POI] POI refresh failed:', err?.message);
   }
@@ -611,4 +636,42 @@ function openArtifactDB(): Promise<IDBDatabase> {
     };
   });
   return _artifactDbPromise;
+}
+
+// ---- Full privacy reset ----
+
+/**
+ * Nuclear reset: wipes all local RAILGUN state so the next page load
+ * re-derives the wallet and re-syncs from scratch. Funds are safe
+ * on-chain — only local caches and merkle tree data are deleted.
+ *
+ * Caller should `window.location.reload()` after awaiting this.
+ */
+export async function fullPrivacyReset(): Promise<void> {
+  const dbNames = ['monarisrailgundb', ARTIFACT_DB_NAME];
+  await Promise.all(dbNames.map(name =>
+    new Promise<void>((resolve) => {
+      const req = indexedDB.deleteDatabase(name);
+      req.onsuccess = () => resolve();
+      req.onerror = () => resolve();
+      req.onblocked = () => resolve();
+    })
+  ));
+
+  localStorage.removeItem('monaris_pw_cache');
+  localStorage.removeItem('monaris_pb_cache');
+
+  _engineStarted = false;
+  _providerLoaded = false;
+  _providerLoadPromise = null;
+  _providerFailedAt = 0;
+  engineStartPromise = null;
+  _proverInitialized = false;
+  _artifactDbPromise = null;
+  _walletModule = null;
+  _sharedModels = null;
+  prefetchStarted = false;
+  setStatus('uninitialized');
+
+  console.log('[RAILGUN] Full privacy reset complete — reload to re-init');
 }

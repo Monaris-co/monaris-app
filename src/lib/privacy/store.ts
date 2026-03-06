@@ -55,6 +55,8 @@ function persistBalances(balances: PrivateBalance[], lastSyncAt: number | null) 
 const cachedWallet = loadCachedWallet();
 const cachedBalances = loadCachedBalances();
 
+export type PoiStatus = 'idle' | 'retrying' | 'stuck' | 'resolved';
+
 interface PrivacyState {
   engineStatus: PrivacyEngineStatus;
   wallet: PrivateWalletInfo | null;
@@ -65,6 +67,9 @@ interface PrivacyState {
   lastSyncAt: number | null;
   proofProgress: number;
   proofStage: string;
+  poiAttempts: number;
+  poiStatus: PoiStatus;
+  stuckSince: number | null;
 
   setEngineStatus: (status: PrivacyEngineStatus) => void;
   setWallet: (wallet: PrivateWalletInfo | null) => void;
@@ -74,6 +79,7 @@ interface PrivacyState {
   setIsSyncing: (v: boolean) => void;
   setLastSyncAt: (t: number) => void;
   setProofProgress: (progress: number, stage: string) => void;
+  setPoiStatus: (status: PoiStatus, attempts?: number) => void;
   reset: () => void;
 }
 
@@ -87,6 +93,9 @@ export const usePrivacyStore = create<PrivacyState>((set, get) => ({
   lastSyncAt: cachedBalances.lastSyncAt,
   proofProgress: 0,
   proofStage: '',
+  poiAttempts: 0,
+  poiStatus: 'idle' as PoiStatus,
+  stuckSince: null,
 
   setEngineStatus: (status) => set({ engineStatus: status }),
   setWallet: (wallet) => {
@@ -107,6 +116,13 @@ export const usePrivacyStore = create<PrivacyState>((set, get) => ({
     set({ lastSyncAt: t });
   },
   setProofProgress: (progress, stage) => set({ proofProgress: progress, proofStage: stage }),
+  setPoiStatus: (status, attempts) => {
+    const updates: Partial<PrivacyState> = { poiStatus: status };
+    if (attempts !== undefined) updates.poiAttempts = attempts;
+    if (status === 'stuck' && !get().stuckSince) updates.stuckSince = Date.now();
+    if (status === 'resolved' || status === 'idle') updates.stuckSince = null;
+    set(updates);
+  },
   reset: () => {
     persistWallet(null);
     persistBalances([], null);
@@ -120,6 +136,9 @@ export const usePrivacyStore = create<PrivacyState>((set, get) => ({
       lastSyncAt: null,
       proofProgress: 0,
       proofStage: '',
+      poiAttempts: 0,
+      poiStatus: 'idle',
+      stuckSince: null,
     });
   },
 }));

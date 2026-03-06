@@ -13,12 +13,14 @@ import {
   ShieldCheck,
   Wallet,
   ArrowRight,
+  AlertTriangle,
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { usePrivateBalance } from "@/hooks/usePrivateBalance"
 import { usePrivateWallet } from "@/hooks/usePrivateWallet"
 import { useTokenBalance } from "@/hooks/useTokenBalance"
 import { PRIVATE_PAYMENTS_ENABLED } from "@/lib/privacy/config"
+import { fullPrivacyReset } from "@/lib/privacy"
 import { ShieldDialog } from "@/components/privacy/ShieldDialog"
 import { UnshieldDialog } from "@/components/privacy/UnshieldDialog"
 import { useChainId } from "wagmi"
@@ -39,7 +41,7 @@ const item = {
 export default function PrivatePayments() {
   const chainId = useChainId()
   const { wallet, engineStatus, isCreatingWallet } = usePrivateWallet()
-  const { privateUsdcBalance, privateUsdtBalance, totalPrivateBalance, totalSpendableBalance, hasPendingFunds, isSyncing, lastSyncAt, refreshBalances } = usePrivateBalance()
+  const { privateUsdcBalance, privateUsdtBalance, totalPrivateBalance, totalSpendableBalance, hasPendingFunds, poiStatus, isSyncing, lastSyncAt, refreshBalances } = usePrivateBalance()
   const { balance: publicUsdcBalance, isLoading: isLoadingPublic } = useTokenBalance()
 
   const [shieldDialogOpen, setShieldDialogOpen] = useState(false)
@@ -199,6 +201,46 @@ export default function PrivatePayments() {
             <p className="text-base font-medium text-[#404040] dark:text-white mt-3">Privacy Engine</p>
           </div>
         </div>
+
+        {/* Stuck Funds Banner */}
+        {poiStatus === 'stuck' && hasPendingFunds && (
+          <div className="mb-4 flex items-start gap-3 rounded-2xl border border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-900/20 p-4">
+            <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                Shielded funds awaiting POI validation
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                The POI aggregator hasn't confirmed your shield transaction yet. This can take 5-30 minutes for new shields.
+                If this persists, try resetting your privacy data below.
+              </p>
+              <button
+                onClick={async () => {
+                  if (!confirm('This will clear the local privacy cache and re-sync from scratch. Your shielded funds are safe on-chain. Continue?')) return;
+                  try {
+                    await fullPrivacyReset();
+                    window.location.reload();
+                  } catch (err) {
+                    console.error('Reset failed:', err);
+                  }
+                }}
+                className="mt-2 px-3 py-1.5 rounded-lg bg-amber-100 dark:bg-amber-800/40 text-xs font-medium text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-800/60 transition-colors"
+              >
+                Reset & Re-sync Now
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Retrying Banner */}
+        {poiStatus === 'retrying' && hasPendingFunds && (
+          <div className="mb-4 flex items-center gap-3 rounded-2xl border border-blue-200 dark:border-blue-800/60 bg-blue-50 dark:bg-blue-900/20 p-4">
+            <RefreshCw className="h-4 w-4 text-blue-500 animate-spin flex-shrink-0" />
+            <p className="text-sm text-blue-700 dark:text-blue-300">
+              Validating shielded funds with POI aggregator...
+            </p>
+          </div>
+        )}
 
         {/* Main Content Grid */}
         <div className="grid lg:grid-cols-12 gap-2 sm:gap-6">
@@ -375,17 +417,9 @@ export default function PrivatePayments() {
                         </div>
                         <button
                           onClick={async () => {
-                            if (!confirm('This will clear the local privacy cache and re-sync your wallet from scratch. Your shielded funds are safe on-chain — the wallet will be re-derived deterministically. Continue?')) return;
+                            if (!confirm('This will clear the local privacy cache and re-sync from scratch. Your shielded funds are safe on-chain. Continue?')) return;
                             try {
-                              const dbs = await indexedDB.databases();
-                              for (const db of dbs) {
-                                if (db.name && (db.name.includes('railgun') || db.name.includes('monaris-railgun') || db.name.includes('monarisrailgun'))) {
-                                  indexedDB.deleteDatabase(db.name);
-                                }
-                              }
-                              localStorage.removeItem('monaris-privacy-wallet');
-                              localStorage.removeItem('monaris-privacy-balances');
-                              localStorage.removeItem('monaris-privacy-store');
+                              await fullPrivacyReset();
                               window.location.reload();
                             } catch (err) {
                               console.error('Reset failed:', err);

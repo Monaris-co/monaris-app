@@ -395,6 +395,7 @@ export async function getPrivateBalances(
 
       const bucketNames = Object.values(RailgunWalletBalanceBucket) as string[];
       let foundAny = false;
+      const bucketSummary: string[] = [];
 
       for (const bucketName of bucketNames) {
         if (bucketName === 'Spent') continue;
@@ -405,7 +406,7 @@ export async function getPrivateBalances(
         for (const erc20 of erc20Amounts) {
           const addr = erc20.tokenAddress?.toLowerCase();
           if (addr && result[addr] !== undefined && erc20.amount > 0n) {
-            console.log(`[PrivateBalance] ${addr.slice(0, 10)}... bucket "${bucketName}": ${erc20.amount.toString()}`);
+            bucketSummary.push(`${addr.slice(0, 10)}…[${bucketName}]=${erc20.amount}`);
             result[addr] += erc20.amount;
             foundAny = true;
           }
@@ -413,9 +414,7 @@ export async function getPrivateBalances(
       }
 
       if (foundAny) {
-        for (const addr of tokenAddresses) {
-          console.log(`[PrivateBalance] TOTAL ${addr.slice(0, 10)}...: ${result[addr.toLowerCase()].toString()}`);
-        }
+        console.log(`[PrivateBalance] Buckets: ${bucketSummary.join(', ')}`);
         return result;
       }
     }
@@ -431,12 +430,10 @@ export async function getPrivateBalances(
       false,
     );
     const erc20Amounts = walletModule.getSerializedERC20Balances(allBalances);
-    console.log(`[PrivateBalance] getTokenBalances returned ${erc20Amounts.length} tokens`);
 
     for (const erc20 of erc20Amounts) {
       const addr = erc20.tokenAddress?.toLowerCase();
       if (addr && result[addr] !== undefined) {
-        console.log(`[PrivateBalance] ${addr.slice(0, 10)}... = ${erc20.amount?.toString()}`);
         result[addr] = erc20.amount ?? 0n;
       }
     }

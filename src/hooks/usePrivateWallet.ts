@@ -24,6 +24,7 @@ import {
   loadProviderAndSync,
   onEngineStatusChange,
   refreshPOIsForWallet,
+  triggerMerkleScans,
 } from '@/lib/privacy';
 import { getWalletModule } from '@/lib/privacy/engine';
 import { deriveWalletPassword } from '@/lib/privacy/wallet';
@@ -192,16 +193,45 @@ async function doInit(
   }
   if (abortRef.current) return;
 
-  // Phase 5: Trigger POI proof generation to move ShieldPending -> Spendable
+  // Phase 5: Wait for quicksync to settle, then run full POI pipeline.
+  // The quicksync downloads UTXO events from the subgraph but needs a few
+  // seconds to process them. Running POI immediately would find no UTXOs.
   const walletId = store.wallet?.id;
   if (walletId) {
-    console.log('[usePrivateWallet] Triggering POI proof generation...');
-    refreshPOIsForWallet(walletId).then(() => {
-      console.log('[usePrivateWallet] POI refresh cycle complete');
+    console.log('[usePrivateWallet] Waiting for quicksync to settle...');
+    await new Promise(r => setTimeout(r, 5_000));
+    if (abortRef.current) return;
+
+    // Full UTXO rescan ensures merkle tree is completely caught up,
+    // preventing TXID/UTXO desync that leads to MissingExternalPOI.
+    console.log('[usePrivateWallet] Running full UTXO rescan...');
+    try {
+      await triggerMerkleScans([walletId]);
+    } catch (err: any) {
+      console.warn('[usePrivateWallet] Full rescan failed:', err?.message);
+    }
+    if (abortRef.current) return;
+
+    console.log('[usePrivateWallet] Running POI pipeline...');
+    try {
+      await refreshPOIsForWallet(walletId);
+      console.log('[usePrivateWallet] POI pipeline complete');
       window.dispatchEvent(new CustomEvent('railgun-balance-update'));
-    }).catch((err: any) => {
-      console.warn('[usePrivateWallet] POI refresh failed:', err?.message);
-    });
+    } catch (err: any) {
+      console.warn('[usePrivateWallet] POI pipeline failed:', err?.message);
+    }
+
+    // Second POI pass after 30s — aggregator may need time to validate external POIs
+    if (!abortRef.current) {
+      setTimeout(async () => {
+        if (abortRef.current) return;
+        console.log('[usePrivateWallet] Second POI pass (delayed)...');
+        try {
+          await refreshPOIsForWallet(walletId);
+          window.dispatchEvent(new CustomEvent('railgun-balance-update'));
+        } catch { /* logged inside */ }
+      }, 30_000);
+    }
   }
 }
 

@@ -1,7 +1,7 @@
 export { PRIVATE_PAYMENTS_ENABLED, getPrivacyConfig, SUPPORTED_PRIVATE_TOKENS } from './config';
 export type { SupportedPrivateToken } from './config';
 
-export { ensureEngineReady, ensureEngineStarted, loadProviderAndSync, getEngineStatus, onEngineStatusChange, prefetchPrivacyModules, triggerMerkleScans, getWalletModule, getSharedModels, refreshPOIsForWallet, getBucketBreakdown, ensureProverInitialized } from './engine';
+export { ensureEngineReady, ensureEngineStarted, loadProviderAndSync, isProviderLoaded, getEngineStatus, onEngineStatusChange, prefetchPrivacyModules, triggerMerkleScans, getWalletModule, getSharedModels, refreshPOIsForWallet, getBucketBreakdown, ensureProverInitialized, fullPrivacyReset } from './engine';
 
 export {
   createPrivateWallet,
