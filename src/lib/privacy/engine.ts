@@ -390,12 +390,11 @@ async function doLoadProvider(): Promise<void> {
     const networkName =
       chainId === 42161 ? NetworkName.Arbitrum : NetworkName.Arbitrum;
 
-    // Strictly rely on highly-verified public RPCs that explicitly have `access-control-allow-origin: *`
-    // and can tolerate eth_getLogs for Railgun background scanning.
+    // Use entirely separate public RPCs for Railgun to avoid consuming Alchemy/Infura primary quotas
     const RAILGUN_RPCS = [
-      'https://arbitrum-one.publicnode.com',
-      'https://arbitrum.meowrpc.com',
-      'https://arbitrum.drpc.org' // dRPC works flawlessly but throws 500s if batch > 3, so limits are restricted below
+      'https://arb1.arbitrum.io/rpc',
+      'https://arb-pokt.nodies.app',
+      'https://arbitrum.drpc.org'
     ];
 
     setStatus('syncing');
@@ -410,20 +409,20 @@ async function doLoadProvider(): Promise<void> {
           try { await unloadProvider(networkName); } catch (_) { }
         }
 
-        const fallbackProvidersObj = {
+        const fallbackProviders = {
           chainId,
           providers: RAILGUN_RPCS.map((rpc, i) => {
             return {
               provider: rpc,
               priority: i + 1,
               weight: 1,
-              maxLogsPerBatch: 2, // Hard limit of 2 specifically for free public nodes like dRPC to bypass rate-blocks
+              maxLogsPerBatch: 2, // Hard limit of 2 for free public nodes to stop 500 errors
               stallTimeout: 15000,
             };
           }),
         };
 
-        await loadProvider(fallbackProvidersObj, networkName, 15_000);
+        await loadProvider(fallbackProviders, networkName, 15_000);
 
         _providerLoaded = true;
         setStatus('ready');

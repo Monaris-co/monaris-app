@@ -368,9 +368,9 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
       const publicClient = createPublicClient({
         chain: arbitrum,
         transport: fallback([
-          http('https://arbitrum-one.publicnode.com'),
-          http('https://arbitrum.meowrpc.com'),
-          http('https://arbitrum.drpc.org')
+          http('https://arbitrum.drpc.org'),
+          http('https://arb-pokt.nodies.app'),
+          http('https://rpc.ankr.com/arbitrum'),
         ]),
       });
       try {
