@@ -84,94 +84,8 @@ export default function InvoiceDetail() {
   const aprRange = aprMap[tierLabel] || { min: 8, max: 12 }
   const fixedApr = aprRange.fixed
 
-  if (isLoadingInvoice) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
-  }
-
-  if (error || !invoice) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center space-y-4">
-        <AlertCircle className="h-12 w-12 text-muted-foreground" />
-        <h1 className="text-2xl font-bold">Invoice Not Found</h1>
-        <p className="text-muted-foreground">This invoice does not exist or has been removed.</p>
-        <Button asChild>
-          <Link to="/app/invoices">Back to Invoices</Link>
-        </Button>
-      </div>
-    )
-  }
-
-  const amount = parseFloat(formatUnits(invoice.amount, 6))
-  const dueDate = new Date(Number(invoice.dueDate) * 1000)
-  const createdAt = new Date(Number(invoice.createdAt) * 1000)
-  const isPastDue = dueDate.getTime() < Date.now()
-  const statusLabel = STATUS_LABELS[invoice.status] || "Unknown"
-  const statusColor = STATUS_COLORS[invoice.status] || "bg-gray-100 text-gray-800"
-  
-  // Format dates
-  const billDate = createdAt.toLocaleString('en-US', { 
-    month: '2-digit', 
-    day: '2-digit', 
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: true 
-  })
-  const clearBillBefore = dueDate.toLocaleDateString('en-CA') // YYYY-MM-DD format
-  
-  // Calculate summary (simplified - using invoice amount as base)
-  const subtotal = amount
-  const tax = 0 // No tax stored on-chain
-  const discount = 0 // No discount stored on-chain
-  const totalAmount = subtotal + tax - discount
-
-  const copyPaymentLink = () => {
-    if (!invoice?.invoiceId) return
-    const link = getPaymentLink(chainId, invoice.invoiceId)
-    navigator.clipboard.writeText(link)
-    toast.success("Payment link copied to clipboard!")
-  }
-
-  // Get seller address (from invoice)
-  const sellerAddress = invoice.seller
-  const buyerAddress = invoice.buyer
-  
-  // Get invoice metadata from localStorage (stored when invoice was created)
-  // Includes: buyerName, buyerEmail, memo, lineItems
-  const getInvoiceMetadata = () => {
-    if (supaMetadata) {
-      return {
-        buyerName: supaMetadata.buyer_name || '',
-        buyerEmail: supaMetadata.buyer_email || '',
-        memo: supaMetadata.memo || '',
-        lineItems: supaMetadata.line_items || [],
-        sellerName: supaMetadata.seller_name || '',
-        invoiceNumber: supaMetadata.invoice_number || '',
-      }
-    }
-    try {
-      const stored = localStorage.getItem(`invoice_metadata_${invoice.invoiceId}`)
-      if (stored) return JSON.parse(stored)
-    } catch (e) {
-      console.error('Error reading invoice metadata:', e)
-    }
-    return { buyerName: '', buyerEmail: '', memo: '', lineItems: [], sellerName: '', invoiceNumber: '' }
-  }
-  
-  const invoiceMetadata = getInvoiceMetadata()
-  const buyerName = invoiceMetadata.buyerName || ''
-  const buyerEmail = invoiceMetadata.buyerEmail || ''
-  const memo = invoiceMetadata.memo || ''
-  const lineItems = invoiceMetadata.lineItems || []
-  const sellerDisplayName = invoiceMetadata.sellerName || 'Monaris Protocol'
-
   const handleDownloadPDF = useCallback(async () => {
-    if (!invoiceRef.current) return
+    if (!invoiceRef.current || !invoice) return
     setIsDownloading(true)
     try {
       const html2canvas = (await import('html2canvas')).default
@@ -202,8 +116,10 @@ export default function InvoiceDetail() {
 
       doc.addImage(imgData, 'PNG', 0, 20, pdfWidth, scaledHeight)
 
-      const invNum = invoiceMetadata.invoiceNumber || `INV-${invoice.invoiceId.toString().padStart(6, '0')}`
-      doc.save(`${invNum}-${dueDate.toLocaleDateString('en-CA')}.pdf`)
+      const invoiceNumber = supaMetadata?.invoice_number || ''
+      const invNum = invoiceNumber || `INV-${invoice.invoiceId.toString().padStart(6, '0')}`
+      const dueDateObj = new Date(Number(invoice.dueDate) * 1000)
+      doc.save(`${invNum}-${dueDateObj.toLocaleDateString('en-CA')}.pdf`)
       toast.success('Invoice PDF downloaded')
     } catch (err: any) {
       console.error('PDF generation failed:', err)
@@ -211,7 +127,88 @@ export default function InvoiceDetail() {
     } finally {
       setIsDownloading(false)
     }
-  }, [invoiceMetadata.invoiceNumber, invoice.invoiceId, dueDate])
+  }, [invoice, supaMetadata])
+
+  if (isLoadingInvoice) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  if (error || !invoice) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center space-y-4">
+        <AlertCircle className="h-12 w-12 text-muted-foreground" />
+        <h1 className="text-2xl font-bold">Invoice Not Found</h1>
+        <p className="text-muted-foreground">This invoice does not exist or has been removed.</p>
+        <Button asChild>
+          <Link to="/app/invoices">Back to Invoices</Link>
+        </Button>
+      </div>
+    )
+  }
+
+  const amount = parseFloat(formatUnits(invoice.amount, 6))
+  const dueDate = new Date(Number(invoice.dueDate) * 1000)
+  const createdAt = new Date(Number(invoice.createdAt) * 1000)
+  const isPastDue = dueDate.getTime() < Date.now()
+  const statusLabel = STATUS_LABELS[invoice.status] || "Unknown"
+  const statusColor = STATUS_COLORS[invoice.status] || "bg-gray-100 text-gray-800"
+  
+  const billDate = createdAt.toLocaleString('en-US', { 
+    month: '2-digit', 
+    day: '2-digit', 
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true 
+  })
+  const clearBillBefore = dueDate.toLocaleDateString('en-CA')
+  
+  const subtotal = amount
+  const tax = 0
+  const discount = 0
+  const totalAmount = subtotal + tax - discount
+
+  const copyPaymentLink = () => {
+    if (!invoice?.invoiceId) return
+    const link = getPaymentLink(chainId, invoice.invoiceId)
+    navigator.clipboard.writeText(link)
+    toast.success("Payment link copied to clipboard!")
+  }
+
+  const sellerAddress = invoice.seller
+  const buyerAddress = invoice.buyer
+  
+  const getInvoiceMetadata = () => {
+    if (supaMetadata) {
+      return {
+        buyerName: supaMetadata.buyer_name || '',
+        buyerEmail: supaMetadata.buyer_email || '',
+        memo: supaMetadata.memo || '',
+        lineItems: supaMetadata.line_items || [],
+        sellerName: supaMetadata.seller_name || '',
+        invoiceNumber: supaMetadata.invoice_number || '',
+      }
+    }
+    try {
+      const stored = localStorage.getItem(`invoice_metadata_${invoice.invoiceId}`)
+      if (stored) return JSON.parse(stored)
+    } catch (e) {
+      console.error('Error reading invoice metadata:', e)
+    }
+    return { buyerName: '', buyerEmail: '', memo: '', lineItems: [], sellerName: '', invoiceNumber: '' }
+  }
+  
+  const invoiceMetadata = getInvoiceMetadata()
+  const buyerName = invoiceMetadata.buyerName || ''
+  const buyerEmail = invoiceMetadata.buyerEmail || ''
+  const memo = invoiceMetadata.memo || ''
+  const lineItems = invoiceMetadata.lineItems || []
+  const sellerDisplayName = invoiceMetadata.sellerName || 'Monaris Protocol'
 
   return (
     <div className="min-h-screen bg-background">

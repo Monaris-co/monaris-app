@@ -25,6 +25,7 @@ import PayInvoice from "./pages/PayInvoice";
 import { PrivyErrorHandler } from "./components/PrivyErrorHandler";
 import { PaymentPrivyProvider } from "./components/PaymentPrivyProvider";
 import { InviteGate } from "./components/InviteGate";
+import { SupabaseAuthProvider } from "./components/SupabaseAuthProvider";
 
 const queryClient = new QueryClient();
 
@@ -89,13 +90,15 @@ const AppRouter = () => {
         >
           <PrivyErrorHandler />
           <WagmiProvider config={wagmiConfig}>
-            <InviteGate>
-              <TooltipProvider>
-                <Toaster />
-                <Sonner />
-                <MainAppRoutes />
-              </TooltipProvider>
-            </InviteGate>
+            <SupabaseAuthProvider>
+              <InviteGate>
+                <TooltipProvider>
+                  <Toaster />
+                  <Sonner />
+                  <MainAppRoutes />
+                </TooltipProvider>
+              </InviteGate>
+            </SupabaseAuthProvider>
           </WagmiProvider>
         </PrivyProvider>
       </QueryClientProvider>

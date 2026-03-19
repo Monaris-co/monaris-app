@@ -111,9 +111,10 @@ export default function Invoices() {
       let changed = false
 
       // 1) Update stale Supabase invoices with on-chain status
+      //    Only skip 'cleared' (terminal) and 'rejected' (user action) — 'paid' can still transition to 'cleared'
       const staleInvoices = supabaseInvoices.filter(
         si => !si.is_draft && si.status !== 'rejected' && si.chain_invoice_id != null &&
-              si.status !== 'paid' && si.status !== 'cleared'
+              si.status !== 'cleared'
       )
       if (staleInvoices.length > 0) {
         const updates: { supaId: string; newStatus: string }[] = []

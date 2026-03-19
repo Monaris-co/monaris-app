@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
-import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { supabase, isSupabaseConfigured, isSupabaseAuthenticated } from '@/lib/supabase'
 import { usePrivyAccount } from './usePrivyAccount'
+import { useSupabaseAuthVersion } from './useSupabaseAuthVersion'
 
 export interface Contact {
   id: string
@@ -18,9 +19,10 @@ export function useContacts() {
   const [isLoading, setIsLoading] = useState(false)
 
   const normalizedAddress = address?.toLowerCase()
+  const authVersion = useSupabaseAuthVersion()
 
   const fetchContacts = useCallback(async () => {
-    if (!normalizedAddress || !isSupabaseConfigured()) return
+    if (!normalizedAddress || !isSupabaseConfigured() || !isSupabaseAuthenticated()) return
     setIsLoading(true)
     try {
       const { data, error } = await supabase
@@ -37,7 +39,8 @@ export function useContacts() {
     } finally {
       setIsLoading(false)
     }
-  }, [normalizedAddress])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [normalizedAddress, authVersion])
 
   const addContact = useCallback(async (
     contactAddress: string,

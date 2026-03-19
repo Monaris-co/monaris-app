@@ -1243,8 +1243,12 @@ function BuyerInvoiceCard({ invoice, onReject }: { invoice: SupabaseInvoice; onR
             </span>
           )}
           {isPaid && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#c8ff00]/15 dark:bg-[#c8ff00]/10 text-xs font-medium text-[#7cb518] dark:text-[#c8ff00]">
-              Paid
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+              invoice.status === 'cleared'
+                ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300'
+                : 'bg-[#c8ff00]/15 dark:bg-[#c8ff00]/10 text-[#7cb518] dark:text-[#c8ff00]'
+            }`}>
+              {invoice.status === 'cleared' ? 'Cleared' : 'Paid'}
             </span>
           )}
           {!isRejected && !isPaid && (

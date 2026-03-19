@@ -7,6 +7,7 @@ import {
   PAYMENT_PRIVY_APP_ID,
   WALLETCONNECT_PROJECT_ID,
 } from '@/lib/payment-privy-config';
+import { SupabaseAuthProvider } from './SupabaseAuthProvider';
 
 // Create a separate QueryClient for payment page
 const paymentQueryClient = new QueryClient({
@@ -121,7 +122,9 @@ export function PaymentPrivyProvider({ children }: PaymentPrivyProviderProps) {
         config={paymentPrivyConfigOptions}
       >
         <PrivyWagmiProvider config={paymentWagmiConfig}>
-          {children}
+          <SupabaseAuthProvider appId={PAYMENT_PRIVY_APP_ID}>
+            {children}
+          </SupabaseAuthProvider>
         </PrivyWagmiProvider>
       </PrivyProvider>
     </QueryClientProvider>

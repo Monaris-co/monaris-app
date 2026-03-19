@@ -5,7 +5,8 @@ import { useChainAddresses } from './useChainAddresses';
 import { InvoiceRegistryABI } from '@/lib/abis';
 import { useSendTransaction, useWallets } from '@privy-io/react-auth';
 import { encodeFunctionData } from 'viem';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured, isSupabaseAuthenticated } from '@/lib/supabase';
+import { useSupabaseAuthVersion } from './useSupabaseAuthVersion';
 
 export type InvoiceStatus = 0 | 1 | 2 | 3; // Issued | Financed | Paid | Cleared
 
@@ -461,6 +462,7 @@ export function useSellerInvoicesWithData(sellerAddress?: string) {
   const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const publicClient = usePublicClient({ chainId });
+  const [dataRefetchCounter, setDataRefetchCounter] = useState(0);
 
   // Fetch invoice data for each ID
   useEffect(() => {
@@ -475,10 +477,8 @@ export function useSellerInvoicesWithData(sellerAddress?: string) {
 
     const fetchInvoices = async () => {
       try {
-        // Fetch all invoices in parallel with timeout
         const invoicePromises = invoiceIds.map(async (invoiceId) => {
           try {
-            // Add timeout to prevent hanging
             const timeoutPromise = new Promise<null>((_, reject) => 
               setTimeout(() => reject(new Error('Timeout')), 10000)
             );
@@ -499,13 +499,12 @@ export function useSellerInvoicesWithData(sellerAddress?: string) {
         });
 
         const fetchedInvoices = await Promise.all(invoicePromises);
-        // Filter out null values and sort by createdAt (newest first)
         const validInvoices = fetchedInvoices
           .filter((inv): inv is Invoice => inv !== null)
           .sort((a, b) => {
             const aTime = Number(a.createdAt);
             const bTime = Number(b.createdAt);
-            return bTime - aTime; // Newest first
+            return bTime - aTime;
           });
 
         setInvoices(validInvoices);
@@ -517,21 +516,32 @@ export function useSellerInvoicesWithData(sellerAddress?: string) {
       }
     };
 
-    // Add a small delay to batch requests
     const timeoutId = setTimeout(fetchInvoices, 100);
     return () => clearTimeout(timeoutId);
-  }, [invoiceIds, publicClient, addresses.InvoiceRegistry]);
+  }, [invoiceIds, publicClient, addresses.InvoiceRegistry, dataRefetchCounter]);
 
-  // Watch for invoice events to refetch (simplified to reduce load)
-  // Only watch for critical events and debounce refetches
+  const refetchData = useCallback(() => {
+    refetchIds();
+    setDataRefetchCounter(c => c + 1);
+  }, [refetchIds]);
+
   useWatchContractEvent({
     address: addresses.InvoiceRegistry as `0x${string}`,
     abi: InvoiceRegistryABI,
     eventName: 'InvoiceCreated',
     chainId,
     onLogs() {
-      // Debounce refetch to avoid rapid calls
-      setTimeout(() => refetchIds(), 1000);
+      setTimeout(() => refetchData(), 1000);
+    },
+  });
+
+  useWatchContractEvent({
+    address: addresses.InvoiceRegistry as `0x${string}`,
+    abi: InvoiceRegistryABI,
+    eventName: 'InvoicePaid',
+    chainId,
+    onLogs() {
+      setTimeout(() => refetchData(), 1500);
     },
   });
 
@@ -541,8 +551,7 @@ export function useSellerInvoicesWithData(sellerAddress?: string) {
     eventName: 'InvoiceCleared',
     chainId,
     onLogs() {
-      // Debounce refetch to avoid rapid calls
-      setTimeout(() => refetchIds(), 2000);
+      setTimeout(() => refetchData(), 2000);
     },
   });
 
@@ -584,9 +593,10 @@ export function useSellerSupabaseInvoices(sellerAddress?: string) {
   const [invoices, setInvoices] = useState<SupabaseInvoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const authVersion = useSupabaseAuthVersion();
 
   const fetchInvoices = useCallback(async () => {
-    if (!seller || !isSupabaseConfigured()) {
+    if (!seller || !isSupabaseConfigured() || !isSupabaseAuthenticated()) {
       setInvoices([]);
       setIsLoading(false);
       return;
@@ -606,7 +616,8 @@ export function useSellerSupabaseInvoices(sellerAddress?: string) {
     } finally {
       setIsLoading(false);
     }
-  }, [seller]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seller, authVersion]);
 
   useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
 
@@ -619,9 +630,10 @@ export function useBuyerInvoices(buyerAddress?: string) {
   const [invoices, setInvoices] = useState<SupabaseInvoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const authVersion = useSupabaseAuthVersion();
 
   const fetchInvoices = useCallback(async () => {
-    if (!buyer || !isSupabaseConfigured()) {
+    if (!buyer || !isSupabaseConfigured() || !isSupabaseAuthenticated()) {
       setInvoices([]);
       setIsLoading(false);
       return;
@@ -643,7 +655,8 @@ export function useBuyerInvoices(buyerAddress?: string) {
     } finally {
       setIsLoading(false);
     }
-  }, [buyer]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buyer, authVersion]);
 
   useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
 

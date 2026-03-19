@@ -350,11 +350,26 @@ export default function PayInvoice() {
 
         const syncPayment = async () => {
           try {
+            // Re-read on-chain status — settlement may have cleared the invoice in the same tx
+            let resolvedStatus = 'paid'
+            try {
+              if (publicClient && addresses.InvoiceRegistry) {
+                const onChain = await publicClient.readContract({
+                  address: addresses.InvoiceRegistry as `0x${string}`,
+                  abi: InvoiceRegistryABI,
+                  functionName: 'getInvoice',
+                  args: [BigInt(invoiceId)],
+                }) as { status: number }
+                const statusMap: Record<number, string> = { 0: 'issued', 1: 'financed', 2: 'paid', 3: 'cleared' }
+                resolvedStatus = statusMap[onChain.status] || 'paid'
+              }
+            } catch { /* fall back to 'paid' */ }
+
             // 1) Try to update existing Supabase row
             const { data: updated, error: updateErr } = await supabase
               .from('invoices')
               .update({
-                status: 'paid',
+                status: resolvedStatus,
                 tx_hash: payHash,
                 payment_completed_at: new Date().toISOString(),
               })
@@ -372,7 +387,7 @@ export default function PayInvoice() {
                 buyer_address: invoice.buyer.toLowerCase(),
                 amount: parseFloat(amtStr),
                 due_date: new Date(Number(invoice.dueDate) * 1000).toISOString(),
-                status: 'paid',
+                status: resolvedStatus,
                 tx_hash: payHash,
                 is_draft: false,
                 payment_completed_at: new Date().toISOString(),
@@ -390,7 +405,7 @@ export default function PayInvoice() {
               chain_invoice_id: Number(invoiceId),
               chain_id: cid,
             })
-            console.log('[Payment] Supabase synced + seller notified')
+            console.log('[Payment] Supabase synced + seller notified, status:', resolvedStatus)
           } catch (err: any) {
             console.warn('[Payment] Supabase sync error:', err?.message)
           }

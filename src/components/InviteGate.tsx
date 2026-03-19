@@ -2,13 +2,26 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react';
 
-const STORAGE_KEY = 'monaris_invite_verified';
+const STORAGE_KEY = 'monaris_access_token';
+const GATE_VERSION = 2;
 
 import { supabase } from '../lib/supabase';
 
+async function computeHash(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 function isAlreadyVerified(): boolean {
   try {
-    return localStorage.getItem(STORAGE_KEY) === 'true';
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    if (parsed?.v !== GATE_VERSION || !parsed?.ts || !parsed?.h) return false;
+    const age = Date.now() - parsed.ts;
+    if (age > 90 * 24 * 60 * 60 * 1000) return false;
+    return true;
   } catch {
     return false;
   }
@@ -53,35 +66,21 @@ export function InviteGate({ children }: InviteGateProps) {
     setIsChecking(true);
 
     try {
-      // 1. Check if code exists and is unused
-      const { data, error: fetchError } = await supabase
-        .from('invite_codes')
-        .select('*')
-        .eq('code', entered)
-        .single();
+      const { data, error: rpcError } = await supabase
+        .rpc('validate_invite_code', { input_code: entered });
 
-      if (fetchError || !data) {
-        throw new Error('Invalid invite code');
-      }
-
-      if (data.is_used) {
-        throw new Error('This invite code has already been used');
-      }
-
-      // 2. Mark code as used
-      const { error: updateError } = await supabase
-        .from('invite_codes')
-        .update({ is_used: true })
-        .eq('code', entered);
-
-      if (updateError) {
+      if (rpcError) {
         throw new Error('Failed to verify code. Please try again.');
       }
 
-      // 3. Success!
+      if (!data?.valid) {
+        throw new Error(data?.error || 'Invalid invite code');
+      }
       setSuccess(true);
       try {
-        localStorage.setItem(STORAGE_KEY, 'true');
+        const ts = Date.now();
+        const h = await computeHash(`${entered}:${ts}:monaris`);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ v: GATE_VERSION, ts, h }));
       } catch { }
       setTimeout(() => setVerified(true), 1200);
 

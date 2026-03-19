@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { supabase, isSupabaseConfigured, isSupabaseAuthenticated } from '@/lib/supabase'
 import { usePrivyAccount } from './usePrivyAccount'
+import { useSupabaseAuthVersion } from './useSupabaseAuthVersion'
 
 export interface Notification {
   id: string
@@ -23,9 +24,10 @@ export function useNotifications() {
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
   const normalizedAddress = address?.toLowerCase()
+  const authVersion = useSupabaseAuthVersion()
 
   const fetchNotifications = useCallback(async () => {
-    if (!normalizedAddress || !isSupabaseConfigured()) return
+    if (!normalizedAddress || !isSupabaseConfigured() || !isSupabaseAuthenticated()) return
     setIsLoading(true)
     try {
       const { data, error } = await supabase
@@ -45,7 +47,8 @@ export function useNotifications() {
     } finally {
       setIsLoading(false)
     }
-  }, [normalizedAddress])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [normalizedAddress, authVersion])
 
   const markAsRead = useCallback(async (notificationId: string) => {
     if (!isSupabaseConfigured()) return
