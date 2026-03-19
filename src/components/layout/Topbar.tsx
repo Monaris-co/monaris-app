@@ -92,21 +92,25 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
   }
 
   const handleLogout = async () => {
+    const preserveKeys = ['monaris_access_token', 'monaris_invite_verified']
+    const saved: Record<string, string> = {}
+    preserveKeys.forEach(k => {
+      const v = localStorage.getItem(k)
+      if (v) saved[k] = v
+    })
+
+    const restoreAndRedirect = (param: string) => {
+      localStorage.clear()
+      Object.entries(saved).forEach(([k, v]) => localStorage.setItem(k, v))
+      sessionStorage.clear()
+      window.location.href = `/?${param}=` + Date.now()
+    }
+
     try {
       await logout()
-      setTimeout(() => {
-        const inviteVerified = localStorage.getItem('monaris_invite_verified')
-        localStorage.clear()
-        if (inviteVerified) localStorage.setItem('monaris_invite_verified', inviteVerified)
-        sessionStorage.clear()
-        window.location.href = '/?reset=' + Date.now()
-      }, 300)
+      setTimeout(() => restoreAndRedirect('reset'), 300)
     } catch (error) {
-      const inviteVerified = localStorage.getItem('monaris_invite_verified')
-      localStorage.clear()
-      if (inviteVerified) localStorage.setItem('monaris_invite_verified', inviteVerified)
-      sessionStorage.clear()
-      window.location.href = '/?logout=' + Date.now()
+      restoreAndRedirect('logout')
     }
   }
 
