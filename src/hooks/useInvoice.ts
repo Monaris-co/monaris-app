@@ -6,6 +6,7 @@ import { InvoiceRegistryABI } from '@/lib/abis';
 import { useSendTransaction, useWallets } from '@privy-io/react-auth';
 import { encodeFunctionData } from 'viem';
 import { supabase, isSupabaseConfigured, isSupabaseAuthenticated } from '@/lib/supabase';
+import { supabaseQueryWithRetry } from '@/lib/supabase-query-retry';
 import { useSupabaseAuthVersion } from './useSupabaseAuthVersion';
 
 export type InvoiceStatus = 0 | 1 | 2 | 3; // Issued | Financed | Paid | Cleared
@@ -565,6 +566,10 @@ export function useSellerInvoicesWithData(sellerAddress?: string) {
 
 // ─── Supabase-backed types & hooks ────────────────────────────────────────────
 
+/** List rows without `line_items` jsonb — keeps payloads small and avoids PostgREST timeouts. */
+const INVOICE_LIST_COLUMNS =
+  'id, chain_invoice_id, chain_id, seller_address, buyer_address, amount, due_date, status, tx_hash, buyer_name, buyer_email, memo, is_draft, seller_name, invoice_number, created_at, updated_at'
+
 export interface SupabaseInvoice {
   id: string;
   chain_invoice_id: number | null;
@@ -591,25 +596,28 @@ export function useSellerSupabaseInvoices(sellerAddress?: string) {
   const chainId = useChainId();
   const seller = (sellerAddress || address)?.toLowerCase();
   const [invoices, setInvoices] = useState<SupabaseInvoice[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const authVersion = useSupabaseAuthVersion();
 
   const fetchInvoices = useCallback(async () => {
-    if (!seller || !isSupabaseConfigured() || !isSupabaseAuthenticated()) {
-      setInvoices([]);
-      setIsLoading(false);
-      return;
-    }
+    if (!seller || !isSupabaseConfigured() || !isSupabaseAuthenticated()) return;
     setIsLoading(true);
     try {
-      const { data, error: err } = await supabase
-        .from('invoices')
-        .select('*')
-        .eq('seller_address', seller)
-        .order('updated_at', { ascending: false });
+      const { data, error: err } = await supabaseQueryWithRetry(
+        'sellerSupabaseInvoices',
+        () =>
+          supabase
+            .from('invoices')
+            .select(INVOICE_LIST_COLUMNS)
+            .eq('seller_address', seller)
+            .order('updated_at', { ascending: false })
+            .limit(200),
+      );
       if (err) throw new Error(err.message);
       setInvoices((data as SupabaseInvoice[]) || []);
+      setHasFetched(true);
       setError(null);
     } catch (e: any) {
       setError(e);
@@ -621,32 +629,33 @@ export function useSellerSupabaseInvoices(sellerAddress?: string) {
 
   useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
 
-  return { invoices, isLoading, error, refetch: fetchInvoices };
+  return { invoices, isLoading, hasFetched, error, refetch: fetchInvoices };
 }
 
 export function useBuyerInvoices(buyerAddress?: string) {
   const { address } = usePrivyAccount();
   const buyer = (buyerAddress || address)?.toLowerCase();
   const [invoices, setInvoices] = useState<SupabaseInvoice[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const authVersion = useSupabaseAuthVersion();
 
   const fetchInvoices = useCallback(async () => {
-    if (!buyer || !isSupabaseConfigured() || !isSupabaseAuthenticated()) {
-      setInvoices([]);
-      setIsLoading(false);
-      return;
-    }
+    if (!buyer || !isSupabaseConfigured() || !isSupabaseAuthenticated()) return;
     setIsLoading(true);
     try {
-      const { data, error: err } = await supabase
-        .from('invoices')
-        .select('*')
-        .eq('buyer_address', buyer)
-        .eq('is_draft', false)
-        .neq('status', 'rejected')
-        .order('created_at', { ascending: false });
+      const { data, error: err } = await supabaseQueryWithRetry(
+        'useBuyerInvoices',
+        () =>
+          supabase
+            .from('invoices')
+            .select(INVOICE_LIST_COLUMNS)
+            .eq('buyer_address', buyer)
+            .eq('is_draft', false)
+            .neq('status', 'rejected')
+            .order('created_at', { ascending: false })
+            .limit(100),
+      );
       if (err) throw new Error(err.message);
       setInvoices((data as SupabaseInvoice[]) || []);
       setError(null);

@@ -26,7 +26,16 @@ function getPayLink(n: Notification): string | null {
 }
 
 export function NotificationBell() {
-  const { notifications, unreadCount, markAsRead, markAllAsRead, dismissNotification } = useNotifications()
+  const {
+    notifications,
+    unreadCount,
+    isLoading,
+    fetchError,
+    markAsRead,
+    markAllAsRead,
+    dismissNotification,
+    refetch,
+  } = useNotifications()
   const [open, setOpen] = useState(false)
   const [rejectingId, setRejectingId] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -108,7 +117,13 @@ export function NotificationBell() {
         variant="ghost"
         size="icon"
         className="relative text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-        onClick={() => setOpen(prev => !prev)}
+        onClick={() => {
+          setOpen(prev => {
+            const next = !prev
+            if (next) refetch()
+            return next
+          })
+        }}
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
@@ -136,9 +151,27 @@ export function NotificationBell() {
 
           {/* Notification list */}
           <div className="max-h-80 overflow-y-auto">
-            {notifications.length === 0 ? (
+            {fetchError ? (
+              <div className="px-4 py-6 text-center text-sm space-y-2">
+                <p className="text-amber-600 dark:text-amber-400">{fetchError}</p>
+                <button
+                  type="button"
+                  onClick={() => refetch()}
+                  className="text-xs font-medium text-[#7cb518] dark:text-[#c8ff00] hover:underline"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : notifications.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
-                No notifications yet
+                {open && isLoading ? (
+                  <span className="inline-flex items-center gap-2 justify-center">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading…
+                  </span>
+                ) : (
+                  'No notifications yet — they appear when someone sends you an invoice or pays one you issued.'
+                )}
               </div>
             ) : (
               notifications.map(n => (

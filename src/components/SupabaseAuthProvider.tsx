@@ -14,37 +14,77 @@ export function useSupabaseReady() {
 }
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || ''
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 const PRIVY_APP_ID = import.meta.env.VITE_PRIVY_APP_ID || ''
+
+type ExchangeResult =
+  | { ok: true; token: string; expires_in: number }
+  | { ok: false; fatalConfig?: boolean }
+
+let loggedJwtSecretHint = false
 
 async function exchangePrivyToken(
   privyToken: string,
   walletAddress: string,
   appId: string,
-): Promise<{ token: string; expires_in: number } | null> {
+): Promise<ExchangeResult> {
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/privy-auth`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'apikey': SUPABASE_ANON_KEY,
+      },
       body: JSON.stringify({
         privy_token: privyToken,
         wallet_address: walletAddress,
         app_id: appId,
       }),
     })
-    if (!res.ok) return null
-    return res.json()
-  } catch {
-    return null
+    const text = await res.text().catch(() => '')
+    if (!res.ok) {
+      console.error('[SupabaseAuth] Edge function error:', res.status, text)
+      try {
+        const body = JSON.parse(text) as { code?: string; hint?: string; error?: string }
+        if (body.code === 'missing_jwt_secret' && body.hint) {
+          if (!loggedJwtSecretHint) {
+            loggedJwtSecretHint = true
+            console.error(
+              '\n%c[Monaris] Supabase Edge Function is missing JWT signing secret',
+              'color:#ef4444;font-weight:bold;font-size:12px',
+            )
+            console.error(
+              '%cSet Edge secret SUPABASE_JWT_SECRET (Dashboard) or JWT_SECRET (CLI). supabase CLI blocks SUPABASE_* names.',
+              'color:#f97316',
+            )
+            console.error(body.hint)
+          }
+          return { ok: false, fatalConfig: true }
+        }
+      } catch {
+        /* not JSON */
+      }
+      return { ok: false }
+    }
+    const data = JSON.parse(text) as { token?: string; expires_in?: number }
+    if (!data?.token) return { ok: false }
+    return { ok: true, token: data.token, expires_in: data.expires_in ?? 3600 }
+  } catch (err) {
+    console.error('[SupabaseAuth] Network error calling privy-auth:', err)
+    return { ok: false }
   }
 }
 
 export function SupabaseAuthProvider({ children, appId }: { children: React.ReactNode; appId?: string }) {
-  const { authenticated, getAccessToken } = usePrivy()
+  const { authenticated, ready, getAccessToken } = usePrivy()
   const { address } = usePrivyAccount()
   const [isReady, setIsReady] = useState(false)
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const exchangingRef = useRef(false)
   const lastAddressRef = useRef<string | null>(null)
+  const retryCount = useRef(0)
 
   const resolvedAppId = appId || PRIVY_APP_ID
 
@@ -54,39 +94,58 @@ export function SupabaseAuthProvider({ children, appId }: { children: React.Reac
     try {
       const privyToken = await getAccessToken()
       if (!privyToken) {
-        clearSupabaseAuth()
-        setIsReady(false)
+        console.warn('[SupabaseAuth] No Privy token, retry', retryCount.current + 1)
+        if (retryCount.current < 4) {
+          retryCount.current++
+          retryTimer.current = setTimeout(() => {
+            exchangingRef.current = false
+            doExchange()
+          }, 1500 * retryCount.current)
+        }
         return
       }
 
       const result = await exchangePrivyToken(privyToken, address, resolvedAppId)
-      if (!result?.token) {
-        clearSupabaseAuth()
-        setIsReady(false)
+      if (!result.ok) {
+        if (result.fatalConfig) {
+          // Retrying won't help until SUPABASE_JWT_SECRET is set on the Edge Function
+          return
+        }
+        console.warn('[SupabaseAuth] No token from edge function, retry', retryCount.current + 1)
+        if (retryCount.current < 4) {
+          retryCount.current++
+          retryTimer.current = setTimeout(() => {
+            exchangingRef.current = false
+            doExchange()
+          }, 2000 * retryCount.current)
+        }
         return
       }
 
+      retryCount.current = 0
       setSupabaseAuth(result.token)
       lastAddressRef.current = address
       setIsReady(true)
+      console.log('[SupabaseAuth] Authenticated for', address.slice(0, 10))
 
       if (refreshTimer.current) clearTimeout(refreshTimer.current)
-      const refreshMs = (result.expires_in || 3600) * 0.8 * 1000
+      const refreshMs = result.expires_in * 0.8 * 1000
       refreshTimer.current = setTimeout(() => {
         exchangingRef.current = false
         doExchange()
       }, refreshMs)
     } catch (err) {
       console.error('[SupabaseAuth] Exchange failed:', err)
-      clearSupabaseAuth()
-      setIsReady(false)
     } finally {
       exchangingRef.current = false
     }
   }, [authenticated, address, getAccessToken, resolvedAppId])
 
   useEffect(() => {
-    if (authenticated && address) {
+    if (retryTimer.current) clearTimeout(retryTimer.current)
+    retryCount.current = 0
+
+    if (ready && authenticated && address) {
       if (lastAddressRef.current !== address) {
         setIsReady(false)
         clearSupabaseAuth()
@@ -99,8 +158,9 @@ export function SupabaseAuthProvider({ children, appId }: { children: React.Reac
     }
     return () => {
       if (refreshTimer.current) clearTimeout(refreshTimer.current)
+      if (retryTimer.current) clearTimeout(retryTimer.current)
     }
-  }, [authenticated, address, doExchange])
+  }, [ready, authenticated, address, doExchange])
 
   return (
     <SupabaseAuthContext.Provider value={{ isReady }}>

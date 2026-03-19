@@ -4,6 +4,13 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
 const anonClient = createClient(supabaseUrl, supabaseAnonKey)
+
+/**
+ * Always uses the anon key (no custom JWT). Use only for `notifications` where RLS allows it.
+ * Keeps the bell working even when `privy-auth` / JWT exchange fails; your app still filters by wallet.
+ */
+export const supabaseAnon = anonClient
+
 let authClient: SupabaseClient | null = null
 let authVersion = 0
 const authListeners = new Set<() => void>()

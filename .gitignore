@@ -44,6 +44,8 @@ cache/
 .env
 .env.*
 !.env.example
+# Helper file for: supabase secrets set --env-file supabase/.env.edge
+supabase/.env.edge
 *.env.local
 *.env.*.local
 
@@ -62,6 +64,9 @@ Thumbs.db
 *.pem
 *.key
 secrets/
+
+# Supabase CLI local link state (do not commit)
+supabase/.temp/
 
 # Temporary files
 tmp/

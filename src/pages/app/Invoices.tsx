@@ -80,7 +80,7 @@ export default function Invoices() {
   const [hiddenInvoiceIds, setHiddenInvoiceIds] = useState<Set<string>>(() => getHiddenInvoices())
   const { invoices, isLoading, error } = useSellerInvoicesWithData()
   const { address } = usePrivyAccount()
-  const { invoices: supabaseInvoices, isLoading: isLoadingSupa, refetch: refetchSupa } = useSellerSupabaseInvoices()
+  const { invoices: supabaseInvoices, hasFetched: supaHasFetched, refetch: refetchSupa } = useSellerSupabaseInvoices()
   const addresses = useChainAddresses()
   const publicClient = usePublicClient({ chainId })
   const [syncDone, setSyncDone] = useState(false)
@@ -99,7 +99,7 @@ export default function Invoices() {
   // One-time sync: update stale statuses AND insert missing Supabase rows for on-chain invoices
   useEffect(() => {
     if (syncDone || !publicClient || !addresses.InvoiceRegistry || !isSupabaseConfigured()) return
-    if (!supabaseInvoices || !invoices) return
+    if (!supabaseInvoices || !invoices || !supaHasFetched) return
     setSyncDone(true)
 
     const supaChainIdSet = new Set<number>()
@@ -167,7 +167,7 @@ export default function Invoices() {
       if (changed) refetchSupa()
     }
     syncAll()
-  }, [supabaseInvoices, invoices, publicClient, addresses.InvoiceRegistry, syncDone, chainId])
+  }, [supabaseInvoices, invoices, publicClient, addresses.InvoiceRegistry, syncDone, chainId, supaHasFetched])
 
   const handleHideInvoice = (invoiceId: bigint | null) => {
     if (!invoiceId) return
@@ -407,7 +407,7 @@ export default function Invoices() {
 
       {/* Invoice table */}
       <div className="rounded-[20px] border border-[#f1f1f1] dark:border-gray-700 bg-white dark:bg-gray-800 shadow-[0px_16px_24px_0px_rgba(0,0,0,0.06),0px_2px_6px_0px_rgba(0,0,0,0.04)] overflow-x-auto">
-        {(isLoading || isLoadingSupa) ? (
+        {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <span className="ml-3 text-muted-foreground">Loading invoices...</span>

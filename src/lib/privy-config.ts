@@ -55,17 +55,7 @@ export const privyConfig = {
       requireUserPasswordOnCreate: false,
       noPromptOnSignature: true,
     },
-    externalWallets: {
-      coinbaseWallet: {
-        connectionOptions: 'all',
-      },
-      walletConnect: {
-        connectionOptions: 'all',
-      },
-      metamask: {
-        connectionOptions: 'all',
-      },
-    },
+    externalWallets: {},
     defaultChain: arbitrumMainnetChain,
     supportedChains: [arbitrumMainnetChain],
   },
