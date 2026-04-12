@@ -14,6 +14,7 @@ import { usePrivy, useWallets } from "@privy-io/react-auth"
 import { toast } from "sonner"
 import { useTokenBalance } from "@/hooks/useTokenBalance"
 import { useChainId } from "wagmi"
+import { useQueryClient } from "@tanstack/react-query"
 import { getExplorerAddressUrl } from "@/lib/chain-utils"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
@@ -27,6 +28,7 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
   const chainId = useChainId()
   const { balance: usdcBalance, isLoading: isLoadingBalance } = useTokenBalance()
   const { wallets } = useWallets()
+  const queryClient = useQueryClient()
 
   const loginMethods = user?.linkedAccounts?.map((acc: any) => acc.type) || []
   const loggedInWithEmail = loginMethods.some((type: string) =>
@@ -98,6 +100,10 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
       const v = localStorage.getItem(k)
       if (v) saved[k] = v
     })
+
+    // Wipe the entire React Query cache before navigating away
+    queryClient.removeQueries()
+    queryClient.clear()
 
     const restoreAndRedirect = (param: string) => {
       localStorage.clear()
