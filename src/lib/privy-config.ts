@@ -49,7 +49,7 @@ export const privyConfig = {
       accentColor: '#c8ff00',
       logo: '/monar.png',
     },
-    loginMethods: ['email'],
+    loginMethods: ['email', 'google'],
     embeddedWallets: {
       createOnLogin: 'all-users',
       requireUserPasswordOnCreate: false,
