@@ -3,10 +3,13 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { PrivyProvider } from "@privy-io/react-auth";
+import { PrivyProvider, usePrivy } from "@privy-io/react-auth";
 import { WagmiProvider } from "@privy-io/wagmi";
+import { useAccount } from "wagmi";
+import { useQueryClient } from "@tanstack/react-query";
 import { privyConfig } from "./lib/privy-config";
 import { wagmiConfig } from "./lib/wagmi-config";
+import { useEffect, useRef } from "react";
 import NotFound from "./pages/NotFound";
 import { AppLayout } from "./components/layout/AppLayout";
 import Dashboard from "./pages/app/Dashboard";
@@ -27,10 +30,51 @@ import { PaymentPrivyProvider } from "./components/PaymentPrivyProvider";
 import { InviteGate } from "./components/InviteGate";
 import { SupabaseAuthProvider } from "./components/SupabaseAuthProvider";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      gcTime: 5 * 60_000,
+      refetchOnWindowFocus: true,
+    },
+  },
+});
 
 // Check if Privy app ID is valid
 const hasValidPrivyAppId = privyConfig.appId && privyConfig.appId.trim().length > 0;
+
+/**
+ * Wipes the React Query cache whenever the active wallet changes,
+ * so the dashboard never shows another wallet's stale data.
+ */
+function AuthCacheManager() {
+  const { authenticated, ready } = usePrivy();
+  const { address } = useAccount();
+  const qc = useQueryClient();
+  const prevAddress = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (!ready) return;
+
+    const current = address?.toLowerCase();
+    const previous = prevAddress.current;
+
+    if (previous && current !== previous) {
+      console.log("[AuthCacheManager] Wallet changed, clearing cache:", previous, "→", current);
+      qc.removeQueries();
+      qc.invalidateQueries();
+    }
+
+    if (!authenticated) {
+      console.log("[AuthCacheManager] Logged out, clearing cache");
+      qc.removeQueries();
+    }
+
+    prevAddress.current = current;
+  }, [ready, authenticated, address, qc]);
+
+  return null;
+}
 
 // Main App Routes (uses main Privy app - for sellers/dashboard)
 const MainAppRoutes = () => (
@@ -90,6 +134,7 @@ const AppRouter = () => {
         >
           <PrivyErrorHandler />
           <WagmiProvider config={wagmiConfig}>
+            <AuthCacheManager />
             <SupabaseAuthProvider>
               <InviteGate>
                 <TooltipProvider>
