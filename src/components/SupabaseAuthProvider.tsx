@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, useCallback } f
 import { usePrivy } from '@privy-io/react-auth'
 import { usePrivyAccount } from '@/hooks/usePrivyAccount'
 import { setSupabaseAuth, clearSupabaseAuth, isSupabaseConfigured } from '@/lib/supabase'
+import { useQueryClient } from '@tanstack/react-query'
 
 interface SupabaseAuthContextValue {
   isReady: boolean
@@ -79,6 +80,7 @@ async function exchangePrivyToken(
 export function SupabaseAuthProvider({ children, appId }: { children: React.ReactNode; appId?: string }) {
   const { authenticated, ready, getAccessToken } = usePrivy()
   const { address } = usePrivyAccount()
+  const queryClient = useQueryClient()
   const [isReady, setIsReady] = useState(false)
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -146,15 +148,18 @@ export function SupabaseAuthProvider({ children, appId }: { children: React.Reac
     retryCount.current = 0
 
     if (ready && authenticated && address) {
-      if (lastAddressRef.current !== address) {
+      if (lastAddressRef.current && lastAddressRef.current !== address) {
+        console.log('[SupabaseAuth] Address changed, resetting state')
         setIsReady(false)
         clearSupabaseAuth()
+        queryClient.removeQueries()
       }
       doExchange()
     } else {
       clearSupabaseAuth()
       setIsReady(false)
       lastAddressRef.current = null
+      queryClient.removeQueries()
     }
     return () => {
       if (refreshTimer.current) clearTimeout(refreshTimer.current)
