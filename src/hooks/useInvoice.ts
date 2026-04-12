@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useReadContract, useWaitForTransactionReceipt, useWatchContractEvent, useChainId, usePublicClient } from 'wagmi';
 import { usePrivyAccount } from './usePrivyAccount';
 import { useChainAddresses } from './useChainAddresses';
@@ -456,6 +456,7 @@ export function useSellerInvoices(sellerAddress?: string) {
 
 // Hook to fetch all seller invoices with full data
 export function useSellerInvoicesWithData(sellerAddress?: string) {
+  const { address: currentAddress } = usePrivyAccount();
   const { invoiceIds, isLoading: isLoadingIds, error: idsError, refetch: refetchIds } = useSellerInvoices(sellerAddress);
   const chainId = useChainId();
   const addresses = useChainAddresses();
@@ -464,6 +465,17 @@ export function useSellerInvoicesWithData(sellerAddress?: string) {
   const [error, setError] = useState<Error | null>(null);
   const publicClient = usePublicClient({ chainId });
   const [dataRefetchCounter, setDataRefetchCounter] = useState(0);
+  const prevAddressRef = useRef<string | undefined>(undefined);
+
+  // Reset local state when wallet address changes
+  useEffect(() => {
+    if (prevAddressRef.current && currentAddress && prevAddressRef.current !== currentAddress) {
+      setInvoices([]);
+      setError(null);
+      setIsLoadingInvoices(true);
+    }
+    prevAddressRef.current = currentAddress;
+  }, [currentAddress]);
 
   // Fetch invoice data for each ID
   useEffect(() => {
