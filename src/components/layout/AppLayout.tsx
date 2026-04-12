@@ -20,7 +20,7 @@ export function AppLayout() {
       <Sidebar open={sidebarOpen} onOpenChange={setSidebarOpen} />
       <div className="md:pl-64 transition-all duration-300">
         <Topbar onMenuClick={() => setSidebarOpen(true)} />
-        <main className="min-h-[calc(100vh-4rem)] px-2 py-4 sm:px-4 md:px-6 lg:px-6">
+        <main className="min-h-[calc(100vh-4rem)] py-4 px-2 sm:px-4 md:px-6 lg:px-8">
           <div className="w-full max-w-7xl sm:mx-auto">
             <Outlet />
           </div>
