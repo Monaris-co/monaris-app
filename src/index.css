@@ -144,6 +144,12 @@
   }
 }
 
+@layer base {
+  h1, h2, h3 {
+    letter-spacing: -0.025em;
+  }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
