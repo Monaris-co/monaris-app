@@ -390,6 +390,21 @@ export async function loadProviderAndSync(): Promise<void> {
 
 const MAX_PROVIDER_RETRIES = 4;
 const RETRY_BASE_MS = 3000;
+const BAD_RPC_PATTERNS = ['publicnode.com', 'pocket.network', 'llamarpc.com', '1rpc.io'];
+
+function getRailgunRpcCandidates(chainId: number) {
+  const envRpc = import.meta.env[`VITE_RPC_URL_${chainId}`];
+  return [
+    envRpc,
+    'https://arb1.arbitrum.io/rpc',
+    'https://arbitrum.drpc.org',
+    'https://rpc.ankr.com/arbitrum',
+    'https://arb-pokt.nodies.app',
+  ].filter(
+    (rpc): rpc is string =>
+      !!rpc && !BAD_RPC_PATTERNS.some((pattern) => rpc.includes(pattern)),
+  );
+}
 
 async function doLoadProvider(): Promise<void> {
   try {
@@ -407,10 +422,7 @@ async function doLoadProvider(): Promise<void> {
     // Two public RPCs with weight 1 each → total weight 2, quorum = ceil(2/2) = 1.
     // Only ONE needs to respond, avoiding "quorum not met" errors from block-height drift.
     // SDK requires total weight >= 2 (enforced in shared-models/fallback-provider.js).
-    const RAILGUN_RPCS = [
-      'https://arbitrum-one-rpc.publicnode.com',
-      'https://arbitrum.drpc.org',
-    ];
+    const RAILGUN_RPCS = getRailgunRpcCandidates(chainId);
 
     setStatus('syncing');
     console.log('[RAILGUN] Loading provider with RPCs:', RAILGUN_RPCS.join(' | '));

@@ -21,13 +21,14 @@ import { usePrivacyStore } from '@/lib/privacy/store';
 import {
   PRIVATE_PAYMENTS_ENABLED,
   ensureEngineStarted,
+  isProviderLoaded,
   loadProviderAndSync,
   onEngineStatusChange,
   refreshPOIsForWallet,
   triggerMerkleScans,
 } from '@/lib/privacy';
 import { getWalletModule } from '@/lib/privacy/engine';
-import { deriveWalletPassword } from '@/lib/privacy/wallet';
+import { deriveWalletPassword, loadPrivateWallet } from '@/lib/privacy/wallet';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 const SEED_MESSAGE = 'Monaris Private Wallet Derivation v1';
@@ -39,6 +40,10 @@ const _mnemonicCache = new Map<string, string>();
 // Lock to prevent concurrent wallet init (which would race on personal_sign)
 let _initLock: Promise<void> | null = null;
 
+interface UsePrivateWalletOptions {
+  syncProvider?: boolean;
+}
+
 async function deriveDeterministicMnemonic(signature: string): Promise<string> {
   const { ethers } = await import('ethers');
   const entropy = ethers.getBytes(ethers.keccak256(ethers.toUtf8Bytes(signature)));
@@ -49,6 +54,13 @@ async function deriveDeterministicMnemonic(signature: string): Promise<string> {
 let globalInitAddress: string | null = null;
 
 export function usePrivateWallet() {
+  return usePrivateWalletWithOptions();
+}
+
+export function usePrivateWalletWithOptions(
+  options: UsePrivateWalletOptions = {},
+) {
+  const { syncProvider = true } = options;
   const { address } = usePrivyAccount();
   const chainId = useChainId();
   const { wallets } = useWallets();
@@ -66,11 +78,17 @@ export function usePrivateWallet() {
       store.setEngineStatus(status);
     });
     return unsub;
-  }, []);
+  }, [store]);
 
   useEffect(() => {
     if (!PRIVATE_PAYMENTS_ENABLED || !address || !embeddedWallet) return;
-    if (globalInitAddress === address) return;
+    if (
+      globalInitAddress === address &&
+      store.walletLoadedInEngine &&
+      (!syncProvider || isProviderLoaded())
+    ) {
+      return;
+    }
 
     globalInitAddress = address;
     abortRef.current = false;
@@ -86,8 +104,14 @@ export function usePrivateWallet() {
       _initLock = new Promise<void>((resolve) => { releaseLock = resolve; });
 
       try {
-        await doInit(address, chainId, embeddedWallet, store, abortRef);
+        await doInit(address, chainId, embeddedWallet, store, abortRef, syncProvider);
       } finally {
+        if (
+          !usePrivacyStore.getState().walletLoadedInEngine ||
+          (syncProvider && !isProviderLoaded())
+        ) {
+          globalInitAddress = null;
+        }
         releaseLock!();
         _initLock = null;
       }
@@ -95,7 +119,7 @@ export function usePrivateWallet() {
 
     run();
     return () => { abortRef.current = true; };
-  }, [address, chainId, embeddedWallet?.address]);
+  }, [address, chainId, embeddedWallet?.address, syncProvider, store.walletLoadedInEngine]);
 
   useEffect(() => {
     return () => {
@@ -127,7 +151,10 @@ async function doInit(
   embeddedWallet: any,
   store: ReturnType<typeof usePrivacyStore>,
   abortRef: React.MutableRefObject<boolean>,
+  syncProvider: boolean,
 ) {
+  const isWalletLoaded = () => usePrivacyStore.getState().walletLoadedInEngine;
+
   // Phase 1: Boot engine + derive password in parallel
   const [, password] = await Promise.all([
     ensureEngineStarted(),
@@ -135,9 +162,23 @@ async function doInit(
   ]);
   if (abortRef.current) return;
 
+  // Phase 1.5: Prefer an already-persisted wallet over re-deriving by signature.
+  // This avoids unnecessary personal_sign prompts and recovers cleanly after reloads.
+  try {
+    const existingWallet = await loadPrivateWallet(address, chainId, password);
+    if (existingWallet) {
+      store.setWallet(existingWallet);
+      store.setWalletLoadedInEngine(true);
+      console.log('[usePrivateWallet] Loaded existing wallet from persisted blob');
+    }
+  } catch (err: any) {
+    console.warn('[usePrivateWallet] Existing wallet load failed:', err?.message);
+  }
+  if (abortRef.current) return;
+
   // Phase 2: Get deterministic mnemonic (cached per session)
   let mnemonic = _mnemonicCache.get(address.toLowerCase());
-  if (!mnemonic) {
+  if (!isWalletLoaded() && !mnemonic) {
     try {
       const provider = await embeddedWallet.getEthereumProvider();
       const hexMsg = `0x${Array.from(new TextEncoder().encode(SEED_MESSAGE)).map(b => b.toString(16).padStart(2, '0')).join('')}`;
@@ -152,36 +193,42 @@ async function doInit(
       console.error('[usePrivateWallet] Failed to sign seed message:', err?.message);
       return;
     }
-  } else {
+  } else if (mnemonic) {
     console.log('[usePrivateWallet] Using cached mnemonic (no signature needed)');
   }
   if (abortRef.current) return;
 
   // Phase 3: Import wallet into engine
-  try {
-    const walletModule = await getWalletModule();
-    const walletInfo = await walletModule.createRailgunWallet(password, mnemonic, {});
+  if (!isWalletLoaded()) {
+    try {
+      const walletModule = await getWalletModule();
+      const walletInfo = await walletModule.createRailgunWallet(password, mnemonic, {});
 
-    if (!walletInfo) {
-      console.error('[usePrivateWallet] createRailgunWallet returned null');
+      if (!walletInfo) {
+        console.error('[usePrivateWallet] createRailgunWallet returned null');
+        return;
+      }
+
+      store.setWallet({
+        id: walletInfo.id,
+        railgunAddress: walletInfo.railgunAddress,
+        encryptionKey: password,
+      });
+      store.setWalletLoadedInEngine(true);
+      console.log('[usePrivateWallet] Wallet loaded:', walletInfo.id.slice(0, 12) + '...');
+
+      // Persist to Supabase in background (fire-and-forget)
+      persistBlobIfNew(address, chainId, mnemonic!, password, walletInfo.railgunAddress);
+    } catch (err: any) {
+      console.error('[usePrivateWallet] Wallet import failed:', err?.message);
       return;
     }
-
-    store.setWallet({
-      id: walletInfo.id,
-      railgunAddress: walletInfo.railgunAddress,
-      encryptionKey: password,
-    });
-    store.setWalletLoadedInEngine(true);
-    console.log('[usePrivateWallet] Wallet loaded:', walletInfo.id.slice(0, 12) + '...');
-
-    // Persist to Supabase in background (fire-and-forget)
-    persistBlobIfNew(address, chainId, mnemonic, password, walletInfo.railgunAddress);
-  } catch (err: any) {
-    console.error('[usePrivateWallet] Wallet import failed:', err?.message);
-    return;
   }
   if (abortRef.current) return;
+
+  if (!syncProvider) {
+    return;
+  }
 
   // Phase 4: Load provider + quicksync
   console.log('[usePrivateWallet] Loading provider + quicksync...');
@@ -196,7 +243,7 @@ async function doInit(
   // Phase 5: Wait for quicksync to settle, then run full POI pipeline.
   // The quicksync downloads UTXO events from the subgraph but needs a few
   // seconds to process them. Running POI immediately would find no UTXOs.
-  const walletId = store.wallet?.id;
+  const walletId = usePrivacyStore.getState().wallet?.id;
   if (walletId) {
     console.log('[usePrivateWallet] Waiting for quicksync to settle...');
     await new Promise(r => setTimeout(r, 5_000));

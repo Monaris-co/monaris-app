@@ -77,6 +77,10 @@ function getZeroExHeaders() {
   };
 }
 
+function isJsonResponse(contentType: string | null) {
+  return !!contentType && contentType.toLowerCase().includes("application/json");
+}
+
 export async function fetchZeroExQuote(params: ZeroExQuoteParams) {
   const search = new URLSearchParams({
     chainId: String(params.chainId),
@@ -97,6 +101,8 @@ export async function fetchZeroExQuote(params: ZeroExQuoteParams) {
         },
   );
 
+  const contentType = response.headers.get("content-type");
+
   if (!response.ok) {
     const raw = await response.text();
     let message = raw || `0x request failed with ${response.status}`;
@@ -114,5 +120,19 @@ export async function fetchZeroExQuote(params: ZeroExQuoteParams) {
     throw new Error(message);
   }
 
-  return (await response.json()) as ZeroExQuote;
+  if (!isJsonResponse(contentType)) {
+    const raw = await response.text();
+    const looksLikeHtml = /^\s*</.test(raw);
+    throw new Error(
+      looksLikeHtml
+        ? "Swap quote proxy returned HTML instead of JSON. Check the /api/0x production route."
+        : "Swap quote response was not valid JSON.",
+    );
+  }
+
+  try {
+    return (await response.json()) as ZeroExQuote;
+  } catch {
+    throw new Error("Swap quote response was not valid JSON.");
+  }
 }

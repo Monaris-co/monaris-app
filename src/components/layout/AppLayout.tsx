@@ -2,13 +2,11 @@ import { Outlet } from "react-router-dom"
 import { Sidebar } from "./Sidebar"
 import { Topbar } from "./Topbar"
 import { useState } from "react"
-import { usePrivateWallet } from "@/hooks/usePrivateWallet"
+import { usePrivateWalletWithOptions } from "@/hooks/usePrivateWallet"
 
 function PrivateWalletAutoInit() {
-  // Calling the hook ensures the RAILGUN wallet is created and persisted
-  // to Supabase on /app login, so buyers can resolve the seller's 0zk address.
-  usePrivateWallet();
-  return null;
+  usePrivateWalletWithOptions({ syncProvider: false })
+  return null
 }
 
 export function AppLayout() {

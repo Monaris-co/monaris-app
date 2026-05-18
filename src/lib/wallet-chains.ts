@@ -1,7 +1,7 @@
-import { fallback, http, webSocket } from "viem";
+import { fallback, http } from "viem";
 import { arbitrum } from "viem/chains";
 
-const KNOWN_BAD_RPCS = ["pocket.network", "llamarpc.com", "1rpc.io"];
+const KNOWN_BAD_RPCS = ["pocket.network", "llamarpc.com", "1rpc.io", "publicnode.com"];
 
 export const walletSupportedChains = [
   arbitrum,
@@ -41,18 +41,22 @@ export function getWalletTransport(chainId: number) {
   const envRpc = getRpcEnvValue(chainId);
   const defaultHttp = chain.rpcUrls.default.http || [];
   const publicHttp = chain.rpcUrls.public?.http || [];
+  const arbitrumFallbacks = [
+    "https://arb1.arbitrum.io/rpc",
+    "https://arbitrum.drpc.org",
+    "https://rpc.ankr.com/arbitrum",
+    "https://arb-pokt.nodies.app",
+  ];
+  const candidateUrls =
+    chainId === arbitrum.id
+      ? [...(envRpc ? [envRpc] : []), ...arbitrumFallbacks, ...defaultHttp, ...publicHttp]
+      : [...(envRpc ? [envRpc] : []), ...defaultHttp, ...publicHttp];
   const httpUrls = Array.from(
-    new Set([...(envRpc ? [envRpc] : []), ...defaultHttp, ...publicHttp]),
+    new Set(candidateUrls.filter((url) => !KNOWN_BAD_RPCS.some((bad) => url.includes(bad)))),
   );
 
   if (chainId === arbitrum.id) {
-    return fallback(
-      [
-        webSocket("wss://arb-mainnet.g.alchemy.com/v2/lA12jxcK7XSr4_xdTRtMG"),
-        ...httpUrls.map((url) => http(url)),
-      ],
-      { rank: true },
-    );
+    return fallback(httpUrls.map((url) => http(url)), { rank: true });
   }
 
   return fallback(httpUrls.map((url) => http(url)), { rank: true });
