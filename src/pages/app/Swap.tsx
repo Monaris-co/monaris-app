@@ -6,10 +6,15 @@ import {
   Clock3,
   Loader2,
   Info,
-  Sparkles,
   Wallet,
 } from "lucide-react";
-import { formatUnits, isAddress, parseUnits, zeroAddress } from "viem";
+import {
+  encodeFunctionData,
+  formatUnits,
+  isAddress,
+  parseUnits,
+  zeroAddress,
+} from "viem";
 import { useChainId, usePublicClient, useSwitchChain } from "wagmi";
 import { usePrivy, useSendTransaction, useWallets } from "@privy-io/react-auth";
 import { toast } from "sonner";
@@ -37,6 +42,12 @@ import {
   isAcrossEvmChain,
 } from "@/lib/across";
 import { walletSupportedChains } from "@/lib/wallet-chains";
+import {
+  fetchZeroExQuote,
+  type ZeroExQuote,
+  ZEROX_API_KEY,
+  ZEROX_NATIVE_TOKEN_ADDRESS,
+} from "@/lib/zeroex";
 
 const container = {
   hidden: { opacity: 0 },
@@ -62,6 +73,7 @@ const TOKEN_PRIORITY: Record<string, number> = {
 };
 
 const GAS_SPONSORED_CHAIN_IDS = new Set([5003, 421614, 11155111, 42161]);
+const ZEROX_ROUTE_CHAIN_IDS = new Set([42161]);
 
 function sortTokens(tokens: AcrossToken[]) {
   return [...tokens].sort((a, b) => {
@@ -81,6 +93,7 @@ function getTxUrl(chain: AcrossChain | undefined, hash: string | undefined) {
 
 function getStatusTone(status: string | undefined) {
   switch (status) {
+    case "confirmed":
     case "filled":
       return "text-[#0f9d58] bg-[#ddf9e4]";
     case "pending":
@@ -134,6 +147,10 @@ function isNativeAcrossToken(token: AcrossToken | null | undefined) {
     normalizedAddress === zeroAddress ||
     normalizedAddress === "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
   );
+}
+
+function normalizeZeroExTokenAddress(token: AcrossToken) {
+  return isNativeAcrossToken(token) ? ZEROX_NATIVE_TOKEN_ADDRESS : token.address;
 }
 
 function getAmountClass(value: string | undefined) {
@@ -216,6 +233,7 @@ export default function Swap() {
   const [outputTokenAddress, setOutputTokenAddress] = useState("");
 
   const [quote, setQuote] = useState<AcrossQuote | null>(null);
+  const [sameChainQuote, setSameChainQuote] = useState<ZeroExQuote | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [isFetchingQuote, setIsFetchingQuote] = useState(false);
   const [inputTokenBalanceRaw, setInputTokenBalanceRaw] = useState<bigint | null>(null);
@@ -306,14 +324,14 @@ export default function Swap() {
   }, [currentChainId, originChainId, originChains]);
 
   const originChain = chainById.get(originChainId);
+  const isSameChainRoute = originChainId === destinationChainId;
+  const isSameChainSwapSupported = ZEROX_ROUTE_CHAIN_IDS.has(originChainId);
   const destinationChains = useMemo(
     () =>
       chains
-        .filter(
-          (chain) => chain.chainId !== originChainId && isAcrossEvmChain(chain.chainId),
-        )
+        .filter((chain) => isAcrossEvmChain(chain.chainId))
         .sort((a, b) => a.name.localeCompare(b.name)),
-    [chains, originChainId],
+    [chains],
   );
 
   const originTokens = useMemo(
@@ -434,16 +452,24 @@ export default function Swap() {
       ? destinationTokens.find((token) => token.symbol === selectedInputToken.symbol)
       : null;
 
-    const preferredOutput =
-      matchingSymbol ??
-      destinationTokens.find((token) => token.symbol === "USDC") ??
-      destinationTokens[0];
+    const preferredOutput = isSameChainRoute
+      ? destinationTokens.find(
+          (token) =>
+            token.address !== selectedInputToken?.address &&
+            (token.symbol === "ETH" || token.symbol === "WETH"),
+        ) ??
+        destinationTokens.find((token) => token.address !== selectedInputToken?.address) ??
+        destinationTokens[0]
+      : matchingSymbol ??
+        destinationTokens.find((token) => token.symbol === "USDC") ??
+        destinationTokens[0];
 
     setOutputTokenAddress(preferredOutput.address);
-  }, [destinationTokens, outputTokenAddress, selectedInputToken]);
+  }, [destinationTokens, isSameChainRoute, outputTokenAddress, selectedInputToken]);
 
   useEffect(() => {
     setQuote(null);
+    setSameChainQuote(null);
     setQuoteError(null);
     setSwapHash(null);
     setDepositStatus(null);
@@ -476,8 +502,46 @@ export default function Swap() {
 
   const isOnOriginChain = currentChainId === originChainId;
   const originChainSupportsSponsorship = GAS_SPONSORED_CHAIN_IDS.has(originChainId);
+  const hasQuote = isSameChainRoute ? Boolean(sameChainQuote) : Boolean(quote);
+  const activeEngineLabel = isSameChainRoute ? "0x" : "Across";
 
   const quotePreview = useMemo(() => {
+    if (isSameChainRoute) {
+      if (!sameChainQuote || !selectedInputToken || !selectedOutputToken) return null;
+
+      return {
+        inputAmount: formatAcrossAmount(
+          sameChainQuote.sellAmount,
+          selectedInputToken.decimals,
+        ),
+        outputAmount: formatAcrossAmount(
+          sameChainQuote.buyAmount,
+          selectedOutputToken.decimals,
+        ),
+        minOutputAmount: formatAcrossAmount(
+          sameChainQuote.minBuyAmount || sameChainQuote.buyAmount,
+          selectedOutputToken.decimals,
+        ),
+        bridgeFee: "0",
+        balanceActual: formatAcrossAmount(
+          sameChainQuote.issues?.balance?.actual,
+          selectedInputToken.decimals,
+        ),
+        balanceExpected: formatAcrossAmount(
+          sameChainQuote.issues?.balance?.expected,
+          selectedInputToken.decimals,
+        ),
+        allowanceActual: formatAcrossAmount(
+          sameChainQuote.issues?.allowance?.actual,
+          selectedInputToken.decimals,
+        ),
+        allowanceExpected: formatAcrossAmount(
+          sameChainQuote.sellAmount,
+          selectedInputToken.decimals,
+        ),
+      };
+    }
+
     if (!quote || !selectedInputToken || !selectedOutputToken) return null;
 
     return {
@@ -514,12 +578,13 @@ export default function Swap() {
         selectedInputToken.decimals,
       ),
     };
-  }, [quote, selectedInputToken, selectedOutputToken]);
+  }, [isSameChainRoute, quote, sameChainQuote, selectedInputToken, selectedOutputToken]);
 
   const quoteExpiry = useMemo(() => {
+    if (isSameChainRoute) return null;
     if (!quote?.quoteExpiryTimestamp) return null;
     return new Date(quote.quoteExpiryTimestamp * 1000).toLocaleTimeString();
-  }, [quote]);
+  }, [isSameChainRoute, quote]);
 
   const inputTokenBalanceDisplay = useMemo(() => {
     if (!selectedInputToken || inputTokenBalanceRaw === null) return "--";
@@ -537,9 +602,9 @@ export default function Swap() {
   }, [quotePreview?.outputAmount, selectedOutputToken?.priceUsd]);
 
   const routeSummary = useMemo(() => {
-    if (!quote || !quotePreview || !selectedInputToken || !selectedOutputToken) {
+    if (!quotePreview || !selectedInputToken || !selectedOutputToken) {
       return {
-        routeLabel: "Across",
+        routeLabel: activeEngineLabel,
         fill: "--",
         minimumReceived: "--",
         rate: "--",
@@ -549,6 +614,46 @@ export default function Swap() {
 
     const input = numericAmount(quotePreview.inputAmount.replace(/,/g, ""));
     const output = numericAmount(quotePreview.outputAmount.replace(/,/g, ""));
+
+    if (isSameChainRoute && sameChainQuote) {
+      const gasPrice = sameChainQuote.transaction.gasPrice
+        ? BigInt(sameChainQuote.transaction.gasPrice)
+        : 0n;
+      const gas = sameChainQuote.transaction.gas ? BigInt(sameChainQuote.transaction.gas) : 0n;
+      const estimatedGasFee =
+        gas > 0n && gasPrice > 0n
+          ? `~ ${Number(formatUnits(gas * gasPrice, 18)).toLocaleString(undefined, {
+              maximumFractionDigits: 6,
+            })} ETH`
+          : "--";
+
+      const routeSource =
+        sameChainQuote.route?.fills?.[0]?.source || sameChainQuote.fees?.zeroExFee?.type;
+
+      return {
+        routeLabel: "0x",
+        fill: routeSource ? `${routeSource}` : "Same chain",
+        minimumReceived: `${quotePreview.minOutputAmount} ${selectedOutputToken.symbol}`,
+        rate:
+          input > 0 && output > 0
+            ? `1 ${selectedInputToken.symbol} = ${(output / input).toLocaleString(undefined, {
+                maximumFractionDigits: 6,
+              })} ${selectedOutputToken.symbol}`
+            : "--",
+        networkFee: estimatedGasFee,
+      };
+    }
+
+    if (!quote) {
+      return {
+        routeLabel: activeEngineLabel,
+        fill: "--",
+        minimumReceived: "--",
+        rate: "--",
+        networkFee: "--",
+      };
+    }
+
     const feeUsd = quote.fees?.originGas?.amountUsd || quote.fees?.total?.amountUsd;
 
     return {
@@ -565,7 +670,7 @@ export default function Swap() {
         ? formatUsd(feeUsd)
         : `${quotePreview.bridgeFee} ${selectedInputToken.symbol}`,
     };
-  }, [quote, quotePreview, selectedInputToken, selectedOutputToken]);
+  }, [activeEngineLabel, isSameChainRoute, quote, quotePreview, sameChainQuote, selectedInputToken, selectedOutputToken]);
 
   const routeDisabledReason = useMemo(() => {
     if (!address) return "Connect your wallet to request a live quote.";
@@ -573,12 +678,26 @@ export default function Swap() {
     if (!selectedInputToken || !selectedOutputToken || !selectedDestinationChain) {
       return "Pick the origin, destination, and token pair.";
     }
+    if (isSameChainRoute && !isSameChainSwapSupported) {
+      return "Same-chain swaps are currently enabled on Arbitrum only.";
+    }
+    if (isSameChainRoute && !ZEROX_API_KEY) {
+      return "Set VITE_ZEROX_API_KEY to request same-chain quotes.";
+    }
+    if (
+      isSameChainRoute &&
+      selectedInputToken.address.toLowerCase() === selectedOutputToken.address.toLowerCase()
+    ) {
+      return "Choose a different buy token for a same-chain swap.";
+    }
     if (!amount || Number(amount) <= 0) return "Enter a valid amount.";
     if (!recipient || !isAddress(recipient)) return "Recipient must be a valid EVM address.";
     return null;
   }, [
     address,
     amount,
+    isSameChainRoute,
+    isSameChainSwapSupported,
     originChain,
     recipient,
     selectedDestinationChain,
@@ -587,20 +706,41 @@ export default function Swap() {
   ]);
 
   const executeDisabledReason = useMemo(() => {
-    if (!quote?.swapTx) return "Request a live quote before executing.";
+    if (isSameChainRoute) {
+      if (!sameChainQuote?.transaction) return "Request a live quote before executing.";
+    } else if (!quote?.swapTx) {
+      return "Request a live quote before executing.";
+    }
     if (!connectedWallet) return "Connect a wallet to execute this route.";
     if (!originChain) return "Select an origin chain.";
     return null;
-  }, [connectedWallet, originChain, quote?.swapTx]);
+  }, [connectedWallet, isSameChainRoute, originChain, quote?.swapTx, sameChainQuote?.transaction]);
 
   const nonSponsoredGasWarning = useMemo(() => {
-    if (!quote?.swapTx || !originChain || !isEmbeddedWallet || originChainSupportsSponsorship) {
+    const activeTx = isSameChainRoute ? sameChainQuote?.transaction : quote?.swapTx;
+    if (!activeTx || !originChain || !isEmbeddedWallet || originChainSupportsSponsorship) {
       return null;
     }
 
-    const swapFeeWei = estimateTxFeeWei(quote.swapTx);
+    const swapFeeWei = estimateTxFeeWei(
+      isSameChainRoute
+        ? {
+            gas: sameChainQuote?.transaction.gas,
+            maxFeePerGas:
+              sameChainQuote?.transaction.maxFeePerGas || sameChainQuote?.transaction.gasPrice,
+          }
+        : quote!.swapTx,
+    );
     const approvalFeeWei =
-      quote.approvalTxns?.reduce((sum, tx) => sum + estimateTxFeeWei(tx), 0n) ?? 0n;
+      (isSameChainRoute
+        ? sameChainQuote?.issues?.allowance?.spender && selectedInputToken && !isNativeAcrossToken(selectedInputToken)
+          ? estimateTxFeeWei({
+              gas: sameChainQuote.transaction.gas,
+              maxFeePerGas:
+                sameChainQuote.transaction.maxFeePerGas || sameChainQuote.transaction.gasPrice,
+            }) / 2n
+          : 0n
+        : quote?.approvalTxns?.reduce((sum, tx) => sum + estimateTxFeeWei(tx), 0n) ?? 0n);
     const estimatedFeeWei = swapFeeWei + approvalFeeWei;
 
     if (estimatedFeeWei <= 0n) {
@@ -612,7 +752,7 @@ export default function Swap() {
     });
 
     return `Gas sponsorship is not enabled on ${originChain.name}. Keep at least ~${estimatedFee} native gas token in this wallet to execute the swap.`;
-  }, [isEmbeddedWallet, originChain, originChainSupportsSponsorship, quote]);
+  }, [isEmbeddedWallet, isSameChainRoute, originChain, originChainSupportsSponsorship, quote, sameChainQuote, selectedInputToken]);
 
   async function handleFetchQuote() {
     if (routeDisabledReason || !selectedInputToken || !selectedOutputToken || !address) {
@@ -633,24 +773,44 @@ export default function Swap() {
     setQuoteError(null);
 
     try {
-      const nextQuote = await fetchAcrossQuote({
-        amount: parsedAmount.toString(),
-        inputToken: selectedInputToken.address,
-        outputToken: selectedOutputToken.address,
-        originChainId,
-        destinationChainId,
-        depositor: address,
-        recipient,
-        refundAddress: address,
-      });
+      if (isSameChainRoute) {
+        const nextQuote = await fetchZeroExQuote({
+          chainId: originChainId,
+          sellToken: normalizeZeroExTokenAddress(selectedInputToken),
+          buyToken: normalizeZeroExTokenAddress(selectedOutputToken),
+          sellAmount: parsedAmount.toString(),
+          taker: address,
+          recipient,
+        });
 
-      setQuote(nextQuote);
-      toast.success("Across quote ready", {
-        description: `Expected fill in about ${nextQuote.expectedFillTime ?? 2}s.`,
-      });
+        setSameChainQuote(nextQuote);
+        toast.success("0x quote ready", {
+          description: `Monaris found the best same-chain route on ${originChain?.name || "Arbitrum"}.`,
+        });
+      } else {
+        const nextQuote = await fetchAcrossQuote({
+          amount: parsedAmount.toString(),
+          inputToken: selectedInputToken.address,
+          outputToken: selectedOutputToken.address,
+          originChainId,
+          destinationChainId,
+          depositor: address,
+          recipient,
+          refundAddress: address,
+        });
+
+        setQuote(nextQuote);
+        toast.success("Across quote ready", {
+          description: `Expected fill in about ${nextQuote.expectedFillTime ?? 2}s.`,
+        });
+      }
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Unable to build an Across quote.";
+        error instanceof Error
+          ? error.message
+          : isSameChainRoute
+            ? "Unable to build a 0x quote."
+            : "Unable to build an Across quote.";
       setQuoteError(message);
       toast.error("Quote failed", { description: message });
     } finally {
@@ -659,7 +819,15 @@ export default function Swap() {
   }
 
   async function handleExecuteSwap() {
-    if (!quote?.swapTx || !quotePreview || !publicClient || !connectedWallet || !originChain) {
+    if (!quotePreview || !publicClient || !connectedWallet || !originChain) {
+      return;
+    }
+
+    if (isSameChainRoute && !sameChainQuote?.transaction) {
+      return;
+    }
+
+    if (!isSameChainRoute && !quote?.swapTx) {
       return;
     }
 
@@ -686,12 +854,33 @@ export default function Swap() {
           address: senderAddress as `0x${string}`,
         });
 
-        const approvalFeeWei =
-          quote.approvalTxns?.reduce(
-            (sum, tx) => sum + estimateTxFeeWei(tx, fallbackGasPrice),
-            0n,
-          ) ?? 0n;
-        const swapFeeWei = estimateTxFeeWei(quote.swapTx, fallbackGasPrice);
+        const approvalFeeWei = isSameChainRoute
+          ? sameChainQuote?.issues?.allowance?.spender && selectedInputToken && !isNativeAcrossToken(selectedInputToken)
+            ? estimateTxFeeWei(
+                {
+                  gas: sameChainQuote.transaction.gas,
+                  maxFeePerGas:
+                    sameChainQuote.transaction.maxFeePerGas ||
+                    sameChainQuote.transaction.gasPrice,
+                },
+                fallbackGasPrice,
+              ) / 2n
+            : 0n
+          : quote?.approvalTxns?.reduce(
+              (sum, tx) => sum + estimateTxFeeWei(tx, fallbackGasPrice),
+              0n,
+            ) ?? 0n;
+        const swapFeeWei = estimateTxFeeWei(
+          isSameChainRoute
+            ? {
+                gas: sameChainQuote!.transaction.gas,
+                maxFeePerGas:
+                  sameChainQuote!.transaction.maxFeePerGas ||
+                  sameChainQuote!.transaction.gasPrice,
+              }
+            : quote!.swapTx,
+          fallbackGasPrice,
+        );
         const requiredNativeWei = approvalFeeWei + swapFeeWei;
 
         if (requiredNativeWei > 0n && nativeBalance < requiredNativeWei) {
@@ -712,7 +901,40 @@ export default function Swap() {
         }
       }
 
-      if (quote.approvalTxns?.length) {
+      if (isSameChainRoute && sameChainQuote?.issues?.allowance?.spender && selectedInputToken && !isNativeAcrossToken(selectedInputToken)) {
+        const allowanceActual = BigInt(sameChainQuote.issues.allowance.actual || "0");
+        const sellAmount = BigInt(sameChainQuote.sellAmount);
+
+        if (allowanceActual < sellAmount) {
+          toast.info("Submitting token approval", {
+            description: "Monaris is approving the 0x allowance target first.",
+            id: "across-swap-progress",
+          });
+
+          const approvalResult = await sendTransaction(
+            {
+              to: selectedInputToken.address as `0x${string}`,
+              data: encodeFunctionData({
+                abi: ERC20ABI,
+                functionName: "approve",
+                args: [sameChainQuote.issues.allowance.spender, sellAmount],
+              }),
+              value: 0n,
+              chainId: originChainId,
+            },
+            {
+              address: senderAddress,
+              sponsor: Boolean(isEmbeddedWallet && GAS_SPONSORED_CHAIN_IDS.has(originChainId)),
+              uiOptions: { showWalletUIs: false },
+            } as any,
+          );
+
+          await publicClient.waitForTransactionReceipt({
+            hash: approvalResult.hash as `0x${string}`,
+            confirmations: 1,
+          });
+        }
+      } else if (quote?.approvalTxns?.length) {
         toast.info("Submitting token approval", {
           description: "Monaris is sending the Across approval transaction first.",
           id: "across-swap-progress",
@@ -747,30 +969,42 @@ export default function Swap() {
         }
       }
 
-      toast.info("Sending Across swap", {
-        description: `Your bridge transaction is being submitted on ${originChain.name}.`,
+      toast.info(isSameChainRoute ? "Sending 0x swap" : "Sending Across swap", {
+        description: isSameChainRoute
+          ? `Your same-chain swap is being submitted on ${originChain.name}.`
+          : `Your bridge transaction is being submitted on ${originChain.name}.`,
         id: "across-swap-progress",
       });
 
       const sponsor = Boolean(
-        isEmbeddedWallet && GAS_SPONSORED_CHAIN_IDS.has(quote.swapTx.chainId),
+        isEmbeddedWallet &&
+          GAS_SPONSORED_CHAIN_IDS.has(
+            isSameChainRoute ? originChainId : quote!.swapTx.chainId,
+          ),
       );
+
+      const executionTx = isSameChainRoute
+        ? sameChainQuote!.transaction
+        : quote!.swapTx;
 
       const swapResult = await sendTransaction(
         {
-          to: quote.swapTx.to,
-          data: quote.swapTx.data,
-          value: quote.swapTx.value ? BigInt(quote.swapTx.value) : 0n,
-          chainId: quote.swapTx.chainId,
-          ...(quote.swapTx.gas && quote.swapTx.gas !== "0"
-            ? { gas: BigInt(quote.swapTx.gas) }
+          to: executionTx.to,
+          data: executionTx.data,
+          value: executionTx.value ? BigInt(executionTx.value) : 0n,
+          chainId: isSameChainRoute ? originChainId : executionTx.chainId,
+          ...(executionTx.gas && executionTx.gas !== "0"
+            ? { gas: BigInt(executionTx.gas) }
             : {}),
-          ...(quote.swapTx.maxFeePerGas && quote.swapTx.maxFeePerGas !== "0"
-            ? { maxFeePerGas: BigInt(quote.swapTx.maxFeePerGas) }
+          ...(executionTx.gasPrice && executionTx.gasPrice !== "0"
+            ? { gasPrice: BigInt(executionTx.gasPrice) }
             : {}),
-          ...(quote.swapTx.maxPriorityFeePerGas &&
-          quote.swapTx.maxPriorityFeePerGas !== "0"
-            ? { maxPriorityFeePerGas: BigInt(quote.swapTx.maxPriorityFeePerGas) }
+          ...(executionTx.maxFeePerGas && executionTx.maxFeePerGas !== "0"
+            ? { maxFeePerGas: BigInt(executionTx.maxFeePerGas) }
+            : {}),
+          ...(executionTx.maxPriorityFeePerGas &&
+          executionTx.maxPriorityFeePerGas !== "0"
+            ? { maxPriorityFeePerGas: BigInt(executionTx.maxPriorityFeePerGas) }
             : {}),
         },
         {
@@ -793,13 +1027,28 @@ export default function Swap() {
         confirmations: 1,
       });
 
-      toast.success("Swap submitted", {
+      if (isSameChainRoute) {
+        setDepositStatus({
+          status: "confirmed",
+          depositTxnRef: swapResult.hash,
+          originChainId,
+          destinationChainId,
+        });
+      }
+
+      toast.success(isSameChainRoute ? "Swap confirmed" : "Swap submitted", {
         id: "across-swap-progress",
-        description: "Origin confirmation landed. Monaris is now tracking the fill.",
+        description: isSameChainRoute
+          ? "The same-chain swap confirmed on Arbitrum."
+          : "Origin confirmation landed. Monaris is now tracking the fill.",
       });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Across swap execution failed.";
+        error instanceof Error
+          ? error.message
+          : isSameChainRoute
+            ? "0x swap execution failed."
+            : "Across swap execution failed.";
       toast.error("Swap failed", {
         id: "across-swap-progress",
         description: message,
@@ -811,7 +1060,7 @@ export default function Swap() {
   }
 
   useEffect(() => {
-    if (!swapHash) return;
+    if (!swapHash || isSameChainRoute) return;
 
     let cancelled = false;
     let timeoutId: number | undefined;
@@ -852,10 +1101,10 @@ export default function Swap() {
       cancelled = true;
       if (timeoutId) window.clearTimeout(timeoutId);
     };
-  }, [swapHash]);
+  }, [isSameChainRoute, swapHash]);
 
   function handlePrimaryAction() {
-    if (!quote) {
+    if (!hasQuote) {
       void handleFetchQuote();
       return;
     }
@@ -922,17 +1171,6 @@ export default function Swap() {
           ) : null}
 
           <div className="rounded-[34px] border border-[#ecefe4] bg-white px-5 py-5 shadow-[0px_30px_60px_rgba(20,20,20,0.08)] sm:px-6">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div className="inline-flex items-center gap-2 rounded-full bg-[#efffc0] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6ea411]">
-                <Sparkles className="h-3.5 w-3.5" />
-                Across
-              </div>
-              <div className="flex items-center gap-2 rounded-full bg-[#f5f7f0] px-3 py-1.5 text-xs font-medium text-[#5e6552]">
-                <TokenLogo label={originChain?.name || "Arbitrum"} src={originChain?.logoUrl} size="sm" />
-                {originChain?.name || "Arbitrum"}
-              </div>
-            </div>
-
             <div className="rounded-[30px] border border-[#ecefe4] bg-[#fcfdf9] p-5 sm:p-6">
               <div className="text-sm font-medium uppercase tracking-[0.12em] text-[#929885]">
                 Sell
@@ -1192,7 +1430,8 @@ export default function Swap() {
               </div>
             </div>
 
-            {!ACROSS_API_KEY || !ACROSS_INTEGRATOR_ID ? (
+            {(!isSameChainRoute && (!ACROSS_API_KEY || !ACROSS_INTEGRATOR_ID)) ||
+            (isSameChainRoute && !ZEROX_API_KEY) ? (
               <div className="mt-5 rounded-[22px] border border-[#f0ecd7] bg-[#fffdf6] px-4 py-3 text-sm text-[#8a6a17]">
                 Local mode active
               </div>
@@ -1219,7 +1458,7 @@ export default function Swap() {
               disabled={
                 !address
                   ? false
-                  : !quote
+                  : !hasQuote
                     ? Boolean(routeDisabledReason) || isFetchingQuote || isBootstrapping
                     : isExecuting || Boolean(executeDisabledReason)
               }
@@ -1240,7 +1479,7 @@ export default function Swap() {
                   <Loader2 className="h-5 w-5 animate-spin" />
                   Swapping
                 </span>
-              ) : quote ? (
+              ) : hasQuote ? (
                 "Swap"
               ) : (
                 "Get Quote"
@@ -1249,11 +1488,11 @@ export default function Swap() {
 
             {(routeDisabledReason || executeDisabledReason) && address ? (
               <p className="mt-3 text-center text-sm text-[#8d9386]">
-                {quote ? executeDisabledReason : routeDisabledReason}
+                {hasQuote ? executeDisabledReason : routeDisabledReason}
               </p>
             ) : null}
 
-            {(quote || swapHash) && (
+            {(hasQuote || swapHash) && (
               <div className="mt-6 rounded-[24px] border border-[#ecefe4] bg-[#fbfcf8] px-4 py-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 text-sm font-semibold text-[#202020]">

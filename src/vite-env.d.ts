@@ -31,6 +31,23 @@ interface ImportMetaEnv {
   readonly VITE_RPC_URL_421614?: string
   readonly VITE_DEFAULT_CHAIN_ID?: string
   readonly VITE_INVITE_CODES?: string
+  readonly VITE_ONRAMP_APP_ID?: string
+  readonly VITE_ONRAMP_SANDBOX?: string
+  readonly VITE_ONRAMP_LANG?: string
+  readonly VITE_ONRAMP_DEPOSIT_NETWORK?: string
+  readonly VITE_ONRAMP_DEPOSIT_COIN_CODE?: string
+  readonly VITE_ONRAMP_DEPOSIT_FIAT_AMOUNT?: string
+  readonly VITE_ONRAMP_WITHDRAW_NETWORK?: string
+  readonly VITE_ONRAMP_WITHDRAW_COIN_CODE?: string
+  readonly VITE_ONRAMP_WITHDRAW_FIAT_AMOUNT?: string
+  readonly VITE_ACROSS_API_BASE_URL?: string
+  readonly VITE_ACROSS_API_KEY?: string
+  readonly VITE_ACROSS_INTEGRATOR_ID?: string
+  readonly VITE_ACROSS_APP_FEE?: string
+  readonly VITE_ACROSS_APP_FEE_RECIPIENT?: string
+  readonly VITE_ZEROX_API_BASE_URL?: string
+  readonly VITE_ZEROX_API_KEY?: string
+  readonly VITE_FINANCING_API_URL?: string
 }
 
 interface ImportMeta {
