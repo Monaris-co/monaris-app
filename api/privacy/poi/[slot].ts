@@ -59,7 +59,7 @@ async function forwardPoi(upstream: string, payload: JsonRpcPayload) {
 }
 
 export const config = {
-  runtime: "nodejs",
+  runtime: "edge",
 };
 
 export default async function handler(request: Request) {

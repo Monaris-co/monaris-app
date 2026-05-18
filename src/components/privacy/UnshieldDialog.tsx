@@ -3,6 +3,8 @@ import { CheckCircle2, ChevronDown, ChevronUp, Copy, Check, Loader2, Zap } from 
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { parseUnits, getAddress, isAddress, createPublicClient, http, fallback } from 'viem';
@@ -457,6 +459,10 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) resetDialog(); onOpenChange(v); }}>
       <DialogContent className="w-[calc(100vw-32px)] sm:w-full sm:max-w-[440px] p-0 overflow-hidden border border-[#2a2a2a] dark:border-[#2a2a2a] rounded-[24px] bg-white dark:bg-[#111111] shadow-[0px_32px_64px_-16px_rgba(0,0,0,0.35)]">
+        <DialogTitle className="sr-only">Withdraw private funds</DialogTitle>
+        <DialogDescription className="sr-only">
+          Move private assets back to a public Arbitrum wallet.
+        </DialogDescription>
 
         {step === 'done' ? (
           <div className="p-5 text-center space-y-4">

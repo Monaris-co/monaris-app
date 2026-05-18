@@ -461,9 +461,11 @@ async function doLoadProvider(): Promise<void> {
     throw lastErr;
   } catch (err: any) {
     console.error('[RAILGUN] loadProvider failed after all retries:', err?.message);
+    _providerLoaded = false;
     _providerFailedAt = Date.now();
     _providerLoadPromise = null;
     setStatus('error');
+    throw err;
   }
 }
 

@@ -1,8 +1,7 @@
 const DEFAULT_ARBITRUM_RPCS = [
+  "https://arbitrum-one-rpc.publicnode.com",
   "https://arb-pokt.nodies.app",
   "https://rpc.ankr.com/arbitrum",
-  "https://arbitrum.drpc.org",
-  "https://arb1.arbitrum.io/rpc",
 ] as const;
 
 const MAX_GET_LOGS_BLOCK_RANGE = 10n;
@@ -146,7 +145,7 @@ async function handleChunkedGetLogs(upstream: string, payload: JsonRpcRequest) {
 }
 
 export const config = {
-  runtime: "nodejs",
+  runtime: "edge",
 };
 
 export default async function handler(request: Request) {

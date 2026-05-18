@@ -8,10 +8,18 @@ export const PRIVACY_POI_PROXY_URLS = [
   "/api/privacy/poi/1",
 ] as const;
 
+function toBrowserAbsoluteUrl(path: string) {
+  if (typeof window === "undefined") {
+    return path;
+  }
+
+  return new URL(path, window.location.origin).toString();
+}
+
 export function getPrivacyRpcProxyUrls() {
-  return [...PRIVACY_RPC_PROXY_URLS];
+  return PRIVACY_RPC_PROXY_URLS.map(toBrowserAbsoluteUrl);
 }
 
 export function getPrivacyPoiProxyUrls() {
-  return [...PRIVACY_POI_PROXY_URLS];
+  return PRIVACY_POI_PROXY_URLS.map(toBrowserAbsoluteUrl);
 }
