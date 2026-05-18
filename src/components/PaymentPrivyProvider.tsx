@@ -1,13 +1,15 @@
 import { PrivyProvider } from '@privy-io/react-auth';
 import { WagmiProvider as PrivyWagmiProvider, createConfig } from '@privy-io/wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { http, fallback, webSocket } from 'viem';
+import { http, fallback } from 'viem';
 import { arbitrum } from 'viem/chains';
 import {
   PAYMENT_PRIVY_APP_ID,
   WALLETCONNECT_PROJECT_ID,
+  ARBITRUM_RPC_URL,
 } from '@/lib/payment-privy-config';
 import { SupabaseAuthProvider } from './SupabaseAuthProvider';
+import { getPrivacyRpcProxyUrls } from '@/lib/privacy/rpc-proxy';
 
 // Create a separate QueryClient for payment page
 const paymentQueryClient = new QueryClient({
@@ -30,12 +32,12 @@ const arbitrumMainnet = {
   },
   rpcUrls: {
     default: {
-      http: ['https://arb-mainnet.g.alchemy.com/v2/lA12jxcK7XSr4_xdTRtMG'],
-      webSocket: ['wss://arb-mainnet.g.alchemy.com/v2/lA12jxcK7XSr4_xdTRtMG'],
+      http: [ARBITRUM_RPC_URL],
+      webSocket: [],
     },
     public: {
-      http: ['https://arb-mainnet.g.alchemy.com/v2/lA12jxcK7XSr4_xdTRtMG'],
-      webSocket: ['wss://arb-mainnet.g.alchemy.com/v2/lA12jxcK7XSr4_xdTRtMG'],
+      http: [ARBITRUM_RPC_URL],
+      webSocket: [],
     },
   },
   blockExplorers: {
@@ -53,10 +55,7 @@ const paymentWagmiConfig = createConfig({
   chains: [arbitrum],
   transports: {
     [arbitrum.id]: fallback([
-      webSocket('wss://arb-mainnet.g.alchemy.com/v2/lA12jxcK7XSr4_xdTRtMG'),
-      http('https://arb-mainnet.g.alchemy.com/v2/lA12jxcK7XSr4_xdTRtMG'),
-      http('https://rpc.ankr.com/arbitrum'),
-      http('https://arbitrum.drpc.org'),
+      ...getPrivacyRpcProxyUrls().map((url) => http(url)),
     ], { rank: true }),
   },
 });

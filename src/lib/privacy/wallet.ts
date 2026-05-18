@@ -10,6 +10,7 @@
 import { supabase, isSupabaseConfigured } from '../supabase';
 import { ensureEngineReady } from './engine';
 import type { PrivateWalletInfo, PrivateWalletRecord } from './types';
+import { getPrivacyRpcProxyUrls } from './rpc-proxy';
 
 // ---------- Password derivation ----------
 
@@ -271,16 +272,7 @@ async function generateBip39Mnemonic(): Promise<string> {
 // ---------- Block number helper ----------
 
 async function getCurrentBlockNumber(chainId: number): Promise<number | null> {
-  const rpcs = [
-    'https://arbitrum.drpc.org',
-    'https://arb-pokt.nodies.app',
-    'https://rpc.ankr.com/arbitrum',
-  ];
-
-  const envRpc = import.meta.env[`VITE_RPC_URL_${chainId}`];
-  if (envRpc && !envRpc.includes('pocket.network') && !envRpc.includes('llamarpc')) {
-    rpcs.unshift(envRpc);
-  }
+  const rpcs = getPrivacyRpcProxyUrls();
 
   for (const rpcUrl of rpcs) {
     try {

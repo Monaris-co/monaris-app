@@ -23,6 +23,7 @@ import { buildShieldTransaction } from '@/lib/privacy/transactions';
 import { resolvePrivateAddress, deriveWalletPassword } from '@/lib/privacy/wallet';
 import { ensureEngineReady, getWalletModule, getSharedModels } from '@/lib/privacy/engine';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { getPrivacyRpcProxyUrls } from '@/lib/privacy/rpc-proxy';
 
 interface PrivatePayButtonProps {
   invoiceId: string;
@@ -124,8 +125,7 @@ export function PrivatePayButton({
       const publicClient = createPublicClient({
         chain: arbitrum,
         transport: fallback([
-          http('https://rpc.ankr.com/arbitrum'),
-          http('https://arbitrum.drpc.org'),
+          ...getPrivacyRpcProxyUrls().map((url) => http(url)),
         ]),
       });
       await publicClient.waitForTransactionReceipt({

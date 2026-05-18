@@ -18,6 +18,7 @@
 
 import { Buffer } from 'buffer';
 import type { PrivacyEngineStatus } from './types';
+import { getPrivacyPoiProxyUrls, getPrivacyRpcProxyUrls } from './rpc-proxy';
 
 let engineStatus: PrivacyEngineStatus = 'uninitialized';
 const statusListeners = new Set<(s: PrivacyEngineStatus) => void>();
@@ -304,10 +305,7 @@ async function doEngineStart(): Promise<void> {
 
     setStatus('loading-artifacts');
 
-    const poiNodeURLs = [
-      'https://ppoi-agg.horsewithsixlegs.xyz',
-      'https://poi.railgun.org'
-    ];
+    const poiNodeURLs = getPrivacyPoiProxyUrls();
 
     await startRailgunEngine(
       'monarispay',
@@ -390,20 +388,12 @@ export async function loadProviderAndSync(): Promise<void> {
 
 const MAX_PROVIDER_RETRIES = 4;
 const RETRY_BASE_MS = 3000;
-const BAD_RPC_PATTERNS = ['publicnode.com', 'pocket.network', 'llamarpc.com', '1rpc.io'];
-
 function getRailgunRpcCandidates(chainId: number) {
-  const envRpc = import.meta.env[`VITE_RPC_URL_${chainId}`];
-  return [
-    envRpc,
-    'https://arb1.arbitrum.io/rpc',
-    'https://arbitrum.drpc.org',
-    'https://rpc.ankr.com/arbitrum',
-    'https://arb-pokt.nodies.app',
-  ].filter(
-    (rpc): rpc is string =>
-      !!rpc && !BAD_RPC_PATTERNS.some((pattern) => rpc.includes(pattern)),
-  );
+  if (chainId === 42161) {
+    return getPrivacyRpcProxyUrls();
+  }
+
+  return getPrivacyRpcProxyUrls();
 }
 
 async function doLoadProvider(): Promise<void> {

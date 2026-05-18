@@ -18,6 +18,7 @@ import { buildShieldTransaction } from '@/lib/privacy/transactions';
 import { RAILGUN_PROXY_CONTRACTS } from '@/lib/privacy/config';
 import { getUSDCABI } from '@/lib/abis';
 import type { SupportedPrivateToken } from '@/lib/privacy/config';
+import { getPrivacyRpcProxyUrls } from '@/lib/privacy/rpc-proxy';
 
 interface ShieldDialogProps {
   open: boolean;
@@ -157,9 +158,7 @@ export function ShieldDialog({ open, onOpenChange }: ShieldDialogProps) {
       const publicClient = createPublicClient({
         chain: arbitrum,
         transport: fallback([
-          http('https://arbitrum.drpc.org'),
-          http('https://arb-pokt.nodies.app'),
-          http('https://rpc.ankr.com/arbitrum'),
+          ...getPrivacyRpcProxyUrls().map((url) => http(url)),
         ]),
       });
       await publicClient.waitForTransactionReceipt({ hash: approveResult.hash as `0x${string}`, confirmations: 1 });
@@ -362,7 +361,7 @@ export function ShieldDialog({ open, onOpenChange }: ShieldDialogProps) {
                         <div className="absolute inset-0 bg-[#c8ff00] blur-xl opacity-50 animate-[pulse_3s_ease-in-out_infinite]" />
 
                         {/* 3D Glass Block */}
-                        <div className="absolute inset-0 rounded-[1.2rem] bg-gradient-to-tr from-[#9acd00] via-[#c8ff00] to-[#e4ff66] shadow-[inset_1px_1px_3px_rgba(255,255,255,0.7),0_12px_30px_-5px_rgba(200,255,0,0.5)] flex items-center justify-center transform -rotate-12 hover:rotate-0 hover:scale-105 transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] border border-white/40 dark:border-white/20 backdrop-blur-md">
+                        <div className="absolute inset-0 rounded-[1.2rem] bg-gradient-to-tr from-[#9acd00] via-[#c8ff00] to-[#e4ff66] shadow-[inset_1px_1px_3px_rgba(255,255,255,0.7),0_12px_30px_-5px_rgba(200,255,0,0.5)] flex items-center justify-center transform -rotate-12 hover:rotate-0 hover:scale-105 transition-all duration-700 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] border border-white/40 dark:border-white/20 backdrop-blur-md">
                           {step === 'confirming' ? (
                             <Loader2 className="h-9 w-9 text-[#1a1a1a] drop-shadow-[0_2px_2px_rgba(255,255,255,0.25)] animate-[spin_6s_linear_infinite]" />
                           ) : (

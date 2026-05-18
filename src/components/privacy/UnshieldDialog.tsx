@@ -16,6 +16,7 @@ import { getPrivacyConfig } from '@/lib/privacy/config';
 import { buildUnshieldTransaction } from '@/lib/privacy/transactions';
 import { useSendTransaction, useWallets } from '@privy-io/react-auth';
 import type { SupportedPrivateToken } from '@/lib/privacy/config';
+import { getPrivacyRpcProxyUrls } from '@/lib/privacy/rpc-proxy';
 
 interface UnshieldDialogProps {
   open: boolean;
@@ -368,9 +369,7 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
       const publicClient = createPublicClient({
         chain: arbitrum,
         transport: fallback([
-          http('https://arbitrum.drpc.org'),
-          http('https://arb-pokt.nodies.app'),
-          http('https://rpc.ankr.com/arbitrum'),
+          ...getPrivacyRpcProxyUrls().map((url) => http(url)),
         ]),
       });
       try {
@@ -840,7 +839,7 @@ export function UnshieldDialog({ open, onOpenChange }: UnshieldDialogProps) {
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ transformStyle: 'preserve-3d', transform: 'translateZ(50px)' }}>
                       <div className="relative w-[72px] h-[72px] animate-[bounce_4s_ease-in-out_infinite]">
                         {/* 3D Glass Block */}
-                        <div className="absolute inset-0 rounded-[1.2rem] bg-[#111] shadow-[inset_1px_1px_3px_rgba(255,255,255,0.1),0_12px_30px_-5px_rgba(200,255,0,0.3)] flex items-center justify-center transform -rotate-12 hover:rotate-0 hover:scale-105 transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] border border-[#c8ff00]/40">
+                        <div className="absolute inset-0 rounded-[1.2rem] bg-[#111] shadow-[inset_1px_1px_3px_rgba(255,255,255,0.1),0_12px_30px_-5px_rgba(200,255,0,0.3)] flex items-center justify-center transform -rotate-12 hover:rotate-0 hover:scale-105 transition-all duration-700 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] border border-[#c8ff00]/40">
                           {step === 'sending' ? (
                             <Loader2 className="h-9 w-9 text-[#c8ff00] drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)] animate-[spin_6s_linear_infinite]" />
                           ) : (

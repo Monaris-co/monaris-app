@@ -24,7 +24,6 @@ import {
   isProviderLoaded,
   loadProviderAndSync,
   onEngineStatusChange,
-  refreshPOIsForWallet,
   triggerMerkleScans,
 } from '@/lib/privacy';
 import { getWalletModule } from '@/lib/privacy/engine';
@@ -259,26 +258,7 @@ async function doInit(
     }
     if (abortRef.current) return;
 
-    console.log('[usePrivateWallet] Running POI pipeline...');
-    try {
-      await refreshPOIsForWallet(walletId);
-      console.log('[usePrivateWallet] POI pipeline complete');
-      window.dispatchEvent(new CustomEvent('railgun-balance-update'));
-    } catch (err: any) {
-      console.warn('[usePrivateWallet] POI pipeline failed:', err?.message);
-    }
-
-    // Second POI pass after 30s — aggregator may need time to validate external POIs
-    if (!abortRef.current) {
-      setTimeout(async () => {
-        if (abortRef.current) return;
-        console.log('[usePrivateWallet] Second POI pass (delayed)...');
-        try {
-          await refreshPOIsForWallet(walletId);
-          window.dispatchEvent(new CustomEvent('railgun-balance-update'));
-        } catch { /* logged inside */ }
-      }, 30_000);
-    }
+    window.dispatchEvent(new CustomEvent('railgun-balance-update'));
   }
 }
 
