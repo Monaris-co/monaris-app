@@ -24,6 +24,7 @@ import Proofs from "./pages/app/Proofs";
 import Activity from "./pages/app/Activity";
 import Settings from "./pages/app/Settings";
 import PrivatePayments from "./pages/app/PrivatePayments";
+import Swap from "./pages/app/Swap";
 import PayInvoice from "./pages/PayInvoice";
 import { PrivyErrorHandler } from "./components/PrivyErrorHandler";
 import { PaymentPrivyProvider } from "./components/PaymentPrivyProvider";
@@ -89,6 +90,7 @@ const MainAppRoutes = () => (
       <Route path="financing" element={<Financing />} />
       <Route path="vault" element={<Vault />} />
       <Route path="private-payments" element={<PrivatePayments />} />
+      <Route path="swap" element={<Swap />} />
       <Route path="reputation" element={<Reputation />} />
       <Route path="proofs" element={<Proofs />} />
       <Route path="activity" element={<Activity />} />
