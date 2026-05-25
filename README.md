@@ -614,5 +614,4 @@ Monaris is in active development. To contribute:
 - **Introduction:** See [INTRO.md](./INTRO.md) for project overview and pitch
 - **Architecture:** See [architecture.md](./architecture.md) for detailed system design
 - **Multichain:** See [MULTICHAIN_SETUP.md](./MULTICHAIN_SETUP.md) for cross-chain deployment
-- **Contact:** Telegram @Adityaakrx | Twitter @adityakrx
 
