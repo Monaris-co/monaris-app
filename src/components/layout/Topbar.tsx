@@ -1,5 +1,4 @@
-import { useEffect, useRef } from "react"
-import { Mail, ChevronDown, Wallet, Copy, LogOut, ExternalLink, DollarSign, Loader2, Menu, User, Globe } from "lucide-react"
+import { Mail, ChevronDown, Copy, LogOut, ExternalLink, DollarSign, Loader2, Menu, User, Globe } from "lucide-react"
 import { NotificationBell } from "@/components/NotificationBell"
 import { Button } from "@/components/ui/button"
 import {
@@ -17,6 +16,8 @@ import { useChainId } from "wagmi"
 import { useQueryClient } from "@tanstack/react-query"
 import { getExplorerAddressUrl } from "@/lib/chain-utils"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { useState } from "react"
+import { CashDialog } from "@/components/layout/CashDialog"
 
 interface TopbarProps {
   onMenuClick?: () => void
@@ -29,8 +30,9 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
   const { balance: usdcBalance, isLoading: isLoadingBalance } = useTokenBalance()
   const { wallets } = useWallets()
   const queryClient = useQueryClient()
+  const [cashDialogOpen, setCashDialogOpen] = useState(false)
 
-  const loginMethods = user?.linkedAccounts?.map((acc: any) => acc.type) || []
+  const loginMethods = user?.linkedAccounts?.map((acc: { type: string }) => acc.type) || []
   const loggedInWithEmail = loginMethods.some((type: string) =>
     ['email', 'sms', 'google_oauth', 'twitter_oauth', 'github_oauth'].includes(type)
   )
@@ -72,18 +74,29 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
   const userName = userEmail ? userEmail.split('@')[0] : truncatedAddress || 'User'
   const userInitials = userName ? userName.slice(0, 2).toUpperCase() : 'U'
 
-  const networkName = chainId === 42161 ? 'Arbitrum' : `Chain ${chainId}`
+  const networkName = chainId === 42161
+    ? 'Arbitrum default'
+    : `Wallet on chain ${chainId}`
 
   const handleLogin = async () => {
     if (!ready) return
     try {
       await login()
-    } catch (error: any) {
+    } catch (error) {
       console.error('Login error:', error)
       toast.error("Failed to open login modal", {
-        description: error?.message || "Check console for details",
+        description: error instanceof Error ? error.message : "Check console for details",
       })
     }
+  }
+
+  const handleCashClick = async () => {
+    if (!authenticated) {
+      await handleLogin()
+      return
+    }
+
+    setCashDialogOpen(true)
   }
 
   const copyAddress = () => {
@@ -131,6 +144,7 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
 
   return (
     <header className="absolute md:sticky top-0 z-30 flex w-full h-16 items-center justify-between md:border-b border-transparent md:border-gray-200 md:dark:border-gray-800 bg-transparent md:bg-white/80 md:dark:bg-gray-900/80 pl-2 pr-3 sm:px-3 md:px-4 lg:px-6 md:backdrop-blur-xl pointer-events-none md:pointer-events-auto">
+      <CashDialog open={cashDialogOpen} onOpenChange={setCashDialogOpen} />
       <div className="flex items-center gap-4 pointer-events-auto">
         <Button
           variant="ghost"
@@ -147,7 +161,21 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
       </div>
 
       <div className="flex items-center gap-2 md:gap-4 pointer-events-auto">
-        <Button variant="ghost" size="icon" className="relative text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hidden sm:flex">
+        <Button
+          type="button"
+          onClick={handleCashClick}
+          className="hidden h-10 rounded-xl bg-primary px-4 text-primary-foreground shadow-sm transition-all duration-200 hover:bg-primary/90 hover:shadow-md sm:inline-flex"
+        >
+          <DollarSign className="h-4 w-4" />
+          <span>Cash</span>
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Inbox"
+          className="relative hidden text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white sm:flex"
+        >
           <Mail className="h-5 w-5" />
         </Button>
 
@@ -167,7 +195,7 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
                 <div className="hidden md:flex flex-col items-start">
                   <span className="text-sm font-medium text-gray-900 dark:text-white">{userName}</span>
                   <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {isEmbeddedWallet ? 'Embedded Wallet' : 'Connected'}
+                    {isEmbeddedWallet ? 'Embedded Wallet · Arbitrum' : 'Connected'}
                   </span>
                 </div>
                 <ChevronDown className="h-4 w-4 text-gray-400 hidden md:block" />
@@ -205,11 +233,14 @@ export function Topbar({ onMenuClick }: TopbarProps = {}) {
                     </div>
                   </div>
                   <div className="pt-3 border-t border-gray-100 dark:border-gray-800">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Network</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Execution rail</p>
                     <div className="flex items-center gap-2">
                       <Globe className="h-4 w-4 text-blue-500" />
                       <p className="text-sm font-medium text-gray-900 dark:text-white">{networkName}</p>
                     </div>
+                    <p className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">
+                      Wallet can hold funds on supported EVM chains while core Monaris flows stay on Arbitrum.
+                    </p>
                   </div>
                 </div>
               </DropdownMenuLabel>
