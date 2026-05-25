@@ -25,6 +25,42 @@ const tabs: Array<{ id: CashTab; label: string }> = [
   { id: "withdraw", label: "Withdraw" },
 ]
 
+type MoonPayEnv = ImportMetaEnv & {
+  readonly VITE_MOONPAY_SELL_API_KEY?: string
+  readonly VITE_MOONPAY_PUBLISHABLE_KEY?: string
+  readonly VITE_MOONPAY_SANDBOX?: string
+  readonly VITE_MOONPAY_SELL_BASE_CURRENCY?: string
+  readonly VITE_MOONPAY_SELL_QUOTE_CURRENCY?: string
+}
+
+const moonPayEnv = import.meta.env as MoonPayEnv
+
+function buildMoonPaySellUrl() {
+  const apiKey =
+    moonPayEnv.VITE_MOONPAY_SELL_API_KEY ||
+    moonPayEnv.VITE_MOONPAY_PUBLISHABLE_KEY
+  const isSandbox = moonPayEnv.VITE_MOONPAY_SANDBOX === "true"
+  const baseUrl = isSandbox
+    ? "https://sell-sandbox.moonpay.com/"
+    : "https://sell.moonpay.com/"
+  const url = new URL(baseUrl)
+
+  if (apiKey) {
+    url.searchParams.set("apiKey", apiKey)
+  }
+
+  url.searchParams.set("defaultBaseCurrencyCode", moonPayEnv.VITE_MOONPAY_SELL_BASE_CURRENCY || "usdc")
+  url.searchParams.set("quoteCurrencyCode", moonPayEnv.VITE_MOONPAY_SELL_QUOTE_CURRENCY || "usd")
+  url.searchParams.set("theme", "light")
+  url.searchParams.set("colorCode", "#c8ff00")
+  url.searchParams.set("redirectURL", `${window.location.origin}/app?cash=withdraw`)
+
+  return {
+    url: url.toString(),
+    hasApiKey: !!apiKey,
+  }
+}
+
 export function CashDialog({ open, onOpenChange }: CashDialogProps) {
   const [activeTab, setActiveTab] = useState<CashTab>("deposit")
   const [isPrivyFunding, setIsPrivyFunding] = useState(false)
@@ -105,8 +141,22 @@ export function CashDialog({ open, onOpenChange }: CashDialogProps) {
   }
 
   const handlePrivyOfframp = () => {
-    toast.message("Privy offramp is provider-based", {
-      description: "Use MoonPay off-ramp with Privy wallet signing for KYC, bank payout, and crypto transfer.",
+    const { url, hasApiKey } = buildMoonPaySellUrl()
+    const moonPayWindow = window.open(url, "_blank", "noopener,noreferrer")
+
+    if (!moonPayWindow) {
+      toast.error("Unable to open MoonPay", {
+        description: "Allow pop-ups for Monaris, then try Cash out again.",
+      })
+      return
+    }
+
+    onOpenChange(false)
+
+    toast.success("MoonPay Sell opened", {
+      description: hasApiKey
+        ? "Create a sell order, then send crypto from your Privy wallet when MoonPay gives deposit instructions."
+        : "Using generic MoonPay Sell. Add VITE_MOONPAY_SELL_API_KEY for the branded partner widget.",
     })
   }
 
@@ -145,10 +195,10 @@ export function CashDialog({ open, onOpenChange }: CashDialogProps) {
             {
               icon: Building2,
               accent: "lime" as const,
-              title: "Privy Offramp",
-              description: "Convert crypto to fiat with MoonPay. Privy keeps wallet signing in-app while MoonPay handles KYC and bank payout.",
-              badge: "Ready",
-              cta: "Details",
+              title: "Cash out with MoonPay",
+              description: "Create a MoonPay sell order, complete KYC and payout setup, then send crypto from your Privy wallet.",
+              badge: "Live",
+              cta: "Cash out",
               onClick: handlePrivyOfframp,
               disabled: false,
             },
