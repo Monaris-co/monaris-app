@@ -12,6 +12,7 @@ import {
   Settings,
   Sparkles,
   ArrowUpRight,
+  DollarSign,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useState, useCallback } from "react"
@@ -35,9 +36,10 @@ const navigation = [
 interface SidebarContentProps {
   collapsed?: boolean
   onNavigate?: () => void
+  onCashClick?: () => void
 }
 
-function SidebarContent({ collapsed = false, onNavigate }: SidebarContentProps) {
+function SidebarContent({ collapsed = false, onNavigate, onCashClick }: SidebarContentProps) {
   const location = useLocation()
 
   const handleMouseEnter = useCallback((href: string) => {
@@ -62,6 +64,20 @@ function SidebarContent({ collapsed = false, onNavigate }: SidebarContentProps) 
 
       {/* Navigation */}
       <nav className="flex-1 px-4 py-4 space-y-1">
+        {!collapsed && onCashClick && (
+          <Button
+            type="button"
+            onClick={() => {
+              onNavigate?.()
+              onCashClick()
+            }}
+            className="mb-4 h-11 w-full rounded-xl bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
+          >
+            <DollarSign className="h-4 w-4" />
+            Cash
+          </Button>
+        )}
+
         {navigation.map((item) => {
           const isDisabled = 'comingSoon' in item && item.comingSoon;
           const isActive = !isDisabled && (location.pathname === item.href || 
@@ -153,9 +169,10 @@ function SidebarContent({ collapsed = false, onNavigate }: SidebarContentProps) 
 interface SidebarProps {
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  onCashClick?: () => void
 }
 
-export function Sidebar({ open, onOpenChange }: SidebarProps) {
+export function Sidebar({ open, onOpenChange, onCashClick }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
   const isMobile = useIsMobile()
 
@@ -163,8 +180,11 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="left" className="w-[280px] p-0 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
-          <SidebarContent onNavigate={() => onOpenChange?.(false)} />
+        <SheetContent side="left" className="w-[min(320px,calc(100vw-2rem))] p-0 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+          <SidebarContent
+            onNavigate={() => onOpenChange?.(false)}
+            onCashClick={onCashClick}
+          />
         </SheetContent>
       </Sheet>
     )

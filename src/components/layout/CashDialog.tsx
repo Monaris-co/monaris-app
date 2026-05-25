@@ -25,6 +25,55 @@ const tabs: Array<{ id: CashTab; label: string }> = [
   { id: "withdraw", label: "Withdraw" },
 ]
 
+type MoonPayEnv = ImportMetaEnv & {
+  readonly VITE_MOONPAY_SELL_API_KEY?: string
+  readonly VITE_MOONPAY_PUBLISHABLE_KEY?: string
+  readonly VITE_MOONPAY_SANDBOX?: string
+  readonly VITE_MOONPAY_SELL_BASE_CURRENCY?: string
+  readonly VITE_MOONPAY_SELL_QUOTE_CURRENCY?: string
+}
+
+const moonPayEnv = import.meta.env as MoonPayEnv
+
+function formatSellAmount(amount: number) {
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return undefined
+  }
+
+  return amount.toFixed(2)
+}
+
+function buildMoonPaySellUrl(usdcAmount: number) {
+  const apiKey =
+    moonPayEnv.VITE_MOONPAY_SELL_API_KEY ||
+    moonPayEnv.VITE_MOONPAY_PUBLISHABLE_KEY
+  const isSandbox = moonPayEnv.VITE_MOONPAY_SANDBOX === "true"
+  const baseUrl = isSandbox
+    ? "https://sell-sandbox.moonpay.com/"
+    : "https://sell.moonpay.com/"
+  const url = new URL(baseUrl)
+
+  if (apiKey) {
+    url.searchParams.set("apiKey", apiKey)
+  }
+
+  url.searchParams.set("baseCurrencyCode", moonPayEnv.VITE_MOONPAY_SELL_BASE_CURRENCY || "usdc")
+  const sellAmount = formatSellAmount(usdcAmount)
+  if (sellAmount) {
+    url.searchParams.set("baseCurrencyAmount", sellAmount)
+  }
+  url.searchParams.set("quoteCurrencyCode", moonPayEnv.VITE_MOONPAY_SELL_QUOTE_CURRENCY || "usd")
+  url.searchParams.set("theme", "light")
+  url.searchParams.set("colorCode", "#c8ff00")
+  url.searchParams.set("redirectURL", `${window.location.origin}/app?cash=withdraw`)
+
+  return {
+    url: url.toString(),
+    hasApiKey: !!apiKey,
+    sellAmount,
+  }
+}
+
 export function CashDialog({ open, onOpenChange }: CashDialogProps) {
   const [activeTab, setActiveTab] = useState<CashTab>("deposit")
   const [isPrivyFunding, setIsPrivyFunding] = useState(false)
@@ -105,8 +154,29 @@ export function CashDialog({ open, onOpenChange }: CashDialogProps) {
   }
 
   const handlePrivyOfframp = () => {
-    toast.message("Privy offramp is provider-based", {
-      description: "Use MoonPay off-ramp with Privy wallet signing for KYC, bank payout, and crypto transfer.",
+    if (usdcBalance <= 0) {
+      toast.error("No USDC available to cash out", {
+        description: "Add USDC to this wallet before opening MoonPay Sell.",
+      })
+      return
+    }
+
+    const { url, hasApiKey, sellAmount } = buildMoonPaySellUrl(usdcBalance)
+    const moonPayWindow = window.open(url, "_blank", "noopener,noreferrer")
+
+    if (!moonPayWindow) {
+      toast.error("Unable to open MoonPay", {
+        description: "Allow pop-ups for Monaris, then try Cash out again.",
+      })
+      return
+    }
+
+    onOpenChange(false)
+
+    toast.success("MoonPay Sell opened", {
+      description: hasApiKey
+        ? `Prefilled with ${sellAmount} USDC. Send crypto from your Privy wallet when MoonPay gives deposit instructions.`
+        : `Prefilled with ${sellAmount} USDC where supported. Add VITE_MOONPAY_SELL_API_KEY for the branded partner widget.`,
     })
   }
 
@@ -145,12 +215,15 @@ export function CashDialog({ open, onOpenChange }: CashDialogProps) {
             {
               icon: Building2,
               accent: "lime" as const,
-              title: "Privy Offramp",
-              description: "Convert crypto to fiat with MoonPay. Privy keeps wallet signing in-app while MoonPay handles KYC and bank payout.",
-              badge: "Ready",
-              cta: "Details",
+              title: "Cash out with MoonPay",
+              description: `Create a MoonPay sell order for up to ${usdcBalance.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })} USDC, then send from your Privy wallet.`,
+              badge: "Live",
+              cta: "Cash out",
               onClick: handlePrivyOfframp,
-              disabled: false,
+              disabled: usdcBalance <= 0,
             },
             {
               icon: ArrowUpRight,
