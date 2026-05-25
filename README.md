@@ -1,19 +1,9 @@
 # Monaris
 
-<img width="1531" height="863" alt="Monaris Dashboard" src="https://github.com/user-attachments/assets/3d3d58c5-10b9-485b-aac2-1493f11311ef" />
-
-<img width="1710" height="864" alt="Invoice Creation" src="https://github.com/user-attachments/assets/fd448bbe-f006-4bcd-a567-a552233be2b1" />
-
-<img width="1155" height="474" alt="Settlement Flow" src="https://github.com/user-attachments/assets/5d9df632-b154-41e3-8b4b-841c511f29b6" />
-<img width="1151" height="311" alt="Reputation System" src="https://github.com/user-attachments/assets/34d937c4-9302-4045-9b16-59403c291b37" />
-<img width="1269" height="779" alt="Vault & Staking" src="https://github.com/user-attachments/assets/46b079b9-1275-4b71-b6b1-7f0399e5cf8d" />
-<img width="1703" height="960" alt="Financing Engine" src="https://github.com/user-attachments/assets/e30f131a-d933-4f80-bc4e-d732ff400e72" />
-
-<img width="1705" height="866" alt="Private Payments" src="https://github.com/user-attachments/assets/ee6dfac9-e0c7-40a3-a533-6303596665d6" />
-
-<img width="895" height="714" alt="zkTLS Proofs" src="https://github.com/user-attachments/assets/22284d59-2089-457d-a977-1592ed04547f" />
-
 **Monaris** is private programmable neo-finance for the stablecoin era, using cashflow to unlock spending, credit, BNPL, and financial automation on PayFi rails. Businesses get paid in stablecoins, unlock instant financing against invoices and cashflows, shield payments with RAILGUN privacy, swap cross-chain via Across Protocol, and build on-chain reputation that improves terms over time.
+
+<img width="1477" height="816" alt="Screenshot 2026-05-26 at 12 17 34 AM" src="https://github.com/user-attachments/assets/06efec12-725a-4f06-9250-a624215c00ba" />
+
 
 For a detailed introduction, see [INTRO.md](./INTRO.md).
 
