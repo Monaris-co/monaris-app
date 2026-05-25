@@ -35,7 +35,15 @@ type MoonPayEnv = ImportMetaEnv & {
 
 const moonPayEnv = import.meta.env as MoonPayEnv
 
-function buildMoonPaySellUrl() {
+function formatSellAmount(amount: number) {
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return undefined
+  }
+
+  return amount.toFixed(2)
+}
+
+function buildMoonPaySellUrl(usdcAmount: number) {
   const apiKey =
     moonPayEnv.VITE_MOONPAY_SELL_API_KEY ||
     moonPayEnv.VITE_MOONPAY_PUBLISHABLE_KEY
@@ -49,7 +57,11 @@ function buildMoonPaySellUrl() {
     url.searchParams.set("apiKey", apiKey)
   }
 
-  url.searchParams.set("defaultBaseCurrencyCode", moonPayEnv.VITE_MOONPAY_SELL_BASE_CURRENCY || "usdc")
+  url.searchParams.set("baseCurrencyCode", moonPayEnv.VITE_MOONPAY_SELL_BASE_CURRENCY || "usdc")
+  const sellAmount = formatSellAmount(usdcAmount)
+  if (sellAmount) {
+    url.searchParams.set("baseCurrencyAmount", sellAmount)
+  }
   url.searchParams.set("quoteCurrencyCode", moonPayEnv.VITE_MOONPAY_SELL_QUOTE_CURRENCY || "usd")
   url.searchParams.set("theme", "light")
   url.searchParams.set("colorCode", "#c8ff00")
@@ -58,6 +70,7 @@ function buildMoonPaySellUrl() {
   return {
     url: url.toString(),
     hasApiKey: !!apiKey,
+    sellAmount,
   }
 }
 
@@ -141,7 +154,14 @@ export function CashDialog({ open, onOpenChange }: CashDialogProps) {
   }
 
   const handlePrivyOfframp = () => {
-    const { url, hasApiKey } = buildMoonPaySellUrl()
+    if (usdcBalance <= 0) {
+      toast.error("No USDC available to cash out", {
+        description: "Add USDC to this wallet before opening MoonPay Sell.",
+      })
+      return
+    }
+
+    const { url, hasApiKey, sellAmount } = buildMoonPaySellUrl(usdcBalance)
     const moonPayWindow = window.open(url, "_blank", "noopener,noreferrer")
 
     if (!moonPayWindow) {
@@ -155,8 +175,8 @@ export function CashDialog({ open, onOpenChange }: CashDialogProps) {
 
     toast.success("MoonPay Sell opened", {
       description: hasApiKey
-        ? "Create a sell order, then send crypto from your Privy wallet when MoonPay gives deposit instructions."
-        : "Using generic MoonPay Sell. Add VITE_MOONPAY_SELL_API_KEY for the branded partner widget.",
+        ? `Prefilled with ${sellAmount} USDC. Send crypto from your Privy wallet when MoonPay gives deposit instructions.`
+        : `Prefilled with ${sellAmount} USDC where supported. Add VITE_MOONPAY_SELL_API_KEY for the branded partner widget.`,
     })
   }
 
@@ -196,11 +216,14 @@ export function CashDialog({ open, onOpenChange }: CashDialogProps) {
               icon: Building2,
               accent: "lime" as const,
               title: "Cash out with MoonPay",
-              description: "Create a MoonPay sell order, complete KYC and payout setup, then send crypto from your Privy wallet.",
+              description: `Create a MoonPay sell order for up to ${usdcBalance.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })} USDC, then send from your Privy wallet.`,
               badge: "Live",
               cta: "Cash out",
               onClick: handlePrivyOfframp,
-              disabled: false,
+              disabled: usdcBalance <= 0,
             },
             {
               icon: ArrowUpRight,
